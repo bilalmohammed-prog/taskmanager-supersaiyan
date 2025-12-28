@@ -4,11 +4,11 @@ import Image from "next/image";
 import "./TopBar.css";
 
 type Props = {
-  section: "tasks" | "inbox" | "progress";
+  section: "tasks" | "inbox" | "progress" | "teamTasks";
 };
 
 export default function TopBar({ section }: Props) {
-  if (section === "tasks") return (
+  if (section === "teamTasks") return (
   
   <div className="rsidebar">
             
@@ -62,8 +62,52 @@ export default function TopBar({ section }: Props) {
         <span className="empDisplay"></span>
         
     </div>
+</div>
+  );
+
+
+  
+  if (section === "tasks")
+    
+    return (
+  
+  <div className="rsidebar">
+            
+            
+            
+<div className="empBarInfo">
+        <span className="empDisplay"></span>
         
-        <button className="sidebar-btn draft">
+    </div>
+        </div>
+  );
+    
+
+  
+  if (section === "progress")
+    
+    return (
+  
+  <div className="rsidebar">
+            
+            
+            
+<div className="empBarInfo">
+        <span className="empDisplay"></span>
+        
+    </div>
+        </div>
+  );
+    
+
+
+  if (section === "inbox")
+
+return (
+  
+  <div className="rsidebar">
+            
+            <button className="sidebar-btn draft">
             <Image
             src="/svg/draft.svg"
             alt="Draft icon"
@@ -72,12 +116,14 @@ export default function TopBar({ section }: Props) {
           />
             <span className="tooltip">Draft</span>
         </button>
+            
+<div className="empBarInfo">
+        <span className="empDisplay"></span>
         
-
+    </div>
         </div>
   );
-  if (section === "inbox") return <div className="topbar">Inbox UI</div>;
-  if (section === "progress") return <div className="topbar">Progress UI</div>;
+
 
   return null;
 }

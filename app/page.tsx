@@ -5,7 +5,7 @@ import TopBar from "../components/TopBar/TopBar";
 export default function Page() {
   return (
     <>
-    <TopBar section="tasks"/>
+    <TopBar section="progress"/>
       <div>
     <div className="overlay"></div>
     <div className="popup">
