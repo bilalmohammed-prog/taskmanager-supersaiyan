@@ -31,7 +31,7 @@ export default function Page() {
     
     <button className="sidebar-btn createEmp">
         <Image
-            src="/createEmp.svg"
+            src="/svg/createEmp.svg"
             alt="Draft icon"
             width={32}
             height={32}
@@ -40,7 +40,7 @@ export default function Page() {
     </button>
     <button className="sidebar-btn assign-task-btn" id="openAssignModalBtn">
         <Image
-            src="/assignTask.svg"
+            src="/svg/assignTask.svg"
             alt="Draft icon"
             width={32}
             height={32}
@@ -50,7 +50,7 @@ export default function Page() {
     <button className="sidebar-btn switchEmp">
       
       <Image
-            src="/switchEmp.svg"
+            src="/svg/switchEmp.svg"
             alt="Draft icon"
             width={32}
             height={32}
@@ -60,7 +60,7 @@ export default function Page() {
     
     <button className="sidebar-btn endDay">
       <Image
-            src="/endDay.svg"
+            src="/svg/endDay.svg"
             alt="Draft icon"
             width={32}
             height={32}
@@ -78,7 +78,7 @@ export default function Page() {
         
         <button className="sidebar-btn draft">
             <Image
-            src="/draft.svg"
+            src="/svg/draft.svg"
             alt="Draft icon"
             width={32}
             height={32}
@@ -114,7 +114,7 @@ export default function Page() {
             <span className="tooltip">Team Tasks</span>
             {/* TeamTasks SVG */}
             <Image
-            src="/teamtasks.svg"
+            src="/svg/teamtasks.svg"
             alt="Team Tasks icon"
             width={32}
             height={32}
@@ -123,7 +123,7 @@ export default function Page() {
         <button className="sidebar-btn empAccess">
             {/* Tasks */}
             <Image
-            src="/tasks.svg"
+            src="/svg/tasks.svg"
             alt="Team Tasks icon"
             width={32}
             height={32}
@@ -134,7 +134,7 @@ export default function Page() {
         <button className="sidebar-btn inbox">
             {/* inbox */}
             <Image
-            src="/inbox.svg"
+            src="/svg/inbox.svg"
             alt="Inbox icon"
             width={32}
             height={32}
@@ -143,7 +143,7 @@ export default function Page() {
         </button>
         <button className="sidebar-btn progress">
             <Image
-            src="/progress.svg"
+            src="/svg/progress.svg"
             alt="Inbox icon"
             width={32}
             height={32}
