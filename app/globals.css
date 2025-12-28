@@ -1,26 +1,2090 @@
-@import "tailwindcss";
+html{
+    height:100%;
+}
+body {
+  min-height: 100dvh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+
+  background-color:  #333333;
+  overflow-y: auto;
+  position: relative;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+/* Add the noise texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+/* background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E"); */
+  pointer-events: none;
+  z-index: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Optional: Add subtle vignette */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  
+  pointer-events: none;
+  z-index: 2;
+}
+body{
+  padding-top:60px;   /* same as rsidebar height */
+}
+
+
+
+
+
+
+
+.task {
+    position: absolute;
+    top: 100px;
+    height: 100px;
+    width: 100px;
+    padding-right: 40px;
+    padding-left: 40px;
+    border-radius: 14px;
+    
+    background-color: #2f2f2f;
+    /* background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E"); */
+    font-size: 20px;
+    border: rgb(255, 255, 255) 0.25px solid;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+    z-index: 75;
+    font-family: 'Roboto', sans-serif;
+}
+
+.time {
+    position: absolute;
+    top: 250px;
+    height: 40px;
+    padding-right: 4px;
+    padding-left: 30px;
+    border-radius: 5px;
+    background-color: #2f2f2f;
+    /* background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E"); */
+    border: rgb(255, 255, 255) 0.25px solid;
+    width:100px;
+    font-size: 14px;
+    z-index: 75;
+    font-family: 'Roboto', sans-serif;
+}
+.endDay{
+    position: absolute;
+    
+    height:35px;
+    width:35px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    background-color: transparent;
+}
+.endDay {
+    appearance: none;
+    -webkit-appearance: none;
+}
+.endDay:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    transform: scale(1.3);
+}
+.endDay svg {
+    height: 60%;
+    width: 100%;
+    display: block;
+    object-fit: contain;
+}
+.rsidebar{
+  position: fixed;
+  top:0;
+  left:0;
+  right:0;
+  height:60px;
+
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items:center;
+
+  background:#1E1E1E;                /* SOLID black */
+  border-bottom:1px solid var(--soft-border);
+  z-index:1000;
+  padding:0 16px;
+  box-sizing:border-box;
+}
+
+
+
+
+.assign {
+    
+    display: flex;
+    flex-direction: horizontal;
+    gap: 12px;
+    
+    background-color: transparent;
+   
+}
+
+
+
+
+.instructions{
+    position:fixed;
+    z-index:100;
+    right:1000px;
+    top:10vh;
+
+}
+.map{
+    height:1430px;
+    z-index:0;
+    position:absolute;
+    left:-20px;
+    visibility: hidden;
+}
+.instruction-text{
+    width:250px;
+    font-family: 'Roboto', sans-serif;
+    color: rgb(0, 255, 238);
+}
+.instruction-title{
+    font-family: 'Roboto', sans-serif;
+    color: rgb(0, 255, 238);
+}
+
+.obj{
+    font-family: 'Roboto', sans-serif;
+}
+.container3 {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+/* Task text on the left */
+.container3 .taskText {
+    flex: 1;              
+    min-width: 0;         
+    word-break: break-word;
+}
+
+/* Buttons container */
+.container2 {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-shrink: 0;      
+}
+
+
+.cobox{
+    background-color: transparent;
+    padding: 10px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 20px;
+    padding-right:40px;
+    padding-left:40px;
+    height:500px;
+    width:700px;
+    overflow-y: scroll;
+    max-height: 500px;
+    scroll-behavior: smooth;
+    color:#ffffff;
+    display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+.cobox,
+.container3,
+.popupContainer
+ {
+    word-break: break-all;  /* Breaks at any character, more aggressive */
+    overflow-wrap: break-word;
+}
+.cobox{
+  position: relative;
+  margin-left: 100px;   /* space for sidebar */
+  margin-top: 20px;     /* space for top bar */
+  width: 60vw;
+  max-width: 900px;
+  height: auto;
+  max-height: 70vh;
+}
+
+/* Custom scrollbar for .cobox */
+.cobox::-webkit-scrollbar {
+    width: 10px;
+    border-radius: 8px;
+}
+
+.delete-button {
+    width:20px;
+    height:20px;
+    background-color:rgb(255, 137, 137);
+    cursor: pointer;
+    
+    padding:2px;
+}
+.completed-button {
+    width:20px;
+    height:20px;
+    background-color: rgb(149, 255, 188);
+    cursor: pointer;
+    
+    padding:2px;
+    padding-bottom: 2px;
+}
+
+.update-button {
+    width:20px;
+    height:20px;
+    background-color: rgb(135, 206, 250);
+    cursor: pointer;
+    
+    padding:2px;
+    padding-bottom: 2px;
+}
+
+.delete-button:hover {
+    background-color: rgb(218, 62, 62);
+
+}
+.completed-button:hover{
+    background-color: rgb(68, 255, 136);
+
+}
+.update-button:hover{
+    background-color: rgb(88, 180, 255);
+}
+
+.checkbox{
+    
+    width:30px;
+    height:30px;
+    border:rgba(0, 0, 0,0.8) 1px solid;
+}
+
+.popup{
+    position:fixed;
+    width:500px;
+    height:500px;
+    display:flex;
+    justify-content: center;
+    align-items: center;
+    z-index:1000;
+    position:absolute;
+    border-radius:8px;
+    border:rgb(245, 255, 131) 3px solid;
+    background-color: rgb(245, 255, 131);
+    border:rgb(0, 0, 0) 3px solid;
+    font-size:18px;
+    font-family: 'Roboto', sans-serif;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    
+}
+.active{
+    opacity:1;
+    visibility: visible;
+}
+.confirm{
+    position: absolute;
+    bottom: 20px;
+    right: 16px;
+    background-color: rgb(68, 255, 136);
+    font-family: 'Roboto', sans-serif;
+    border-radius:2px;
+    padding:5px;
+}
+.cancel{
+    position:absolute;
+    top: 16px;
+    right: 14px;
+    background-color: rgb(218, 62, 62);
+    padding:2px;
+    padding-left:5px;
+    padding-right:4px;
+    font-family: 'Roboto', sans-serif;
+    border-radius:2px;
+    padding-left:7px;
+}
+.pt{
+    font-family: 'Roboto', sans-serif;
+    font-size:22px;
+    color: black;
+    position:absolute;
+    top:10px;
+    font-weight: 450;
+}
+.overlay{
+    top:0;
+    bottom:0;
+    left:0;
+    right:0;
+    background:rgba(0,0,0,0.3);
+    position:fixed;
+    z-index:1000;
+}
+.overlay {
+  display: none;
+}
+.overlay.active {
+  display: block;
+}
+
+
+.notaskc{
+    position: absolute;
+    bottom: 0px;
+    left: 20px;
+}
+.popupscroll::-webkit-scrollbar {
+    width: 10px;
+    border-radius: 8px;
+}
+.popupscroll{
+    max-height: 200px;
+    max-width:300px;
+    overflow-y: scroll;
+    font-size: 18px;
+}
+/*reason button*/
+.reason_button{
+    width:20px;
+    height:20px;
+    background-color: rgb(135, 206, 250);
+    cursor: pointer;
+}
+
+.reason_popup{
+    position:absolute;
+    width:100px;
+    height:100px;
+    top:0px;
+    right:-400px;
+    display:flex;
+    justify-content: center;
+    align-items: center;
+    z-index:1001;
+    position:absolute;
+    border-radius:8px;
+    border:rgb(245, 255, 131) 3px solid;
+    background-color: rgb(245, 255, 131);
+    border:rgb(0, 0, 0) 3px solid;
+    font-size:20px;
+    font-family: 'Roboto', sans-serif;
+    visibility: hidden;
+    opacity: 0;
+}
+
+.reason_popup.active{
+    position:fixed;
+    width:300px;
+    height:200px;
+    display:flex;
+    justify-content: center;
+    align-items: center;
+    z-index:1001;
+    position:absolute;
+    border-radius:8px;
+    border:rgb(245, 255, 131) 3px solid;
+    background-color: rgb(245, 255, 131);
+    border:rgb(0, 0, 0) 2px solid;
+    font-size:20px;
+    font-family: 'Roboto', sans-serif;
+    opacity:1;
+    visibility: visible;
+}
+
+.reason_input{
+    width:250px;
+    height:80px;
+    padding-right:10px;
+    padding-left:10px;
+    border-radius:5px;
+    background-color: rgb(245, 255, 131);
+    font-size:16px;
+    font-family: 'Roboto', sans-serif;
+}
+
+.rconfirm{
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    background-color: rgb(68, 255, 136);
+    font-family: 'Roboto', sans-serif;
+    border-radius:2px;
+    padding:5px;
+}
+.rcancel{
+    position:absolute;
+    top: 15px;
+    right: 15px;
+    background-color: rgb(218, 62, 62);
+    padding:2px;
+    padding-left:5px;
+    padding-right:4px;
+    font-family: 'Roboto', sans-serif;
+    border-radius:2px;
+    padding-left:7px;
+}
+
+.AIeval{
+    position:absolute;
+    bottom:0px;
+    left:-350px;
+    width:300px;
+    height:500px;
+    background-color: rgb(245, 255, 131);
+    max-height:500px;
+    border-radius:10px;
+    z-index:2000;
+    overflow-y: scroll;
+}
+.AIh{
+    font-family: 'Roboto', sans-serif;
+    font-size:22px;
+    color: black;
+    position:absolute;
+    top:10px;
+    right:68px;
+    font-weight: 450;
+    
+}
+.AIp{
+    font-family: 'Roboto', sans-serif;
+    font-size:18px;
+    color: black;
+    position:absolute;
+    top:50px;
+    left:15px;
+    font-weight: 450;
+    max-width: 280px;
+
+}
+.AIeval::-webkit-scrollbar {
+    width: 10px;
+    border-radius: 8px;
+}
+.record_popup{
+    position:fixed;
+    width:500px;
+    height:500px;
+    display:flex;
+    justify-content: center;
+    align-items: center;
+    z-index:1000;
+    position:absolute;
+    border-radius:8px;
+    border:rgb(245, 255, 131) 3px solid;
+    background-color: rgb(245, 255, 131);
+    border:rgb(0, 0, 0) 3px solid;
+    font-size:18px;
+    font-family: 'Roboto', sans-serif;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.record_popup.active{
+    position:fixed;
+    width:500px;
+    height:500px;
+    display:flex;
+    justify-content: center;
+    align-items: center;
+    z-index:1000;
+    position:absolute;
+    border-radius:8px;
+    background-color: rgb(245, 255, 131);
+    border:rgb(0, 0, 0) 3px solid;
+    font-weight: 500;
+    font-size:20px;
+    font-family: 'Roboto', sans-serif;
+    opacity:1;
+    visibility: visible;
+}
+.record_title{
+    font-family: 'Roboto', sans-serif;
+    font-size:22px;
+    color: black;
+    position:absolute;
+    top:10px;
+    font-weight: 450;
+}
+.record_cancel{
+    position:absolute;
+    top: 16px;
+    right: 14px;
+    background-color: rgb(218, 62, 62);
+    padding:2px;
+    padding-left:5px;
+    padding-right:4px;
+    font-family: 'Roboto', sans-serif;
+    border-radius:2px;
+    padding-left:7px;
+}
+.record_scroll{
+    max-height: 400px;
+    max-width:450px;
+    overflow-y: scroll;
+    font-size: 18px;
+    position:absolute;
+    top:50px;
+    left:25px;
+    right:25px;
+    bottom:25px;
+}
+.record_scroll::-webkit-scrollbar {
+    width: 10px;
+    border-radius: 8px;
+}
+.record_content{
+    font-family: 'Roboto', sans-serif;
+    color: black;
+    margin: 5px 0;
+}
+
+
+
+
+.record_btn,.assign-task-btn,.createEmp,.switchEmp,.inbox,.empAccess,.managerAccess, .draft {
+    height:35px;
+    width:35px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    background-color: transparent;
+
+    appearance: none;
+    -webkit-appearance: none;
+}
+.draft {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  align-self: center;
+}
+.draft{
+  position: static !important;   /* remove absolute behavior */
+  grid-column: 2;
+  align-self: center;
+  justify-self: center;
+}
+.draft svg{
+  display:block;
+}
+
+
+.createEmp{
+    position:absolute;
+    
+}
+.switchEmp{
+    position:absolute;
+    
+}
+.empBarInfo{
+  justify-self: end;
+  color:white;
+  font-family:'Roboto',sans-serif;
+  font-size:16px;
+}
+
+
+.empDisplay{
+  white-space:nowrap;
+}
+
+
+.empDisplay,
+.actualEmpDisplay{
+  position: static;       /* IMPORTANT remove absolute behavior */
+  font-family:'Roboto',sans-serif;
+  font-size:16px;
+  color:white;
+  white-space:nowrap;
+}
+
+
+
+.createEmp:hover,.switchEmp:hover,.inbox:hover,.empAccess:hover,.managerAccess:hover, .draft:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    transform: scale(1.3);
+}
+.record_btn:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    transform: scale(1.3);
+}
+
+
+.record_btn svg, .managerAccess svg, .inbox svg, .createEmp svg, .switchEmp svg, .endDay svg , .progress svg, .draft svg{
+    height: 60%;
+    width: 100%;
+    display: block;
+    object-fit: contain;
+}
+ .empAccess svg{
+    height:60%;
+    width:100%;
+    display: block;
+    object-fit: contain;
+   
+ }
+/* Sidebar buttons must be relative to anchor the tooltip */
+.sidebar-btn {
+    position: relative;
+    height: 35px;
+    width: 35px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Hover style */
+.sidebar-btn:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: 0.2s ease;
+    transform: scale(1.2);
+}
+
+/* Tooltip base */
+.sidebar-btn .tooltip {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 8px);
+    transform: translateY(-50%);
+    white-space: nowrap;
+
+    background-color: #2D2D2D;
+    color: #E8E8E8;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 10px;
+    pointer-events: none;
+
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
+    z-index: 2000;
+}
+
+/* Tooltip arrow */
+.sidebar-btn .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: #2D2D2D;
+}
+
+/* Show tooltip on hover */
+.sidebar-btn:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+
+/* css reusable variables */
+:root{
+  --soft-border: rgba(255, 255, 255, 0.287);
+  --soft-shadow: 0 8px 20px rgba(0,0,0,0.35);
+  --inset-highlight: rgba(255,255,255,0.02);
+}
+
+/* Smooth borders & anti-aliased rounded corners */
+
+.popup,
+.record_popup,
+.reason_popup
+ {
+  border-radius: 12px;                 /* smooth curvature */
+  background-clip: padding-box;       /* keeps border clean on rounded corners */
+  -webkit-background-clip: padding-box;
+  /*box-shadow: var(--soft-shadow), 0 1px 0 var(--inset-highlight) inset; */
+  border: 1px solid var(--soft-border); /* semi-transparent border looks smoother than opaque */
+  -webkit-font-smoothing: antialiased;
+  backface-visibility: hidden;
+  transform: translateZ(0);           /* promote to composite layer to reduce rendering artifacts */
+}
+
+
+
+/* Optional: tighter radius for tiny controls so corners stay crisp */
+
+
+/* If you still see jagged edges, avoid fractional pixel offsets (use whole px values)
+   and ensure devicePixelRatio isn't being scaled by transforms. */
+  
+/* claude */
+/* ===============================================
+   TASK ASSIGNMENT MODAL STYLES
+   Add this section to style1.css
+   =============================================== */
+
+/* Trigger Button in Sidebar */
+.assign-task-btn{
+    position:absolute;
+    
+}
+
+.assign-task-btn:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    transform: scale(1.3);
+}
+
+
+.assign-task-btn svg {
+    height: 60%;
+    width: 100%;
+    display: block;
+    object-fit: contain;
+}
+
+/* Modal Overlay */
+.assign-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+}
+
+.assign-modal-overlay.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Modal Container */
+.assign-modal {
+    background-color: rgb(245, 255, 131);
+    border: 3px solid rgb(0, 0, 0);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    padding: 30px;
+    position: relative;
+    
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    background-clip: padding-box;
+    -webkit-background-clip: padding-box;
+    -webkit-font-smoothing: antialiased;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+/* Modal Header */
+.assign-modal-header {
+    margin-bottom: 24px;
+}
+
+.assign-modal-title {
+    font-size: 22px;
+    font-weight: 500;
+    color: #000;
+    margin-bottom: 8px;
+    font-family: 'Roboto', sans-serif;
+}
+
+.assign-modal-subtitle {
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.7);
+    font-family: 'Roboto', sans-serif;
+}
+
+/* Close Button */
+.assign-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background-color: rgb(218, 62, 62);
+    border: none;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 18px;
+    color: white;
+    font-weight: bold;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Roboto', sans-serif;
+}
+
+.assign-modal-close:hover {
+    background-color: rgb(180, 40, 40);
+}
+
+/* Form Fields */
+.assign-form-group {
+    margin-bottom: 20px;
+}
+
+.assign-form-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #000;
+    margin-bottom: 8px;
+    font-family: 'Roboto', sans-serif;
+}
+
+.assign-form-input,
+.assign-form-textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    font-size: 16px;
+    font-family: 'Roboto', sans-serif;
+    background-color: rgba(255, 255, 255, 0.8);
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.assign-form-input:focus,
+.assign-form-textarea:focus {
+    outline: none;
+    border-color: rgb(0, 0, 0);
+    background-color: rgba(255, 255, 255, 1);
+}
+
+.assign-form-textarea {
+    resize: vertical;
+    min-height: 100px;
+    max-height: 200px;
+}
+
+.assign-form-input::placeholder,
+.assign-form-textarea::placeholder {
+    color: rgba(0, 0, 0, 0.4);
+}
+
+/* Validation Message */
+.assign-validation-message {
+    font-size: 12px;
+    color: rgb(218, 62, 62);
+    margin-top: 6px;
+    display: none;
+    font-family: 'Roboto', sans-serif;
+}
+
+.assign-validation-message.show {
+    display: block;
+}
+
+/* Modal Actions */
+.assign-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 30px;
+}
+
+.assign-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Roboto', sans-serif;
+    min-width: 80px;
+}
+
+.assign-btn-cancel {
+    background-color: rgb(218, 62, 62);
+    color: white;
+}
+
+.assign-btn-cancel:hover {
+    background-color: rgb(180, 40, 40);
+    transform: translateY(-2px);
+}
+
+.assign-btn-ok {
+    background-color: rgb(68, 255, 136);
+    color: #000;
+}
+
+.assign-btn-ok:hover:not(:disabled) {
+    background-color: rgb(40, 220, 100);
+    transform: translateY(-2px);
+}
+
+.assign-btn-ok:disabled {
+    background-color: rgba(68, 255, 136, 0.4);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Loading State */
+.assign-btn-ok.loading {
+    position: relative;
+    color: transparent;
+    pointer-events: none;
+}
+
+.assign-btn-ok.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-left: -8px;
+    margin-top: -8px;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .assign-modal {
+        padding: 20px;
+        width: 95%;
+    }
+
+    .assign-modal-title {
+        font-size: 20px;
+    }
+
+    .assign-modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .assign-btn {
+        width: 100%;
+    }
+}
+
+/* ===============================================
+   SWITCH EMPLOYEE MODAL STYLES
+   Add this section to style1.css
+   =============================================== */
+
+/* Modal Overlay */
+.switch-emp-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    animation: fadeIn 0.2s ease;
+}
+
+.switch-emp-modal-overlay.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Modal Container */
+.switch-emp-modal {
+    background-color: rgb(245, 255, 131);
+    border: 3px solid rgb(0, 0, 0);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 450px;
+    max-height: 80vh;
+    padding: 30px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    background-clip: padding-box;
+    -webkit-background-clip: padding-box;
+    -webkit-font-smoothing: antialiased;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    animation: slideIn 0.3s ease;
+}
+
+/* Modal Header */
+.switch-emp-modal-header {
+    margin-bottom: 20px;
+}
+
+.switch-emp-modal-title {
+    font-size: 22px;
+    font-weight: 500;
+    color: #000;
+    margin-bottom: 8px;
+    font-family: 'Roboto', sans-serif;
+}
+
+.switch-emp-modal-subtitle {
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.7);
+    font-family: 'Roboto', sans-serif;
+}
+
+/* Close Button */
+.switch-emp-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background-color: rgb(218, 62, 62);
+    border: none;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 18px;
+    color: white;
+    font-weight: bold;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Roboto', sans-serif;
+    z-index: 10;
+}
+
+.switch-emp-modal-close:hover {
+    background-color: rgb(180, 40, 40);
+}
+
+/* List Container */
+.switch-emp-list-container {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    min-height: 200px;
+    max-height: 400px;
+}
+
+.switch-emp-list-container::-webkit-scrollbar {
+    width: 10px;
+}
+
+.switch-emp-list-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+}
+
+.switch-emp-list-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 5px;
+}
+
+.switch-emp-list-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* Loading State */
+.switch-emp-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: rgba(0, 0, 0, 0.7);
+    font-family: 'Roboto', sans-serif;
+}
+
+.switch-emp-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+}
+
+/* Error State */
+.switch-emp-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: rgb(218, 62, 62);
+    font-family: 'Roboto', sans-serif;
+    text-align: center;
+}
+
+.switch-emp-retry-btn {
+    margin-top: 16px;
+    padding: 8px 20px;
+    background-color: rgb(68, 255, 136);
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Roboto', sans-serif;
+    transition: all 0.2s ease;
+}
+
+.switch-emp-retry-btn:hover {
+    background-color: rgb(40, 220, 100);
+    transform: translateY(-2px);
+}
+
+/* Empty State */
+.switch-emp-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: rgba(0, 0, 0, 0.6);
+    font-family: 'Roboto', sans-serif;
+    font-style: italic;
+}
+
+/* Employee List */
+.switch-emp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Employee Item */
+.switch-emp-item {
+    background-color: rgba(255, 255, 255, 0.6);
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Roboto', sans-serif;
+}
+
+.switch-emp-item:hover {
+    background-color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.4);
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.switch-emp-item:active {
+    transform: translateX(2px);
+}
+
+/* Current employee indicator */
+.switch-emp-item.current {
+    background-color: rgba(68, 255, 136, 0.3);
+    border-color: rgb(68, 255, 136);
+    cursor: default;
+}
+
+.switch-emp-item.current:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.switch-emp-item-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: #000;
+    margin-bottom: 4px;
+}
+
+.switch-emp-item-id {
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.6);
+}
+
+.switch-emp-item-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    background-color: rgb(68, 255, 136);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #000;
+}
+
+/* Modal Actions */
+.switch-emp-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 16px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.switch-emp-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Roboto', sans-serif;
+    min-width: 80px;
+}
+
+.switch-emp-btn-cancel {
+    background-color: rgb(218, 62, 62);
+    color: white;
+}
+
+.switch-emp-btn-cancel:hover {
+    background-color: rgb(180, 40, 40);
+    transform: translateY(-2px);
+}
+/* DEFAULT LAYOUT ACROSS ALL DEVICES */
+.rsidebar{
+  height:60px;
+  top:0;
+}
+
+.lsidebar{
+  top:50px;
+  width:55px;
+  height:calc(100vh - 50px);
+
+}
+
+/* Main content box */
+.cobox{
+  margin-top:60px;
+  margin-left:65px;
+  width:calc(100vw - 85px);
+  max-width:none;
+  height:auto;
+  max-height:unset;
+  overflow-x:hidden;
+  overflow-y:auto;
+}
+
+/* Task card layout */
+.container3{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  padding:10px;
+  border-radius:8px;
+  background:none;
+}
+
+/* Button row */
+.container3{
+  display: flex;
+  justify-content: space-between;   /* left + right separation */
+  align-items: center;
+  width: 100%;
+}
+
+.container2{
+  display: flex;
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: auto;
+}
+
+
+/* Responsive */
+@media (max-width: 600px) {
+    .switch-emp-modal {
+        padding: 20px;
+        width: 95%;
+        max-height: 90vh;
+    }
+
+    .switch-emp-modal-title {
+        font-size: 20px;
+    }
+
+    .switch-emp-item {
+        padding: 14px;
+    }
+
+    .switch-emp-item-name {
+        font-size: 15px;
+    }
+}
+
+.assign-task-btn,
+.createEmp,
+.switchEmp,
+.endDay {
+    position: static; /* or just remove position entirely */
+}
+
+.lsidebar {
+  position: fixed;
+  top: 60px;                    /* EXACTLY top bar height */
+  left: 0;
+  width: 60px;
+  height: calc(100vh - 60px);   /* fills precisely remaining space */
+    padding-top: 10px;
+  background:#1E1E1E;  
+  border-right: 1px solid var(--soft-border);
+  z-index: 999;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+
+.hidden {
+    display: none !important;
+}
+
+.container3.editing {
+    display:flex !important;
+    flex-direction:row !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    gap:8px !important;
+}
+.container3.editing .container2{
+    margin-left:auto !important;
+    display:flex !important;
+    align-items:center;
+    gap:8px;
+}
+
+
+/* Inline edit controls styling */
+.container3.editing .edit-input,
+.container3.editing .edit-start,
+.container3.editing .edit-end {
+    box-sizing: border-box;
+    font-family: 'Roboto', sans-serif;
+    font-size: 16px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background-color: rgba(255,255,255,0.04);
+    color: #f5f5f5;
+    outline: none;
+}
+
+/* Make the main text input flexible so it expands to the left side of the cobox */
+.container3.editing .edit-input {
+    flex: 1 1 60%;
+    min-width: 120px;
+    margin-right: 8px;
+}
+
+/* Start/end inputs should be smaller and sit next to the main input */
+.container3.editing .edit-start,
+.container3.editing .edit-end {
+    flex: 0 0 90px;
+    text-align: center;
+}
+
+/* When editing, ensure the controls container stays at the right */
+.container3.editing .container2 {
+    margin-left: auto; /* push controls to the far right */
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Focus styles for clarity */
+.container3.editing .edit-input:focus,
+.container3.editing .edit-start:focus,
+.container3.editing .edit-end:focus {
+    border-color: rgba(68,255,136,0.9);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+    background-color: rgba(255,255,255,0.06);
+}
+
+/* Smaller typography so the inline editor looks professional and compact */
+.container3 .taskText {
+    font-size: 15px;
+    color: white;
+}
+
+
+
+
+.draftPopup{
+    position:fixed;
+    width:400px;
+    height:300px;
+    display:flex;
+    justify-content: center;
+    align-items: center;
+    z-index:1000;
+    position:absolute;
+    border-radius:8px;
+    border:rgb(245, 255, 131) 3px solid;
+    background-color: rgb(245, 255, 131);
+    border:rgb(0, 0, 0) 3px solid;
+    font-size:18px;
+    font-family: 'Roboto', sans-serif;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    
+}
+/* ================= DRAFT POPUP ================= */
+.draft-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2000;
+}
+
+.draft-modal-overlay.active {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.draft-modal {
+  width: 420px;
+  background: #ffffff;
+  padding: 18px 22px;
+  border-radius: 10px;
+  box-shadow: 0 5px 25px rgba(0,0,0,0.25);
+  position: relative;
+  animation: popupFade 0.25s ease;
+}
+
+@keyframes popupFade {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.draft-modal-close {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.draft-title {
+  margin-top: 5px;
+  margin-bottom: 14px;
+  font-size: 24px;
+  color: #000;
+}
+
+.draft-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+  margin-top: 10px;
+  display: block;
+}
+
+.draft-input,
+.draft-textarea {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+.draft-textarea {
+  height: 120px;
+  resize: none;
+}
+
+.draft-actions {
+  margin-top: 15px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.draft-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+}
+
+.draft-cancel {
+  background: #bbb;
+}
+
+.draft-send {
+  background: rgb(68, 255, 136);
+  font-weight: bold;
+}
+.logout-btn{
+  padding:8px 14px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,0.25);
+  background:rgba(0,0,0,0.4);
+  color:white;
+  cursor:pointer;
+}
+.logout-btn:hover{
+  background:rgba(218,62,62,0.9);
+  transform:scale(1.05);
+}
+
+.container3{
+  display:flex;
+  justify-content:space-between; /* keep both sides fixed */
+  align-items:flex-start;
+  min-height:70px;
+  gap:16px;                      /* constant spacing */
+}
+
+/* Left text / editor area always takes space */
+.taskText{
+  flex:1;                        /* reserve width always */
+  min-height:40px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+/* Increase text size inside container3 */
+.container3 .taskText {
+  font-size: 20px;       /* increase character size */
+  font-weight: 400;
+  line-height: 1.6;      /* increases spacing between lines */
+  letter-spacing: 0.5px; /* slight spacing between characters */
+}
+
+/* Increase gap between task name and time line */
+.container3 .taskText br {
+  line-height: 2;
+}
+
+
+/* Right button column never shrinks or moves */
+.container2{
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  gap:8px;
+  flex-shrink:0;                  /* prevents squeezing */
+  width:60px;                     /* fixes its position */
+}
+
+
+/* profile btn */
+
+
+/* Push profile section to bottom */
+.lsidebar-bottom {
+  margin-top: auto;
+  padding: 12px;
+}
+
+/* Profile */
+.profile-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  bottom: 10px;   /* adjust spacing */
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.profile-icon {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: white;
+  color: #2f2f2f;
+  font-weight: bold;
+  font-size: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* Dropdown */
+.profile-dropdown {
+  position: absolute;
+  bottom: 60px;
+  width: 230px;
+  padding: 12px;
+  border-radius: 10px;
+  background: white;
+  color: black;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+  display: none;
+  z-index: 10;
+}
+
+.profile-name { font-weight: bold; margin-bottom: 5px; }
+.profile-id, .profile-email {
+  font-size: 13px;
+  color: #555;
+}
+
+.profile-dropdown .logout-btn {
+  margin-top: 10px;
+  width: 100%;
+  padding: 7px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: #ff4747;
+  color: white;
+}
+.profile-dropdown .logout-btn:hover {
+  background: #d93b3b;
+}
+
+.profile-dropdown{
+  position: fixed;
+  bottom: 80px;
+  left: 70px;
+  z-index: 5000;
+}
+
+
+.profile-icon{
+  cursor: pointer;
+}
+
+.profile-dropdown{
+  position: fixed;
+  bottom: 80px;
+  left: 70px;
+  width: 230px;
+  padding: 12px;
+  border-radius: 10px;
+  background: white;
+  color: black;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+  display: none;
+  z-index: 99999;
+}
+
+.profile-dropdown.show{
+  display: block;
+}
+
+.rsidebar .assign{
+  align-items:center;
+  justify-content:center;
+}
+
+.rsidebar{
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items:center;
+}
+
+/* Center buttons (middle column) */
+.assign{
+  grid-column:2;
+  justify-content:center;
+}
+
+/* Push employee info to far right */
+.empBarInfo{
+  grid-column:3;
+  justify-self:end;
+  margin-right:0;     /* remove your override */
+}
+
+@media (max-width: 900px){
+  .cobox{
+    width: 78vw;
+    margin-left: 80px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@media (max-width: 600px){
+
+  .rsidebar{
+     height:50px;
+  }
+
+  .lsidebar{
+     width:50px;
+     top:50px;
+     height: calc(100vh - 50px);
+  }
+
+  .cobox{
+    margin-left: 60px;
+    margin-top: 65px;
+    width: 85vw;
+  }
+
+  .container2{
+    flex-direction: row;
+    width: auto;
+  }
+}
+
+@media (max-width: 768px){
+
+  .rsidebar{
+     height:50px;
+     top:0;
+  }
+
+  .lsidebar{
+     top:50px;
+     width:55px;
+     height:calc(100vh - 50px);
+        /* IMPORTANT */
+  }
+
+  .cobox{
+     margin-top:60px;          /* space for top bar */
+     margin-left:65px;         /* space for sidebar */
+     width:calc(100vw - 85px); /* fits perfectly */
+     max-width:none;
+  }
+
+  .empBarInfo{
+    max-width: 70vw;
+    
+    
+    text-overflow: ellipsis;
+  }
+}
+@media (max-width: 768px){
+
+  .cobox{
+    width: 88vw;
+    margin-left: 65px;
+    margin-top: 60px;
+    height: auto;
+    max-height: unset;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .container3{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 10px;
+    border-radius: 8px;
+    background: none;
+  }
+
+  .container2{
+    flex-direction: row;
+    justify-content: flex-end;
+    width: 100%;
+  }
+}
+@media(max-width:768px){
+  .profile-dropdown{
+    left: 60px;
+    bottom: 90px;
+    transform:none;
+    width: 220px;
+  }
+}
+
+
+.lsidebar-bottom{
+  padding-bottom:10px;
+}
+
+
+html, body {
+  overflow-x: hidden;
+}
+
+
+/* FINAL OVERRIDE — KEEP BUTTONS RIGHT + HORIZONTAL */
+.container3{
+  display:flex !important;
+  flex-direction:row !important;
+  justify-content:space-between !important;
+  align-items:center !important;
+}
+
+.container2{
+  display:flex !important;
+  flex-direction:row !important;
+  gap:10px !important;
+  margin-left:auto !important;   /* pushes to right */
+  width:auto !important;         /* remove fixed width */
+}
+.cobox{
+  margin-top: 10px;
+}
+.task {
+  position: relative;
+  top: unset;
+}
+
+.time {
+  position: relative;
+  top: unset;
+}
+.rsidebar{
+  display:grid;
+  grid-template-columns: 1fr auto auto 1fr;
+  align-items:center;
+}
+
+/* Assign buttons group */
+.assign{
+  grid-column:2;
+}
+
+/* Draft button */
+.draft{
+  grid-column:3;
+  position: static !important;
+  align-self:center;
+  justify-self:center;
+}
+
+/* Employee info */
+.empBarInfo{
+  grid-column:4;
+  justify-self:end;
+}
+.container3{
+ 
+
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    background .18s ease;
+}
+/* container3tasktext */
+.container3:hover{
+  transform: translateY(-3px);
+  
+  background:none;
+}
+.container3 .taskText{
+  color:white;
+}
+
+.container3 .taskText span{
+  color:#555;
+}
+
+/* MAIN CONTENT PANEL */
+.cobox{
+  margin-top: 10px;
+  background:none;            /* soft panel layer */
+  border: none;
+  padding:22px;
+  padding-right: 42px;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.3);
+}
+
+/* TASK CARD */
+.container3{         /* clean card white */
+  border-radius:12px;
+  padding:16px 18px;
+
+  border:1px solid white;    /* clear separation */
+  box-shadow:none;                        /* remove cheap depth */
+
+  transition:
+    transform .18s ease,
+    background .18s ease,
+    border-color .18s ease;
+}
+
+/* CARD HOVER (subtle elegance, not drama) */
+.container3:hover{
+  transform: translateY(-2px);
+  lighting-color: 1.1;
+}
+
+
+.delete-button,
+.update-button,
+.completed-button{
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  font-weight: bold;
+  color: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-button{ background:#ff6b6b; }
+.update-button{ background:#6ecbff; }
+.completed-button{ background:#6dffa1; }
+
+.delete-button:hover,
+.update-button:hover,
+.completed-button:hover{
+  transform: scale(1.1);
+
+}
+
+/* MAKE COBOX INVISIBLE */
+.cobox{
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+
+/* 🔥 Force BLACK text inside inputs + textareas */
+.edit-start,.edit-end,.edit-input{
+  color: #000 !important;
+  background: #ffffff !important;
+  border: 1px solid #444;
+}
+
+
+
+/* Base icon action button */
+.action-btn{
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0,0.8);
+  background: rgba(255,255,255,0.08);
+
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  cursor:pointer;
+  transition: .2s ease;
+}
+
+/* Hover – subtle glow */
+.action-btn:hover{
+  transform: translateY(-2px);
+
+}
+
+/* Individual meaning colors */
+.delete-button{
+
+
+  background:#ff4d4d;
+}
+
+.completed-button{
+
+  background:#42d98d;
+}
+
+.update-button{
+
+  background:#4aa9ff;
+}
+
+/* Icon inside buttons */
+.action-btn svg {
+  width: 18px;
+  height: 18px;
+
+}
+.action-btn,
+.action-btn svg{
+  transform: translateZ(0);
+  image-rendering: crisp-edges;
+}
+.completed-button{
+  background:#42d98d !important;
+
+}
+.completed-button{
+  -webkit-backface-visibility:hidden;
+  transform: translateZ(0);
+}
+
+.inbox-card{
+  background: none !important;
+  color: #ffffff !important;
+  border: 1px solid rgb(255, 255, 255) !important;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 20px;
+}
+
+.inbox-card strong{
+  color:#ffffff !important;
+}
+
+.inbox-card span{
+  color:#bbbbbb !important;
+}
+
+.inbox-card div{
+  color:#ffffff !important;
+}
+
+.sidebar-btn img {
+  width: 100%;
+  height: 60%;
 }
