@@ -1,5 +1,5 @@
 import "./globals.css";
-import {LeftSideBar} from "../components/LeftSideBar";
+import {LeftSideBar} from "../components/LeftSideBar/LeftSideBar";
 
 export const metadata = {
   title: "Task Manager",
