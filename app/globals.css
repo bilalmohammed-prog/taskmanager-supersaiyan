@@ -1297,12 +1297,7 @@ body{
   top:0;
 }
 
-.lsidebar{
-  top:50px;
-  width:55px;
-  height:calc(100vh - 50px);
 
-}
 
 /* Main content box */
 .cobox{
@@ -1372,22 +1367,7 @@ body{
     position: static; /* or just remove position entirely */
 }
 
-.lsidebar {
-  position: fixed;
-  top: 60px;                    /* EXACTLY top bar height */
-  left: 0;
-  width: 60px;
-  height: calc(100vh - 60px);   /* fills precisely remaining space */
-    padding-top: 10px;
-  background:#1E1E1E;  
-  border-right: 1px solid var(--soft-border);
-  z-index: 999;
 
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
 
 
 .hidden {
@@ -1634,10 +1614,7 @@ body{
 
 
 /* Push profile section to bottom */
-.lsidebar-bottom {
-  margin-top: auto;
-  padding: 12px;
-}
+
 
 /* Profile */
 .profile-wrapper {
@@ -1764,11 +1741,7 @@ body{
      height:50px;
   }
 
-  .lsidebar{
-     width:50px;
-     top:50px;
-     height: calc(100vh - 50px);
-  }
+  
 
   .cobox{
     margin-left: 60px;
@@ -1789,12 +1762,7 @@ body{
      top:0;
   }
 
-  .lsidebar{
-     top:50px;
-     width:55px;
-     height:calc(100vh - 50px);
-        /* IMPORTANT */
-  }
+  
 
   .cobox{
      margin-top:60px;          /* space for top bar */
@@ -1847,9 +1815,7 @@ body{
 }
 
 
-.lsidebar-bottom{
-  padding-bottom:10px;
-}
+
 
 
 html, body {

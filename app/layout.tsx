@@ -1,4 +1,5 @@
 import "./globals.css";
+import {LeftSideBar} from "../components/LeftSideBar";
 
 export const metadata = {
   title: "Task Manager",
@@ -9,6 +10,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+      
         {/* GOOGLE FONT */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
@@ -19,8 +21,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
 
       <body>
+        <LeftSideBar />
         {children}
       </body>
     </html>
   );
 }
+
+// children is the changing part of the UI (dont alter it)

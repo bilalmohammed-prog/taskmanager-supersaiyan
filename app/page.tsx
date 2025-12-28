@@ -103,69 +103,7 @@ export default function Page() {
     </div>
 
 
-    <div className="lsidebar">
-        {/* <!-- <div className="record"> --> */}
-        {/* <!-- <button className="sidebar-btn record_btn"> --> */}
-            {/* <!-- <svg viewBox="0 0 32 32" data-name="Layer 1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" fill="#ffffff" stroke="#ffffff"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><defs><style>.cls-1{fill:rgb(245, 241, 237);;}</style></defs><title></title><path className="cls-1" d="M26.66,9.63a.25.25,0,0,1,0-.07,4.28,4.28,0,0,0-.79-1.15L20.59,3.17A4,4,0,0,0,17.76,2H8A3,3,0,0,0,5,5V27a3,3,0,0,0,3,3H24a3,3,0,0,0,3-3V11.24A4,4,0,0,0,26.66,9.63ZM20,5.41,23.59,9H21a1,1,0,0,1-1-1ZM25,27a1,1,0,0,1-1,1H8a1,1,0,0,1-1-1V5A1,1,0,0,1,8,4h9.76L18,4V8a3,3,0,0,0,3,3h4a1.94,1.94,0,0,1,0,.24Z"></path><path className="cls-1" d="M12.29,19.29,11,20.59l-.29-.3a1,1,0,0,0-1.42,1.42l1,1a1,1,0,0,0,1.42,0l2-2a1,1,0,0,0-1.42-1.42Z"></path><path className="cls-1" d="M12.29,13.29,11,14.59l-.29-.3a1,1,0,0,0-1.42,1.42l1,1a1,1,0,0,0,1.42,0l2-2a1,1,0,0,0-1.42-1.42Z"></path><path className="cls-1" d="M22,14H17a1,1,0,0,0,0,2h5a1,1,0,0,0,0-2Z"></path><path className="cls-1" d="M22,20H17a1,1,0,0,0,0,2h5a1,1,0,0,0,0-2Z"></path></g></svg> --> */}
-            {/* <!-- <span className="tooltip">Record</span> --> */}
-        {/* <!-- </button> --> */}
-        {/* <!-- </div> --> */}
-        <button className="sidebar-btn managerAccess">
-            <span className="tooltip">Team Tasks</span>
-            {/* TeamTasks SVG */}
-            <Image
-            src="/svg/teamtasks.svg"
-            alt="Team Tasks icon"
-            width={32}
-            height={32}
-          />
-        </button>
-        <button className="sidebar-btn empAccess">
-            {/* Tasks */}
-            <Image
-            src="/svg/tasks.svg"
-            alt="Team Tasks icon"
-            width={32}
-            height={32}
-          />
-            <span className="tooltip">Tasks</span>
-            
-        </button>
-        <button className="sidebar-btn inbox">
-            {/* inbox */}
-            <Image
-            src="/svg/inbox.svg"
-            alt="Inbox icon"
-            width={32}
-            height={32}
-          />
-            <span className="tooltip">Inbox</span>
-        </button>
-        <button className="sidebar-btn progress">
-            <Image
-            src="/svg/progress.svg"
-            alt="Inbox icon"
-            width={32}
-            height={32}
-          />
-            <span className="tooltip">Progress</span>
-        </button>
-
-        {/* <!-- profile btn --> */}
-         <div className="lsidebar-bottom">
-
-  <div className="profile-wrapper">
-      <div className="profile-icon">
-        <span id="profileInitial">U</span>
-      </div>
-
-      
-  </div>
-
-</div>
-
-
-    </div>
+    
 
 
     <div className="assign-modal-overlay" id="assignModalOverlay">

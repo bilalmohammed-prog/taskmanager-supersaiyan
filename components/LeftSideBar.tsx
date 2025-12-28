@@ -1,0 +1,68 @@
+"use client";
+
+
+import Image from "next/image";
+import "./LeftSideBar.css";
+
+export function LeftSideBar(){
+    return (
+        <div className="lsidebar">
+        
+        <button className="sidebar-btn managerAccess">
+            <span className="tooltip">Team Tasks</span>
+            {/* TeamTasks SVG */}
+            <Image
+            src="/svg/teamtasks.svg"
+            alt="Team Tasks icon"
+            width={32}
+            height={32}
+          />
+        </button>
+        <button className="sidebar-btn empAccess">
+            {/* Tasks */}
+            <Image
+            src="/svg/tasks.svg"
+            alt="Team Tasks icon"
+            width={32}
+            height={32}
+          />
+            <span className="tooltip">Tasks</span>
+            
+        </button>
+        <button className="sidebar-btn inbox">
+            {/* inbox */}
+            <Image
+            src="/svg/inbox.svg"
+            alt="Inbox icon"
+            width={32}
+            height={32}
+          />
+            <span className="tooltip">Inbox</span>
+        </button>
+        <button className="sidebar-btn progress">
+            <Image
+            src="/svg/progress.svg"
+            alt="Inbox icon"
+            width={32}
+            height={32}
+          />
+            <span className="tooltip">Progress</span>
+        </button>
+
+        {/* <!-- profile btn --> */}
+         <div className="lsidebar-bottom">
+
+  <div className="profile-wrapper">
+      <div className="profile-icon">
+        <span id="profileInitial">U</span>
+      </div>
+
+      
+  </div>
+
+</div>
+
+
+    </div>
+    );
+}
