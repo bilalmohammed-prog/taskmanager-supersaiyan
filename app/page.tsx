@@ -1,11 +1,17 @@
 "use client";
 
 import TopBar from "../components/TopBar/TopBar";
+import { useState } from "react";
+
+
 
 export default function Page() {
+
+  
+
   return (
     <>
-    <TopBar section="progress"/>
+    
       <div>
     <div className="overlay"></div>
     <div className="popup">
