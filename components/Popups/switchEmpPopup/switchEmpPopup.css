@@ -311,3 +311,22 @@
 .switch-emp-list-container {
   padding-right: 6px;
 }
+
+.switch-emp-card.selected {
+  background-color: rgba(68, 255, 136, 0.35);
+  border: 2px solid rgb(68, 255, 136);
+}
+
+.switch-emp-card.selected:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.empBarInfo {
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform: translateY(-50%);
+}
+
+

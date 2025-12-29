@@ -9,7 +9,16 @@ type Employee = {
 };
 
 
-export default function SwitchEmpPopup({ onClose }: { onClose: () => void }) {
+export default function SwitchEmpPopup({
+  onClose,
+  onSelect,
+  selectedEmpID
+}: {
+  onClose: () => void;
+  onSelect: (emp: { name: string; empID: string }) => void;
+  selectedEmpID: string | null;
+}) {
+
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -25,7 +34,8 @@ export default function SwitchEmpPopup({ onClose }: { onClose: () => void }) {
     }
   }
 
-  function choose(empID: string) {
+  function choose(empID: string, name: string) {
+    onSelect({ empID, name });
     console.log("Switched to employee:", empID);
     // TODO: save employee in global state OR context
     onClose();
@@ -70,22 +80,20 @@ export default function SwitchEmpPopup({ onClose }: { onClose: () => void }) {
 
   {!loading && employees.length > 0 && (
     <div className="switch-emp-grid">
-      {employees.map(e => (
-        <div
-          key={e.empID}
-          className="switch-emp-card"
-          onClick={() => choose(e.empID)}
-        >
-          <div className="switch-emp-card-name">
-            {e.name || "Unnamed Employee"}
-          </div>
-
-          <div className="switch-emp-card-id">
-            ID: {e.empID}
-          </div>
-        </div>
-      ))}
+  {employees.map(e => (
+    <div
+      key={e.empID}
+      className={`switch-emp-card ${
+        selectedEmpID === e.empID ? "selected" : ""
+      }`}
+      onClick={() => onSelect({ empID: e.empID, name: e.name })}
+    >
+      <div className="switch-emp-card-name">{e.name}</div>
+      <div className="switch-emp-card-id">ID: {e.empID}</div>
     </div>
+  ))}
+</div>
+
   )}
 
 </div>

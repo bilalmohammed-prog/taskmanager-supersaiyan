@@ -12,13 +12,26 @@ type Props = {
 export default function TopBar({ section }: Props) {
 
     const [showPopup, setShowPopup] = useState(false);
+    const [selectedEmp, setSelectedEmp] = useState<{
+  name: string;
+  empID: string;
+} | null>(null);
+
 
   if (section === "teamTasks")
     return (
       <>
         {showPopup && (
-          <SwitchEmpPopup onClose={() => setShowPopup(false)} />
-        )}
+  <SwitchEmpPopup
+    onClose={() => setShowPopup(false)}
+    onSelect={(emp) => {
+      setSelectedEmp(emp);
+      setShowPopup(false);
+    }}
+    selectedEmpID={selectedEmp?.empID || null}
+  />
+)}
+
 
         <div className="rsidebar">
           <div className="assign">
@@ -46,8 +59,13 @@ export default function TopBar({ section }: Props) {
           </div>
 
           <div className="empBarInfo">
-            <span className="empDisplay"></span>
-          </div>
+  <span className="empDisplay">
+    {selectedEmp
+      ? `${selectedEmp.name} (${selectedEmp.empID})`
+      : "No employee selected"}
+  </span>
+</div>
+
         </div>
       </>
     );
