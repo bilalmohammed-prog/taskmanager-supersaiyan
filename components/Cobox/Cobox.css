@@ -1,0 +1,506 @@
+.cobox{
+    background-color: transparent;
+    padding: 10px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 20px;
+    padding-right:40px;
+    padding-left:40px;
+    height:500px;
+    width:700px;
+    overflow-y: scroll;
+    max-height: 500px;
+    scroll-behavior: smooth;
+    color:#ffffff;
+    display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.cobox,
+.container3
+ {
+    word-break: break-all;  /* Breaks at any character, more aggressive */
+    overflow-wrap: break-word;
+}
+
+.cobox{
+  position: relative;
+  margin-left: 100px;   /* space for sidebar */
+  margin-top: 20px;     /* space for top bar */
+  width: 60vw;
+  max-width: 900px;
+  height: auto;
+  max-height: 70vh;
+}
+
+.obj{
+    font-family: 'Roboto', sans-serif;
+}
+.container3 {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+/* Task text on the left */
+.container3 .taskText {
+    flex: 1;              
+    min-width: 0;         
+    word-break: break-word;
+}
+
+/* Buttons container */
+.container2 {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-shrink: 0;      
+}
+
+
+
+
+.popupContainer
+ {
+    word-break: break-all;  /* Breaks at any character, more aggressive */
+    overflow-wrap: break-word;
+}
+
+
+/* Custom scrollbar for .cobox */
+.cobox::-webkit-scrollbar {
+    width: 10px;
+    border-radius: 8px;
+}
+
+.delete-button {
+    width:20px;
+    height:20px;
+    background-color:rgb(255, 137, 137);
+    cursor: pointer;
+    
+    padding:2px;
+}
+.completed-button {
+    width:20px;
+    height:20px;
+    background-color: rgb(149, 255, 188);
+    cursor: pointer;
+    
+    padding:2px;
+    padding-bottom: 2px;
+}
+
+.update-button {
+    width:20px;
+    height:20px;
+    background-color: rgb(135, 206, 250);
+    cursor: pointer;
+    
+    padding:2px;
+    padding-bottom: 2px;
+}
+
+.delete-button:hover {
+    background-color: rgb(218, 62, 62);
+
+}
+.completed-button:hover{
+    background-color: rgb(68, 255, 136);
+
+}
+.update-button:hover{
+    background-color: rgb(88, 180, 255);
+}
+
+.checkbox{
+    
+    width:30px;
+    height:30px;
+    border:rgba(0, 0, 0,0.8) 1px solid;
+}
+
+.cobox{
+  margin-top:60px;
+  margin-left:65px;
+  width:calc(100vw - 85px);
+  max-width:none;
+  height:auto;
+  max-height:unset;
+  overflow-x:hidden;
+  overflow-y:auto;
+}
+
+/* Task card layout */
+.container3{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  padding:10px;
+  border-radius:8px;
+  background:none;
+}
+
+/* Button row */
+.container3{
+  display: flex;
+  justify-content: space-between;   /* left + right separation */
+  align-items: center;
+  width: 100%;
+}
+
+.container2{
+  display: flex;
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: auto;
+}
+
+.container3.editing {
+    display:flex !important;
+    flex-direction:row !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    gap:8px !important;
+}
+.container3.editing .container2{
+    margin-left:auto !important;
+    display:flex !important;
+    align-items:center;
+    gap:8px;
+}
+
+
+/* Inline edit controls styling */
+.container3.editing .edit-input,
+.container3.editing .edit-start,
+.container3.editing .edit-end {
+    box-sizing: border-box;
+    font-family: 'Roboto', sans-serif;
+    font-size: 16px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background-color: rgba(255,255,255,0.04);
+    color: #f5f5f5;
+    outline: none;
+}
+
+/* Make the main text input flexible so it expands to the left side of the cobox */
+.container3.editing .edit-input {
+    flex: 1 1 60%;
+    min-width: 120px;
+    margin-right: 8px;
+}
+
+/* Start/end inputs should be smaller and sit next to the main input */
+.container3.editing .edit-start,
+.container3.editing .edit-end {
+    flex: 0 0 90px;
+    text-align: center;
+}
+
+/* When editing, ensure the controls container stays at the right */
+.container3.editing .container2 {
+    margin-left: auto; /* push controls to the far right */
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Focus styles for clarity */
+.container3.editing .edit-input:focus,
+.container3.editing .edit-start:focus,
+.container3.editing .edit-end:focus {
+    border-color: rgba(68,255,136,0.9);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+    background-color: rgba(255,255,255,0.06);
+}
+
+/* Smaller typography so the inline editor looks professional and compact */
+.container3 .taskText {
+    font-size: 15px;
+    color: white;
+}
+
+@media (max-width: 900px){
+  .cobox{
+    width: 78vw;
+    margin-left: 80px;
+  }
+}
+
+@media (max-width: 600px){
+
+  
+
+  
+
+  .cobox{
+    margin-left: 60px;
+    margin-top: 65px;
+    width: 85vw;
+  }
+
+  .container2{
+    flex-direction: row;
+    width: auto;
+  }
+}
+
+@media (max-width: 768px){
+
+  
+
+  
+
+  .cobox{
+     margin-top:60px;          /* space for top bar */
+     margin-left:65px;         /* space for sidebar */
+     width:calc(100vw - 85px); /* fits perfectly */
+     max-width:none;
+  }
+
+  .empBarInfo{
+    max-width: 70vw;
+    
+    
+    text-overflow: ellipsis;
+  }
+}
+@media (max-width: 768px){
+
+  .cobox{
+    width: 88vw;
+    margin-left: 65px;
+    margin-top: 60px;
+    height: auto;
+    max-height: unset;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .container3{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 10px;
+    border-radius: 8px;
+    background: none;
+  }
+
+  .container2{
+    flex-direction: row;
+    justify-content: flex-end;
+    width: 100%;
+  }
+}
+
+.container3{
+  display:flex !important;
+  flex-direction:row !important;
+  justify-content:space-between !important;
+  align-items:center !important;
+}
+
+.container2{
+  display:flex !important;
+  flex-direction:row !important;
+  gap:10px !important;
+  margin-left:auto !important;   /* pushes to right */
+  width:auto !important;         /* remove fixed width */
+}
+.cobox{
+  margin-top: 10px;
+}
+.task {
+  position: relative;
+  top: unset;
+}
+
+.time {
+  position: relative;
+  top: unset;
+}
+
+.container3{
+ 
+
+  transition:
+    transform .18s ease,
+    box-shadow .18s ease,
+    background .18s ease;
+}
+/* container3tasktext */
+.container3:hover{
+  transform: translateY(-3px);
+  
+  background:none;
+}
+.container3 .taskText{
+  color:white;
+}
+
+.container3 .taskText span{
+  color:#555;
+}
+
+/* MAIN CONTENT PANEL */
+.cobox{
+  margin-top: 10px;
+  background:none;            /* soft panel layer */
+  border: none;
+  padding:22px;
+  padding-right: 42px;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.3);
+}
+
+/* TASK CARD */
+.container3{         /* clean card white */
+  border-radius:12px;
+  padding:16px 18px;
+
+  border:1px solid white;    /* clear separation */
+  box-shadow:none;                        /* remove cheap depth */
+
+  transition:
+    transform .18s ease,
+    background .18s ease,
+    border-color .18s ease;
+}
+
+/* CARD HOVER (subtle elegance, not drama) */
+.container3:hover{
+  transform: translateY(-2px);
+  lighting-color: 1.1;
+}
+
+
+.delete-button,
+.update-button,
+.completed-button{
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  font-weight: bold;
+  color: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-button{ background:#ff6b6b; }
+.update-button{ background:#6ecbff; }
+.completed-button{ background:#6dffa1; }
+
+.delete-button:hover,
+.update-button:hover,
+.completed-button:hover{
+  transform: scale(1.1);
+
+}
+
+/* MAKE COBOX INVISIBLE */
+.cobox{
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+
+/* 🔥 Force BLACK text inside inputs + textareas */
+.edit-start,.edit-end,.edit-input{
+  color: #000 !important;
+  background: #ffffff !important;
+  border: 1px solid #444;
+}
+
+
+
+/* Base icon action button */
+.action-btn{
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0,0.8);
+  background: rgba(255,255,255,0.08);
+
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  cursor:pointer;
+  transition: .2s ease;
+}
+
+/* Hover – subtle glow */
+.action-btn:hover{
+  transform: translateY(-2px);
+
+}
+
+/* Individual meaning colors */
+.delete-button{
+
+
+  background:#ff4d4d;
+}
+
+.completed-button{
+
+  background:#42d98d;
+}
+
+.update-button{
+
+  background:#4aa9ff;
+}
+
+/* Icon inside buttons */
+.action-btn svg {
+  width: 18px;
+  height: 18px;
+
+}
+.action-btn,
+.action-btn svg{
+  transform: translateZ(0);
+  image-rendering: crisp-edges;
+}
+.completed-button{
+  background:#42d98d !important;
+
+}
+.completed-button{
+  -webkit-backface-visibility:hidden;
+  transform: translateZ(0);
+}
+
+.inbox-card{
+  background: none !important;
+  color: #ffffff !important;
+  border: 1px solid rgb(255, 255, 255) !important;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 20px;
+}
+
+.inbox-card strong{
+  color:#ffffff !important;
+}
+
+.inbox-card span{
+  color:#bbbbbb !important;
+}
+
+.inbox-card div{
+  color:#ffffff !important;
+}
