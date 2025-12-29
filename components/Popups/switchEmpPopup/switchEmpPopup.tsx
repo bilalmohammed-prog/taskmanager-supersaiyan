@@ -5,6 +5,7 @@ import {useState, useEffect} from "react";
 
 type Employee = {
   empID: string;
+  name:string;
 };
 
 
@@ -47,39 +48,49 @@ export default function SwitchEmpPopup({ onClose }: { onClose: () => void }) {
             <h2 className="switch-emp-modal-title" id="switchEmpModalTitle">Select Employee</h2>
             
 
-        {loading && <p>Loading...</p>}
-
-        {!loading && employees.map((e) =>
-          <button
-            key={e.empID}
-            className="switch-emp-item"
-            onClick={() => choose(e.empID)}
-          >
-            {e.empID}
-          </button>
-        )}
-            <p className="switch-emp-modal-subtitle">Choose an employee to switch to</p>
+        
+            
         </div>
 
         {/* <!-- Employee List Container --> */}
-        <div className="switch-emp-list-container" id="switchEmpListContainer">
-            {/* <!-- Loading state --> */}
-            <div className="switch-emp-loading" id="switchEmpLoading">
-                <div className="switch-emp-spinner"></div>
-                <p>Loading employees...</p>
-            </div>
+        <div className="switch-emp-list-container">
 
-            {/* <!-- Error state --> */}
-            <div className="switch-emp-error" id="switchEmpError" style={{display: "none"}}>
-                <p>Failed to load employees. Please try again.</p>
-                <button className="switch-emp-retry-btn" id="switchEmpRetryBtn">Retry</button>
-            </div>
+  {loading && (
+    <div className="switch-emp-loading">
+      <div className="switch-emp-spinner"></div>
+      <p>Loading employees...</p>
+    </div>
+  )}
 
-            {/* <!-- Employee list (dynamically populated) --> */}
-            <div className="switch-emp-list" id="switchEmpList">
-                {/* <!-- Employee items will be inserted here dynamically --> */}
-            </div>
+  {!loading && employees.length === 0 && (
+    <div className="switch-emp-empty">
+      <p>No employees found</p>
+    </div>
+  )}
+
+  {!loading && employees.length > 0 && (
+    <div className="switch-emp-grid">
+      {employees.map(e => (
+        <div
+          key={e.empID}
+          className="switch-emp-card"
+          onClick={() => choose(e.empID)}
+        >
+          <div className="switch-emp-card-name">
+            {e.name || "Unnamed Employee"}
+          </div>
+
+          <div className="switch-emp-card-id">
+            ID: {e.empID}
+          </div>
         </div>
+      ))}
+    </div>
+  )}
+
+</div>
+
+
 
             {/* <!-- Inbox Modal --> */}
             <div className="inbox-modal-overlay" id="inboxModalOverlay" style={{display:"none", position:"fixed", inset:"0", background:"rgba(0,0,0,0.5)", zIndex:"1000"}}>
@@ -108,11 +119,6 @@ export default function SwitchEmpPopup({ onClose }: { onClose: () => void }) {
         {/* <!-- Empty state --> */}
         <div className="switch-emp-empty" id="switchEmpEmpty" style={{display: "none"}}>
             <p>No employees found</p>
-        </div>
-
-        {/* <!-- Action Buttons --> */}
-        <div className="switch-emp-modal-actions">
-            <button type="button" className="switch-emp-btn switch-emp-btn-cancel" id="switchEmpCancelBtn">Cancel</button>
         </div>
     </div>
 </div>

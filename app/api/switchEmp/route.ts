@@ -2,10 +2,22 @@ import { connectDB } from "@/lib/mongoose";
 import Emp from "@/models/employeesModel";
 
 export async function GET() {
-  await connectDB();
+  try {
+    await connectDB();
 
-  // however you determine employee list
-  const employees = await Emp.find().select("empID");
-console.log(employees);
-  return Response.json({ employees });
+    const employees = await Emp
+      .find({ status: "active" })        // optional filter
+      .select("name empID -_id")         // only return what UI needs
+      .lean();
+
+    return Response.json({ employees });
+  } 
+  catch (err) {
+    console.error("SwitchEmp API error:", err);
+    return Response.json(
+      { error: "Failed to load employees" },
+      { status: 500 }
+    );
+  }
 }
+

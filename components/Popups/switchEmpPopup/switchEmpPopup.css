@@ -98,18 +98,16 @@
 }
 
 .switch-emp-list-container::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0);
     border-radius: 5px;
 }
 
 .switch-emp-list-container::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0);
     border-radius: 5px;
 }
 
-.switch-emp-list-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.5);
-}
+
 
 /* Loading State */
 .switch-emp-loading {
@@ -265,4 +263,51 @@
 .switch-emp-btn-cancel:hover {
     background-color: rgb(180, 40, 40);
     transform: translateY(-2px);
+}
+
+/* ===== GRID LAYOUT ===== */
+.switch-emp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+/* ===== CARD ===== */
+.switch-emp-card {
+  background: white;
+  border: 2px solid rgba(0,0,0,0.25);
+  border-radius: 10px;
+  padding: 14px 16px;
+    margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+/* Hover effects (professional feel) */
+.switch-emp-card:hover {
+  transform: translateY(-3px);
+  border-color: black;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.25);
+}
+
+/* ===== NAME ===== */
+.switch-emp-card-name {
+  font-size: 17px;
+  font-weight: 500;
+  color: black;
+}
+
+/* ===== EMPLOYEE ID TEXT ===== */
+.switch-emp-card-id {
+  font-size: 13px;
+  color: rgba(0,0,0,0.6);
+}
+
+/* Scroll container improvements */
+.switch-emp-list-container {
+  padding-right: 6px;
 }
