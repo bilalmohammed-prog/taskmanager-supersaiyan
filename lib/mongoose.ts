@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI as string;
+const MONGODB_URI = process.env.uri as string;
 
 if (!MONGODB_URI) {
   throw new Error("Please add MONGODB_URI to .env file");

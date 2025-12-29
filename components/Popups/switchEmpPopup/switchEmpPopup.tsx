@@ -1,9 +1,39 @@
 "use client";
 
 import "./switchEmpPopup.css";
+import {useState, useEffect} from "react";
+
+type Employee = {
+  empID: string;
+};
 
 
 export default function SwitchEmpPopup({ onClose }: { onClose: () => void }) {
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [loading, setLoading] = useState(true);
+
+  async function loadEmployees() {
+    try {
+      const res = await fetch("/api/switchEmp");
+      const data = await res.json();
+      setEmployees(data.employees);
+    } catch (err) {
+      console.error("Failed to load employees", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function choose(empID: string) {
+    console.log("Switched to employee:", empID);
+    // TODO: save employee in global state OR context
+    onClose();
+  }
+
+  useEffect(() => {
+    loadEmployees();
+  }, []);
+
     return (
   <div className="switch-emp-modal-overlay active" id="switchEmpModalOverlay">
     <div className="switch-emp-modal" role="dialog" aria-labelledby="switchEmpModalTitle" aria-modal="true">
@@ -15,6 +45,19 @@ export default function SwitchEmpPopup({ onClose }: { onClose: () => void }) {
         {/* <!-- Modal Header --> */}
         <div className="switch-emp-modal-header">
             <h2 className="switch-emp-modal-title" id="switchEmpModalTitle">Select Employee</h2>
+            
+
+        {loading && <p>Loading...</p>}
+
+        {!loading && employees.map((e) =>
+          <button
+            key={e.empID}
+            className="switch-emp-item"
+            onClick={() => choose(e.empID)}
+          >
+            {e.empID}
+          </button>
+        )}
             <p className="switch-emp-modal-subtitle">Choose an employee to switch to</p>
         </div>
 

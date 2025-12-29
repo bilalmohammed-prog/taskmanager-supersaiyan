@@ -1,0 +1,18 @@
+import mongoose, { models, model } from "mongoose";
+
+const userSchema = new mongoose.Schema({
+  googleId: { type: String, unique: true, sparse: true },
+  email: { type: String, unique: true, required: true },
+  name: { type: String, default: null },
+  empID: { type: String, unique: true, sparse: true },
+  managerID: { type: String, default: null },
+  verified: { type: Boolean, default: false },
+  roles: { type: [String], default: ['user'] },
+  status: { type: String, default: 'active' },
+  lastLoginAt: { type: Date, default: Date.now },
+  createdAt: { type: Date, default: Date.now },
+  trustScore: { type: Number, default: 80 }  
+}, { collection: 'empID' });
+
+const Emp = models.Emp || model("Emp", userSchema);
+export default Emp;
