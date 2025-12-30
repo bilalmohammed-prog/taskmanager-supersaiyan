@@ -28,9 +28,7 @@ export default function Page() {
     
     
         
-        <div className="cobox">
-            
-        </div>
+        
 
         
     

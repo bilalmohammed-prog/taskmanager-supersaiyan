@@ -7,15 +7,16 @@ import { useState } from "react";
 
 type Props = {
   section: "tasks" | "inbox" | "progress" | "teamTasks";
+  selectedEmp: { name: string; empID: string } | null;
+  setSelectedEmp: React.Dispatch<
+    React.SetStateAction<{ name: string; empID: string } | null>
+  >;
 };
 
-export default function TopBar({ section }: Props) {
+export default function TopBar({ section, selectedEmp, setSelectedEmp }: Props) {
 
     const [showPopup, setShowPopup] = useState(false);
-    const [selectedEmp, setSelectedEmp] = useState<{
-  name: string;
-  empID: string;
-} | null>(null);
+    
 
 
   if (section === "teamTasks")
