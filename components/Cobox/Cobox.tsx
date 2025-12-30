@@ -33,6 +33,12 @@ function prettyDateTime(dt: string | Date | number) {
   });
 }
 
+function safeISO(dt: string | Date) {
+  const d = new Date(dt);
+  if (isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 16);
+}
+
 
 
 
@@ -67,7 +73,8 @@ function TeamTasksView({ selectedEmp }: { selectedEmp: SelectedEmp }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const empID = selectedEmp?.empID;
-  const [backupTask, setBackupTask] = useState<Task | null>(null);
+  const [backupTask, setBackupTask] = useState<Record<string, Task>>({});
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState({
     task: "",
@@ -160,13 +167,37 @@ async function saveTask(taskId: string) {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return;
 
+  const { task: name, startTime, endTime } = task;
+
+  // 1️⃣ all fields must exist
+  if (!name.trim() || !startTime || !endTime) {
+    alert("Please enter task, start time and end time");
+    return;
+  }
+
+  // 2️⃣ times must be valid dates
+  const s = new Date(startTime);
+  const e = new Date(endTime);
+
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) {
+    alert("Please enter valid date & time values");
+    return;
+  }
+
+  // 3️⃣ optional: end must be after start
+  if (e < s) {
+    alert("End time cannot be earlier than start time");
+    return;
+  }
+
+  // If valid → continue saving
   await fetch(`/api/tasks/${taskId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      task: task.task,
-      startTime: task.startTime,
-      endTime: task.endTime
+      task: name,
+      startTime,
+      endTime
     })
   });
 
@@ -176,6 +207,7 @@ async function saveTask(taskId: string) {
     )
   );
 }
+
 
 
 
@@ -202,8 +234,8 @@ async function saveTask(taskId: string) {
             ) : (
               <>
                 <input
-                  className="edit-input"
-                  defaultValue={t.task}
+                  className="edit-input" required
+                  value={t.task}
                   onChange={e =>
                     setTasks(prev =>
                       prev.map(x =>
@@ -218,11 +250,10 @@ async function saveTask(taskId: string) {
                 />
 
                 <input
-                  type="datetime-local"
+                  type="datetime-local" required
                   className="edit-start"
-                  defaultValue={new Date(t.startTime)
-                    .toISOString()
-                    .slice(0, 16)}
+                  value={safeISO(t.startTime)}
+
                   onChange={e =>
                     setTasks(prev =>
                       prev.map(x =>
@@ -239,11 +270,10 @@ async function saveTask(taskId: string) {
                 />
 
                 <input
-                  type="datetime-local"
+                  type="datetime-local" required
                   className="edit-end"
-                  defaultValue={new Date(t.endTime)
-                    .toISOString()
-                    .slice(0, 16)}
+                  value={safeISO(t.endTime)}
+
                   onChange={e =>
                     setTasks(prev =>
                       prev.map(x =>
@@ -273,13 +303,14 @@ async function saveTask(taskId: string) {
   setTasks(prev =>
     prev.map(x => {
       if (x.id === t.id) {
-        setBackupTask({ ...x });   // save original
+        setBackupTask(b => ({ ...b, [t.id]: { ...x } })); // store per task
         return { ...x, isEditing: true };
       }
       return x;
     })
   )
 }
+
 
                 >
                   <Image
@@ -321,14 +352,12 @@ async function saveTask(taskId: string) {
   setTasks(prev =>
     prev.map(x =>
       x.id === t.id
-        ? {
-            ...backupTask!,   // restore original values
-            isEditing: false
-          }
+        ? { ...backupTask[t.id], isEditing: false }
         : x
     )
   )
 }
+
 
                 >
                   <Image
