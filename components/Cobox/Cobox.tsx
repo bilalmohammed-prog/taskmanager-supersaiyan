@@ -16,6 +16,7 @@ type Task = {
   proof: string;
   durationHours: number;
   submittedAt: Date;
+  isEditing?: boolean;
 };
 
 function prettyDateTime(dt: string | Date | number) {
@@ -66,7 +67,13 @@ function TeamTasksView({ selectedEmp }: { selectedEmp: SelectedEmp }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const empID = selectedEmp?.empID;
-
+  const [backupTask, setBackupTask] = useState<Task | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState({
+    task: "",
+    startTime: "",
+    endTime: ""
+  });
 
   useEffect(() => {
   
@@ -101,6 +108,38 @@ async function deleteTask(taskId: string){
 });
 }
 
+// ----- INLINE EDIT SAVE -----
+  async function saveEdit(taskId: string) {
+    setTasks(prev =>
+      prev.map(t =>
+        t.id === taskId
+          ? {
+              ...t,
+              task: editValues.task,
+              startTime: editValues.startTime,
+              endTime: editValues.endTime
+            }
+          : t
+      )
+    );
+
+    setEditingId(null);
+
+    await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        task: editValues.task,
+        startTime: editValues.startTime,
+        endTime: editValues.endTime
+      })
+    });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+  }
+
 async function updateTask(taskId: string){
 
 setTasks(prev =>
@@ -117,40 +156,198 @@ setTasks(prev =>
 
 }
 
+async function saveTask(taskId: string) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+
+  await fetch(`/api/tasks/${taskId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      task: task.task,
+      startTime: task.startTime,
+      endTime: task.endTime
+    })
+  });
+
+  setTasks(prev =>
+    prev.map(t =>
+      t.id === taskId ? { ...t, isEditing: false } : t
+    )
+  );
+}
+
+
 
   return (
-    <div className="cobox">
-      {!selectedEmp && <p>Select an employee</p>}
+  <div className="cobox">
+    {!selectedEmp && <p>Select an employee</p>}
 
-      {loading && <p>Loading...</p>}
+    {loading && <p>Loading...</p>}
 
-      {!loading && tasks.length === 0 && <p>No tasks found</p>}
+    {!loading && tasks.length === 0 && <p>No tasks found</p>}
 
-      {!loading &&
-        tasks.map(t => (
-          <div key={t.id} className="container3">
-            <div className="taskText">
-              {t.task} <br />
-              {prettyDateTime(t.startTime)} → {prettyDateTime(t.endTime)}
-            </div>
+    {!loading &&
+      tasks.map(t => (
+        <div
+          key={t.id}
+          className={`container3 ${t.isEditing ? "editing" : ""}`}
+        >
+          <div className="taskText">
+            {!t.isEditing ? (
+              <>
+                {t.task} <br />
+                {prettyDateTime(t.startTime)} → {prettyDateTime(t.endTime)}
+              </>
+            ) : (
+              <>
+                <input
+                  className="edit-input"
+                  defaultValue={t.task}
+                  onChange={e =>
+                    setTasks(prev =>
+                      prev.map(x =>
+                        x.id === t.id ? { ...x, task: e.target.value } : x
+                      )
+                    )
+                  }
+                  onKeyDown={(e) => {
+  if (e.key === "Enter") saveTask(t.id);
+}}
 
-            <div className="container2">
-              <button className="action-btn delete-button"
-                onClick={()=>deleteTask(t.id)}
-              >
-                <Image src="/svg/deleteTask.svg" alt="Draft icon" width={32} height={32}/>
-              </button>
-              <button className="action-btn update-button"
-                onClick={()=>updateTask(t.id)}
-              >
-                <Image src="/svg/updateTask.svg" alt="Draft icon" width={32} height={32}/>
-              </button>
-              <button className="checkbox" disabled />
-            </div>
+                />
+
+                <input
+                  type="datetime-local"
+                  className="edit-start"
+                  defaultValue={new Date(t.startTime)
+                    .toISOString()
+                    .slice(0, 16)}
+                  onChange={e =>
+                    setTasks(prev =>
+                      prev.map(x =>
+                        x.id === t.id
+                          ? { ...x, startTime: e.target.value }
+                          : x
+                      )
+                    )
+                  }
+                  onKeyDown={(e) => {
+  if (e.key === "Enter") saveTask(t.id);
+}}
+
+                />
+
+                <input
+                  type="datetime-local"
+                  className="edit-end"
+                  defaultValue={new Date(t.endTime)
+                    .toISOString()
+                    .slice(0, 16)}
+                  onChange={e =>
+                    setTasks(prev =>
+                      prev.map(x =>
+                        x.id === t.id
+                          ? { ...x, endTime: e.target.value }
+                          : x
+                      )
+                    )
+                  }
+                  onKeyDown={(e) => {
+  if (e.key === "Enter") saveTask(t.id);
+}}
+
+                />
+              </>
+            )}
           </div>
-        ))}
-    </div>
-  );
+
+          <div className="container2">
+            {!t.isEditing ? (
+              <>
+                
+
+                <button
+                  className="action-btn update-button"
+                  onClick={() =>
+  setTasks(prev =>
+    prev.map(x => {
+      if (x.id === t.id) {
+        setBackupTask({ ...x });   // save original
+        return { ...x, isEditing: true };
+      }
+      return x;
+    })
+  )
+}
+
+                >
+                  <Image
+                    src="/svg/updateTask.svg"
+                    alt="update"
+                    width={32}
+                    height={32}
+                  />
+                </button>
+                <button
+                  className="action-btn delete-button"
+                  onClick={() => deleteTask(t.id)}
+                >
+                  <Image
+                    src="/svg/deleteTask.svg"
+                    alt="delete"
+                    width={32}
+                    height={32}
+                  />
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="action-btn update-button"
+                  onClick={() => saveTask(t.id)}
+                >
+                  <Image
+                    src="/svg/updateTask.svg"
+                    alt="update"
+                    width={32}
+                    height={32}
+                  />
+                </button>
+
+                <button
+                  className="action-btn delete-button"
+                  onClick={() =>
+  setTasks(prev =>
+    prev.map(x =>
+      x.id === t.id
+        ? {
+            ...backupTask!,   // restore original values
+            isEditing: false
+          }
+        : x
+    )
+  )
+}
+
+                >
+                  <Image
+                    src="/svg/deleteTask.svg"
+                    alt="delete"
+                    width={32}
+                    height={32}
+                  />
+                </button>
+              </>
+            )}
+
+            <button className="checkbox" disabled />
+          </div>
+        </div>
+      ))}
+  </div>
+);
+
 }
 
 /* ---------------- OTHER VIEWS ---------------- */

@@ -251,3 +251,84 @@ container3{
     display: block;
     object-fit: contain;
 }
+
+/* ===============================
+   INLINE EDIT MODE
+================================*/
+.container3.editing {
+  border-color: #6ecbff;
+  box-shadow: 0 0 20px rgba(110,203,255,.4);
+  transform: translateY(-2px);
+}
+
+/* container spacing correction when editing */
+.container3.editing .taskText {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+
+/* ===============================
+   EDIT INPUTS
+================================*/
+.edit-input,
+.edit-start,
+.edit-end {
+  width: 90%;
+  padding: 10px 12px;
+
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.5);
+
+  background: rgba(255,255,255,0.08);
+  color: white;
+  font-size: 16px;
+
+  outline: none;
+  transition: .18s ease;
+}
+
+
+/* Hover + Focus (Professional UI Glow) */
+.edit-input:hover,
+.edit-start:hover,
+.edit-end:hover {
+  background: rgba(255,255,255,0.12);
+}
+
+.edit-input:focus,
+.edit-start:focus,
+.edit-end:focus {
+  border-color: white;
+  background: rgba(255,255,255,0.18);
+  box-shadow: 0 0 20px rgba(255,255,255,0.35);
+}
+
+
+/* ===============================
+   PLACEHOLDER / TEXT VISIBILITY
+================================*/
+.edit-input::placeholder,
+.edit-start::placeholder,
+.edit-end::placeholder {
+  color: rgba(255,255,255,0.6);
+}
+
+
+/* ===============================
+   RESPONSIVE EDITING LAYOUT
+================================*/
+@media(max-width: 900px){
+  .edit-input,
+  .edit-start,
+  .edit-end{
+    font-size: 14px;
+  }
+}
+
+@media(max-width: 700px){
+  .container3.editing .taskText{
+    width: 100%;
+  }
+}
