@@ -244,3 +244,10 @@
 container3{
     background-color: none;
 }
+
+.delete-button img, .update-button img{
+    height: 60%;
+    width: 100%;
+    display: block;
+    object-fit: contain;
+}

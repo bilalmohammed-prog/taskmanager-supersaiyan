@@ -2,6 +2,7 @@
 
 import "./Cobox.css";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 type Section = "tasks" | "inbox" | "progress" | "teamTasks";
 
@@ -30,6 +31,9 @@ function prettyDateTime(dt: string | Date | number) {
     hour12: true
   });
 }
+
+
+
 
 type Props = {
   section: Section;
@@ -61,11 +65,13 @@ type SelectedEmp =
 function TeamTasksView({ selectedEmp }: { selectedEmp: SelectedEmp }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const empID = selectedEmp?.empID;
+
 
   useEffect(() => {
   
 
-  const empID = selectedEmp?.empID;
+  
   if (!empID) {
     setTasks([]);
     setLoading(false);
@@ -86,9 +92,30 @@ function TeamTasksView({ selectedEmp }: { selectedEmp: SelectedEmp }) {
   }
 
   loadTasks();
-}, [selectedEmp]);   // <-- THIS is what links it to employee change
+}, [empID]);   // <-- THIS is what links it to employee change
 
+async function deleteTask(taskId: string){
+  setTasks(prev => prev.filter(t => t.id !== taskId));
+  await fetch(`/api/tasks/${taskId}`, {
+  method: "DELETE"
+});
+}
 
+async function updateTask(taskId: string){
+
+setTasks(prev =>
+      prev.map(t =>
+        t.id === taskId ? { ...t, status: "completed" } : t
+      )
+    );
+
+  await fetch(`/api/tasks/${taskId}`, {
+  method: "PATCH",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ status: "completed" })
+});
+
+}
 
 
   return (
@@ -108,8 +135,16 @@ function TeamTasksView({ selectedEmp }: { selectedEmp: SelectedEmp }) {
             </div>
 
             <div className="container2">
-              <button className="action-btn delete-button" />
-              <button className="action-btn update-button" />
+              <button className="action-btn delete-button"
+                onClick={()=>deleteTask(t.id)}
+              >
+                <Image src="/svg/deleteTask.svg" alt="Draft icon" width={32} height={32}/>
+              </button>
+              <button className="action-btn update-button"
+                onClick={()=>updateTask(t.id)}
+              >
+                <Image src="/svg/updateTask.svg" alt="Draft icon" width={32} height={32}/>
+              </button>
               <button className="checkbox" disabled />
             </div>
           </div>

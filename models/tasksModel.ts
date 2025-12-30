@@ -12,5 +12,5 @@ const userSchema = new mongoose.Schema({
   submittedAt: { type: Date, default: Date.now } // when user marked task as done
 });
 
-const Task = models.Task || model("tasks", userSchema);
+const Task = models.Task || model("Task", userSchema, "tasks");
 export default Task;
