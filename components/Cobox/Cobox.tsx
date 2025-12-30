@@ -23,7 +23,7 @@ function prettyDateTime(dt: string | Date | number) {
   const d = new Date(dt);
   if (isNaN(d.getTime())) return String(dt);
 
-  return d.toLocaleString("en-IN", {
+  return d.toLocaleString(undefined, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -36,8 +36,14 @@ function prettyDateTime(dt: string | Date | number) {
 function safeISO(dt: string | Date) {
   const d = new Date(dt);
   if (isNaN(d.getTime())) return "";
-  return d.toISOString().slice(0, 16);
+
+  // convert UTC → Local for datetime-local
+  const off = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - off * 60000);
+
+  return local.toISOString().slice(0, 16);
 }
+
 
 
 
@@ -255,14 +261,16 @@ async function saveTask(taskId: string) {
                   value={safeISO(t.startTime)}
 
                   onChange={e =>
-                    setTasks(prev =>
-                      prev.map(x =>
-                        x.id === t.id
-                          ? { ...x, startTime: e.target.value }
-                          : x
-                      )
-                    )
-                  }
+  setTasks(prev =>
+    prev.map(x =>
+      x.id === t.id
+        ? { ...x, startTime: e.target.value }
+        : x
+    )
+  )
+}
+
+
                   onKeyDown={(e) => {
   if (e.key === "Enter") saveTask(t.id);
 }}
@@ -275,14 +283,16 @@ async function saveTask(taskId: string) {
                   value={safeISO(t.endTime)}
 
                   onChange={e =>
-                    setTasks(prev =>
-                      prev.map(x =>
-                        x.id === t.id
-                          ? { ...x, endTime: e.target.value }
-                          : x
-                      )
-                    )
-                  }
+  setTasks(prev =>
+    prev.map(x =>
+      x.id === t.id
+        ? { ...x, endTime: e.target.value }
+        : x
+    )
+  )
+}
+
+
                   onKeyDown={(e) => {
   if (e.key === "Enter") saveTask(t.id);
 }}
