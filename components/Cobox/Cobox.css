@@ -332,3 +332,43 @@ container3{
     width: 100%;
   }
 }
+
+.assignBtn {
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  border: none;
+  background: #4a6df3;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modalBox {
+  background: white;
+  padding: 18px;
+  border-radius: 10px;
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modalBox input {
+  padding: 8px;
+}
+
+.row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}

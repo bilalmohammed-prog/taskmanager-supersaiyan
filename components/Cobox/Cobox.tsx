@@ -88,6 +88,72 @@ function TeamTasksView({ selectedEmp }: { selectedEmp: SelectedEmp }) {
     endTime: ""
   });
 
+  const [showCreate, setShowCreate] = useState(false);
+
+const [newTask, setNewTask] = useState({
+  task: "",
+  startTime: "",
+  endTime: ""
+});
+
+function resetCreate() {
+  setNewTask({ task: "", startTime: "", endTime: "" });
+}
+
+async function createTask() {
+  if (!empID) {
+    alert("No employee selected");
+    return;
+  }
+
+  const { task, startTime, endTime } = newTask;
+
+  if (!task.trim() || !startTime || !endTime) {
+    alert("Please enter task, start time and end time");
+    return;
+  }
+
+  const s = new Date(startTime);
+  const e = new Date(endTime);
+
+  if (isNaN(s.getTime()) || isNaN(e.getTime()) || e <= s) {
+    alert("Invalid date or end time must be after start time");
+    return;
+  }
+
+  // required by DB
+  const id = crypto.randomUUID(); // unique task id
+
+  const res = await fetch(`/api/tasks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      empID,
+      id,
+      task,
+      startTime,
+      endTime,
+      status: "pending",
+      proof: ""
+    })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error || "Failed to create task");
+    return;
+  }
+
+  // UI update
+  setTasks(prev => [...prev, data.task]);
+
+  setShowCreate(false);
+  resetCreate();
+}
+
+
+
   useEffect(() => {
   
 
@@ -219,6 +285,49 @@ async function saveTask(taskId: string) {
 
   return (
   <div className="cobox">
+
+    <button
+    className="assignBtn"
+    onClick={() => setShowCreate(true)}
+  >
+    Assign Task
+  </button>
+
+  {showCreate && (
+  <div className="modalOverlay" onClick={(e) => {
+    if (e.target === e.currentTarget) setShowCreate(false);
+  }}>
+    
+    <div className="modalBox">
+      <h3>Assign Task</h3>
+
+      <input
+        placeholder="Task description"
+        value={newTask.task}
+        onChange={e => setNewTask(p => ({ ...p, task: e.target.value }))}
+      />
+
+      <input
+        type="datetime-local"
+        value={newTask.startTime}
+        onChange={e => setNewTask(p => ({ ...p, startTime: e.target.value }))}
+      />
+
+      <input
+        type="datetime-local"
+        value={newTask.endTime}
+        onChange={e => setNewTask(p => ({ ...p, endTime: e.target.value }))}
+      />
+
+      <div className="row">
+        <button onClick={() => setShowCreate(false)}>Cancel</button>
+        <button onClick={createTask}>Create</button>
+      </div>
+    </div>
+  </div>
+)}
+
+
     {!selectedEmp && <p>Select an employee</p>}
 
     {loading && <p>Loading...</p>}
