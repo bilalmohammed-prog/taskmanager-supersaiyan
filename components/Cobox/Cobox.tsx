@@ -51,13 +51,24 @@ function safeISO(dt: string | Date) {
 type Props = {
   section: Section;
   selectedEmp: { empID: string; name: string } | null;
+
+  openAssignModal: boolean;
+  setOpenAssignModal: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-export default function Cobox({ section, selectedEmp }: Props) {
+
+export default function Cobox({ section, selectedEmp, openAssignModal, setOpenAssignModal }: Props) {
   if (section === "tasks") return <UserTasksView />;
 
   if (section === "teamTasks")
-    return <TeamTasksView selectedEmp={selectedEmp} />;
+  return (
+    <TeamTasksView
+      selectedEmp={selectedEmp}
+      openAssignModal={openAssignModal}
+      setOpenAssignModal={setOpenAssignModal}
+    />
+  );
+
 
   if (section === "progress") return <ProgressView />;
 
@@ -75,7 +86,16 @@ type SelectedEmp =
     }
   | null;
 
-function TeamTasksView({ selectedEmp }: { selectedEmp: SelectedEmp }) {
+function TeamTasksView({
+  selectedEmp,
+  openAssignModal,
+  setOpenAssignModal
+}: {
+  selectedEmp: SelectedEmp;
+  openAssignModal: boolean;
+  setOpenAssignModal: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const empID = selectedEmp?.empID;
@@ -88,7 +108,9 @@ function TeamTasksView({ selectedEmp }: { selectedEmp: SelectedEmp }) {
     endTime: ""
   });
 
-  const [showCreate, setShowCreate] = useState(false);
+  const showCreate = openAssignModal;
+const setShowCreate = setOpenAssignModal;
+
 
 const [newTask, setNewTask] = useState({
   task: "",
@@ -286,12 +308,7 @@ async function saveTask(taskId: string) {
   return (
   <div className="cobox">
 
-    <button
-    className="assignBtn"
-    onClick={() => setShowCreate(true)}
-  >
-    Assign Task
-  </button>
+    
 
   {showCreate && (
   <div className="modalOverlay" onClick={(e) => {

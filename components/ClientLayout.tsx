@@ -11,17 +11,22 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
 const [selectedEmp, setSelectedEmp] =
     useState<{ name: string; empID: string } | null>(null);
+const [openAssignModal, setOpenAssignModal] = useState(false);
+
 
   return (
     <>
       <TopBar 
       section={section}
       selectedEmp={selectedEmp}
-      setSelectedEmp={setSelectedEmp} 
+      setSelectedEmp={setSelectedEmp}
+      setOpenAssignModal={setOpenAssignModal}
       />
       <LeftSideBar setSection={setSection} />
       <Cobox section={section}
       selectedEmp={selectedEmp}
+      openAssignModal={openAssignModal}
+      setOpenAssignModal={setOpenAssignModal}
       />
       {children}
     </>

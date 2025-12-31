@@ -11,9 +11,10 @@ type Props = {
   setSelectedEmp: React.Dispatch<
     React.SetStateAction<{ name: string; empID: string } | null>
   >;
+  setOpenAssignModal: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-export default function TopBar({ section, selectedEmp, setSelectedEmp }: Props) {
+export default function TopBar({ section, selectedEmp, setSelectedEmp, setOpenAssignModal }: Props) {
 
     const [showPopup, setShowPopup] = useState(false);
     
@@ -42,10 +43,14 @@ export default function TopBar({ section, selectedEmp, setSelectedEmp }: Props) 
               <span className="tooltip">Add/Drop employee</span>
             </button>
 
-            <button className="sidebar-btn assign-task-btn" id="openAssignModalBtn">
-              <Image src="/svg/assignTask.svg" alt="Draft icon" width={32} height={32}/>
-              <span className="tooltip">Add task</span>
-            </button>
+            <button
+  className="sidebar-btn assign-task-btn"
+  onClick={() => setOpenAssignModal(true)}
+>
+  <Image src="/svg/assignTask.svg" alt="Draft icon" width={32} height={32}/>
+  <span className="tooltip">Add task</span>
+</button>
+
 
             <button className="sidebar-btn switchEmp" onClick={() => setShowPopup(true)}>
               <Image src="/svg/switchEmp.svg" alt="Draft icon" width={32} height={32}/>
