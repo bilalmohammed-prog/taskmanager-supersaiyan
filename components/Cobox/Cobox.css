@@ -372,3 +372,12 @@ container3{
   justify-content: flex-end;
   gap: 10px;
 }
+
+.select-an-employee {
+  position:absolute;
+  top:35%;
+  right:40%;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 18px;
+  text-align: center;
+}

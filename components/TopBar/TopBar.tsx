@@ -45,7 +45,13 @@ export default function TopBar({ section, selectedEmp, setSelectedEmp, setOpenAs
 
             <button
   className="sidebar-btn assign-task-btn"
-  onClick={() => setOpenAssignModal(true)}
+  onClick={() => {
+    if (!selectedEmp) {
+      alert("Select an employee first");
+      return;
+    }
+    setOpenAssignModal(true);
+  }}
 >
   <Image src="/svg/assignTask.svg" alt="Draft icon" width={32} height={32}/>
   <span className="tooltip">Add task</span>
@@ -57,7 +63,10 @@ export default function TopBar({ section, selectedEmp, setSelectedEmp, setOpenAs
               <span className="tooltip">Switch employee</span>
             </button>
 
-            <button className="sidebar-btn endDay">
+            <button className="sidebar-btn endDay" onClick={() => {
+    setSelectedEmp(null);      // remove employee selection
+    setOpenAssignModal(false); // close assign modal if open
+  }}>
               <Image src="/svg/endDay.svg" alt="Draft icon" width={32} height={32}/>
               <span className="tooltip">Assign</span>
             </button>

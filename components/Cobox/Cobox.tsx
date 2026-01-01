@@ -345,11 +345,10 @@ async function saveTask(taskId: string) {
 )}
 
 
-    {!selectedEmp && <p>Select an employee</p>}
+    {!selectedEmp && <p className="select-an-employee">Select an employee or add an employee</p>}
 
     {loading && <p>Loading...</p>}
 
-    {!loading && tasks.length === 0 && <p>No tasks found</p>}
 
     {!loading &&
       tasks.map(t => (
