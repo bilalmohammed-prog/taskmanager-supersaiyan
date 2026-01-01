@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import "./LeftSideBar.css";
+import ProfileMenu from "../ProfileMenu/ProfileMenu";   // adjust path if different
+
 
 type Props = {
   setSection: (s: "tasks" | "inbox" | "progress" | "teamTasks") => void;
@@ -55,16 +57,9 @@ export function LeftSideBar({setSection}:Props){
 
         {/* <!-- profile btn --> */}
          <div className="lsidebar-bottom">
-
-  <div className="profile-wrapper">
-      <div className="profile-icon">
-        <span id="profileInitial">U</span>
-      </div>
-
-      
-  </div>
-
+  <ProfileMenu />
 </div>
+
 
 
     </div>
