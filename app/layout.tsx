@@ -1,5 +1,6 @@
 import "./globals.css";
 import ClientLayout from "../components/ClientLayout";
+import  Providers  from "./Providers";
 
 export const metadata = {
   title: "Task Manager",
@@ -22,9 +23,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
 
       <body>
-        <ClientLayout>
+        <Providers>
+        
           {children}
-        </ClientLayout>
+        
+        </Providers>
       </body>
     </html>
   );
