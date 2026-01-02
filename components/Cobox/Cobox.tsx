@@ -52,6 +52,8 @@ function UserTasksView() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
   const email = session?.user?.email;
 
   useEffect(() => {
@@ -120,15 +122,18 @@ function UserTasksView() {
   }
 
   return (
-    <div className="coboxContainer">
-      
+  <div className="coboxContainer">
     <div className="cobox">
-      
       {loading && <p>Loading...</p>}
 
       {!loading &&
-        tasks.map(t => (
-          <div key={t.id} className="container3">
+        tasks.map((t) => (
+          <div
+            key={t.id}
+            className={`container3 ${selectedTask?.id === t.id ? "active-card" : ""}`}
+            onClick={() => setSelectedTask(t)} // 1. Updates state on click
+            style={{ cursor: "pointer" }}
+          >
             <div className="taskText">
               {t.task}
               <br />
@@ -136,37 +141,48 @@ function UserTasksView() {
             </div>
 
             <div className="container2">
-
-  {/* COMPLETE BUTTON */}
-  <button
-    className="action-btn completed-button"
-    onClick={() => markCompleted(t)}
-    disabled={t.status === "completed"}
-  >
-    <Image
-                    src="/svg/completed.svg"
-                    alt=""
-                    width={32}
-                    height={32}
-                  />
-  </button>
-
-  {/* STATUS BOX */}
-  <button
-    className="checkbox"
-    disabled
-    style={{
-      background: getStatusColor(t)
-    }}
-  />
-</div>
-
+              <button
+                className="action-btn completed-button"
+                onClick={(e) => {
+                  e.stopPropagation(); // 2. Prevents selecting the card when clicking button
+                  markCompleted(t);
+                }}
+                disabled={t.status === "completed"}
+              >
+                <Image src="/svg/completed.svg" alt="" width={32} height={32} />
+              </button>
+              <button
+                className="checkbox"
+                disabled
+                style={{ background: getStatusColor(t) }}
+              />
+            </div>
           </div>
         ))}
     </div>
-    <div className="taskDescription">Task Description</div>
+
+    {/* 3. MOVED OUTSIDE THE LOOP: The actual Detail View */}
+    <div className="taskDescription">
+      {selectedTask ? (
+        <div className="description-content">
+          <h2>{selectedTask.task}</h2>
+          <hr />
+          <p><strong>Status:</strong> {selectedTask.status}</p>
+          <p><strong>Start:</strong> {prettyDateTime(selectedTask.startTime)}</p>
+          <p><strong>Deadline:</strong> {prettyDateTime(selectedTask.endTime)}</p>
+          {selectedTask.proof && (
+            <div className="proof-box">
+              <strong>Proof:</strong>
+              <p>{selectedTask.proof}</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="select-prompt">Select a task from the list to view details.</p>
+      )}
     </div>
-  );
+  </div>
+);
 }
 
 
@@ -223,6 +239,8 @@ function TeamTasksView({
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null); // NEW
+
   const empID = selectedEmp?.empID;
   const [backupTask, setBackupTask] = useState<Record<string, Task>>({});
 
@@ -431,57 +449,31 @@ async function saveTask(taskId: string) {
 
 
   return (
-    <div className="coboxContainer">
-      
-  <div className="cobox">
+  <div className="coboxContainer">
+    <div className="cobox">
+      {showCreate && (
+        <div className="modalOverlay" onClick={(e) => { if (e.target === e.currentTarget) setShowCreate(false); }}>
+          <div className="modalBox">
+            <h3>Assign Task</h3>
+            <input placeholder="Task description" value={newTask.task} onChange={e => setNewTask(p => ({ ...p, task: e.target.value }))} />
+            <input type="datetime-local" value={newTask.startTime} onChange={e => setNewTask(p => ({ ...p, startTime: e.target.value }))} />
+            <input type="datetime-local" value={newTask.endTime} onChange={e => setNewTask(p => ({ ...p, endTime: e.target.value }))} />
+            <div className="row">
+              <button onClick={() => setShowCreate(false)}>Cancel</button>
+              <button onClick={createTask}>Create</button>
+            </div>
+          </div>
+        </div>
+      )}
 
-    
+      {!selectedEmp && <p className="select-an-employee">Select an employee or add an employee</p>}
+      {loading && <p>Loading...</p>}
 
-  {showCreate && (
-  <div className="modalOverlay" onClick={(e) => {
-    if (e.target === e.currentTarget) setShowCreate(false);
-  }}>
-    
-    <div className="modalBox">
-      <h3>Assign Task</h3>
-
-      <input
-        placeholder="Task description"
-        value={newTask.task}
-        onChange={e => setNewTask(p => ({ ...p, task: e.target.value }))}
-      />
-
-      <input
-        type="datetime-local"
-        value={newTask.startTime}
-        onChange={e => setNewTask(p => ({ ...p, startTime: e.target.value }))}
-      />
-
-      <input
-        type="datetime-local"
-        value={newTask.endTime}
-        onChange={e => setNewTask(p => ({ ...p, endTime: e.target.value }))}
-      />
-
-      <div className="row">
-        <button onClick={() => setShowCreate(false)}>Cancel</button>
-        <button onClick={createTask}>Create</button>
-      </div>
-    </div>
-  </div>
-)}
-
-
-    {!selectedEmp && <p className="select-an-employee">Select an employee or add an employee</p>}
-
-    {loading && <p>Loading...</p>}
-
-
-    {!loading &&
-      tasks.map(t => (
+      {!loading && tasks.map(t => (
         <div
           key={t.id}
-          className={`container3 ${t.isEditing ? "editing" : ""}`}
+          className={`container3 ${t.isEditing ? "editing" : ""} ${selectedTask?.id === t.id ? "active-card" : ""}`}
+          onClick={() => !t.isEditing && setSelectedTask(t)} // 4. Updates detail view
         >
           <div className="taskText">
             {!t.isEditing ? (
@@ -490,154 +482,80 @@ async function saveTask(taskId: string) {
                 {prettyDateTime(t.startTime)} → {prettyDateTime(t.endTime)}
               </>
             ) : (
-              <>
-                <input
-                  className="edit-input" required
-                  value={t.task}
-                  onChange={e =>
-                    setTasks(prev =>
-                      prev.map(x =>
-                        x.id === t.id ? { ...x, task: e.target.value } : x
-                      )
-                    )
-                  }
-                  onKeyDown={(e) => {
-  if (e.key === "Enter") saveTask(t.id);
-}}
-
-                />
-
-                <input
-                  type="datetime-local" required
-                  className="edit-start"
-                  value={safeISO(t.startTime)}
-
-                  onChange={e =>
-  setTasks(prev =>
-    prev.map(x =>
-      x.id === t.id
-        ? { ...x, startTime: e.target.value }
-        : x
-    )
-  )
-}
-
-
-                  onKeyDown={(e) => {
-  if (e.key === "Enter") saveTask(t.id);
-}}
-
-                />
-
-                <input
-                  type="datetime-local" required
-                  className="edit-end"
-                  value={safeISO(t.endTime)}
-
-                  onChange={e =>
-  setTasks(prev =>
-    prev.map(x =>
-      x.id === t.id
-        ? { ...x, endTime: e.target.value }
-        : x
-    )
-  )
-}
-
-
-                  onKeyDown={(e) => {
-  if (e.key === "Enter") saveTask(t.id);
-}}
-
-                />
-              </>
+              <div onClick={(e) => e.stopPropagation()}> {/* 5. Prevent selection while typing */}
+                <input className="edit-input" value={t.task} onChange={e => setTasks(prev => prev.map(x => x.id === t.id ? { ...x, task: e.target.value } : x))} />
+                <input type="datetime-local" className="edit-start" value={safeISO(t.startTime)} onChange={e => setTasks(prev => prev.map(x => x.id === t.id ? { ...x, startTime: e.target.value } : x))} />
+                <input type="datetime-local" className="edit-end" value={safeISO(t.endTime)} onChange={e => setTasks(prev => prev.map(x => x.id === t.id ? { ...x, endTime: e.target.value } : x))} />
+              </div>
             )}
           </div>
 
           <div className="container2">
             {!t.isEditing ? (
               <>
-                
-
-                <button
-                  className="action-btn update-button"
-                  onClick={() =>
-  setTasks(prev =>
-    prev.map(x => {
-      if (x.id === t.id) {
-        setBackupTask(b => ({ ...b, [t.id]: { ...x } })); // store per task
-        return { ...x, isEditing: true };
-      }
-      return x;
-    })
-  )
-}
-
-
-                >
-                  <Image
-                    src="/svg/updateTask.svg"
-                    alt="update"
-                    width={32}
-                    height={32}
-                  />
+                <button className="action-btn update-button" onClick={(e) => {
+                  e.stopPropagation(); // 6. Prevent card selection
+                  setTasks(prev => prev.map(x => {
+                    if (x.id === t.id) {
+                      setBackupTask(b => ({ ...b, [t.id]: { ...x } }));
+                      return { ...x, isEditing: true };
+                    }
+                    return x;
+                  }));
+                }}>
+                  <Image src="/svg/updateTask.svg" alt="update" width={32} height={32} />
                 </button>
-                <button
-                  className="action-btn delete-button"
-                  onClick={() => deleteTask(t.id)}
-                >
-                  <Image
-                    src="/svg/deleteTask.svg"
-                    alt="delete"
-                    width={32}
-                    height={32}
-                  />
+                <button className="action-btn delete-button" onClick={(e) => { e.stopPropagation(); deleteTask(t.id); }}>
+                  <Image src="/svg/deleteTask.svg" alt="delete" width={32} height={32} />
                 </button>
               </>
             ) : (
               <>
-                <button
-                  className="action-btn update-button"
-                  onClick={() => saveTask(t.id)}
-                >
-                  <Image
-                    src="/svg/updateTask.svg"
-                    alt="update"
-                    width={32}
-                    height={32}
-                  />
+                <button className="action-btn update-button" onClick={(e) => { e.stopPropagation(); saveTask(t.id); }}>
+                  <Image src="/svg/updateTask.svg" alt="update" width={32} height={32} />
                 </button>
-
-                <button
-                  className="action-btn delete-button"
-                  onClick={() =>
-  setTasks(prev =>
-    prev.map(x =>
-      x.id === t.id
-        ? { ...backupTask[t.id], isEditing: false }
-        : x
-    )
-  )
-}
-
-
-                >
-                  <Image
-                    src="/svg/deleteTask.svg"
-                    alt="delete"
-                    width={32}
-                    height={32}
-                  />
+                <button className="action-btn delete-button" onClick={(e) => {
+                  e.stopPropagation();
+                  setTasks(prev => prev.map(x => x.id === t.id ? { ...backupTask[t.id], isEditing: false } : x));
+                }}>
+                  <Image src="/svg/deleteTask.svg" alt="delete" width={32} height={32} />
                 </button>
               </>
             )}
-
             <button className="checkbox" disabled />
           </div>
         </div>
       ))}
-  </div>
-  <div className="taskDescription">Task Description</div>
+    </div>
+
+    {/* 7. THE ACTUAL RIGHT-SIDE DIV */}
+    {/* 7. THE UPDATED RIGHT-SIDE DIV (Matches UserTasksView) */}
+<div className="taskDescription">
+  {selectedTask ? (
+    /* Wrapped in description-content for consistent styling */
+    <div className="description-content">
+      <h2>{selectedTask.task}</h2>
+      <hr /> {/* Added horizontal line to match UserView */}
+      
+      <p><strong>Status:</strong> {selectedTask.status}</p>
+      
+      {/* Added Start and Deadline labels instead of just "Time" */}
+      <p><strong>Start:</strong> {prettyDateTime(selectedTask.startTime)}</p>
+      <p><strong>Deadline:</strong> {prettyDateTime(selectedTask.endTime)}</p>
+      
+      {/* Added Proof of Work section so managers can see submissions */}
+      {selectedTask.proof && (
+        <div className="proof-box">
+          <strong>Proof of Work:</strong>
+          <p>{selectedTask.proof}</p>
+        </div>
+      )}
+    </div>
+  ) : (
+    /* Matches the empty state text from UserView */
+    <p className="select-prompt">Select a task from the list to view details.</p>
+  )}
+</div>
   </div>
 );
 
