@@ -4,6 +4,8 @@ import "./Cobox.css";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 
+import { useSession } from "next-auth/react";
+
 type Section = "tasks" | "inbox" | "progress" | "teamTasks";
 
 type Task = {
@@ -42,6 +44,128 @@ function safeISO(dt: string | Date) {
   const local = new Date(d.getTime() - off * 60000);
 
   return local.toISOString().slice(0, 16);
+}
+
+
+function UserTasksView() {
+  const { data: session } = useSession();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const email = session?.user?.email;
+
+  useEffect(() => {
+    if (!email) return;
+
+    async function load() {
+      try {
+        setLoading(true);
+
+        // 1️⃣ Get employee by email
+        const empRes = await fetch(`/api/get-emp?email=${email}`);
+        const empData = await empRes.json();
+
+        if (!empData?.empID) {
+          setTasks([]);
+          return;
+        }
+
+        // 2️⃣ Fetch tasks for that employee
+        const taskRes = await fetch(`/api/displayTasks?empID=${empData.empID}`);
+        const taskData = await taskRes.json();
+
+        setTasks(taskData.tasks || []);
+      } catch (e) {
+        console.error("User task load error", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    load();
+  }, [email]);
+
+  async function markCompleted(task: Task) {
+    const proof = prompt("Enter proof of work");
+    if (!proof) return alert("Proof is required");
+
+    const submittedAt = new Date();
+
+    await fetch(`/api/tasks/${task.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: "completed",
+        proof,
+        submittedAt
+      })
+    });
+
+    setTasks(prev =>
+      prev.map(t =>
+        t.id === task.id
+          ? { ...t, status: "completed", proof, submittedAt }
+          : t
+      )
+    );
+  }
+
+  function getStatusColor(t: Task) {
+    if (t.status !== "completed") return "gray";
+
+    const end = new Date(t.endTime);
+    const submitted = new Date(t.submittedAt);
+
+    return submitted <= end ? "limegreen" : "gold";
+  }
+
+  return (
+    <div className="coboxContainer">
+      <div className="taskDescription">Task Description</div>
+    <div className="cobox">
+      
+      {loading && <p>Loading...</p>}
+
+      {!loading &&
+        tasks.map(t => (
+          <div key={t.id} className="container3">
+            <div className="taskText">
+              {t.task}
+              <br />
+              {prettyDateTime(t.startTime)} → {prettyDateTime(t.endTime)}
+            </div>
+
+            <div className="container2">
+
+  {/* COMPLETE BUTTON */}
+  <button
+    className="action-btn completed-button"
+    onClick={() => markCompleted(t)}
+    disabled={t.status === "completed"}
+  >
+    <Image
+                    src="/svg/completed.svg"
+                    alt=""
+                    width={32}
+                    height={32}
+                  />
+  </button>
+
+  {/* STATUS BOX */}
+  <button
+    className="checkbox"
+    disabled
+    style={{
+      background: getStatusColor(t)
+    }}
+  />
+</div>
+
+          </div>
+        ))}
+    </div>
+    </div>
+  );
 }
 
 
@@ -306,6 +430,8 @@ async function saveTask(taskId: string) {
 
 
   return (
+    <div className="coboxContainer">
+      <div className="taskDescription">Task Description</div>
   <div className="cobox">
 
     
@@ -510,15 +636,14 @@ async function saveTask(taskId: string) {
         </div>
       ))}
   </div>
+  </div>
 );
 
 }
 
 /* ---------------- OTHER VIEWS ---------------- */
 
-function UserTasksView() {
-  return <div className="cobox">Your personal tasks UI</div>;
-}
+
 
 function InboxView() {
   return <div className="cobox">Inbox UI here</div>;

@@ -1,29 +1,4 @@
-/* ===============================
-   COBOX LAYOUT
-================================*/
-.cobox{
-  margin-top:70px;
-  margin-left:80px;
 
-  width:65vw;
-  max-width:1200px;
-  min-height:300px;
-  max-height:70vh;
-
-  padding:22px;
-  overflow-y:auto;
-
-  
-  
-  
-  backdrop-filter: blur(6px);
-
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-
-  font-family:"Roboto", sans-serif;
-}
 
 /* Smooth scrollbar */
 
@@ -44,7 +19,7 @@
   justify-content:space-between;
   align-items:center;
   gap:12px;
-
+  
   transition:.18s ease;
 }
 
@@ -85,7 +60,7 @@
   width:34px;
   height:34px;
 
-  border-radius:50%;
+  border-radius:4px;
   border:1px solid rgba(255,255,255,0.35);
   background:rgba(255,255,255,0.08);
 
@@ -96,6 +71,7 @@
   cursor:pointer;
   transition:.18s ease;
 }
+
 
 /* Hover pop */
 .action-btn:hover{
@@ -112,10 +88,10 @@
    STATUS CHECKBOX
 ================================*/
 .checkbox{
-  width:30px;
-  height:30px;
+  width:34px;
+  height:34px;
 
-  border-radius:6px;
+  border-radius:4px;
   background:rgba(255,255,255,0.09);
   border:1px solid rgba(255,255,255,0.35);
 }
@@ -145,33 +121,7 @@
    - Bigger work area
    - Transparent scroll
 ================================*/
-.cobox{
-  position: fixed;
 
-  /* Reduce margins → more space */
-  top: 60px;     /* was 70 */
-  left: 70px;    /* was 80 */
-
-  right: 10px;   /* tighter edge */
-  bottom: 10px;  /* tighter edge */
-
-  padding: 22px;
-
-  
-  
-
-  background: none;   /* slight frost */
-  backdrop-filter: blur(6px);
-
-  overflow-y: auto;
-  overflow-x: hidden;
-
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-
-  font-family: "Roboto", sans-serif;
-}
 
 /* Ultra clean transparent scrollbar */
 .cobox::-webkit-scrollbar{
@@ -200,27 +150,60 @@
 /* ===============================
    COBOX — % BASED PERFECT LAYOUT
 ================================*/
+/* FINAL — Stable, Responsive, Never Cross Edge */
+
+
+/* COBOX ALWAYS FITS REMAINING SCREEN */
+
+/* ===============================
+   COBOX LAYOUT
+================================*/
 .cobox{
-  position: fixed;
+  height:90%;
 
-  top: 8vh;         /* relative to screen height */
-         /* relative to sidebar width */
+  
+  overflow-y:auto;
 
-  width: calc(100vw - 20vw);
-  height: calc(100vh - 10vh);
+  display:flex;
+  flex-direction:column;
+  gap:14px;
 
-  padding: 22px;
+  font-family:"Roboto", sans-serif;
 
-  background: none;
+  overflow-x: hidden;
+}
+
+
+
+/* LEFT PANEL — FIXED */
+.taskDescription{
+  align-self: start;
+
+  height: 90%;
+
+  padding: 0px;
+
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.8);
+  background: rgba(255,255,255,.08);
   backdrop-filter: blur(6px);
 
-  overflow-y: auto;
-  overflow-x: hidden;
+  color: white;
 
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  flex-shrink: 0;
 }
+
+
+/* RIGHT PANEL — TASK CARDS COLUMN */
+.container3{
+  width: 90%;
+
+}
+
+
+
+
+
 
 /* TASK CARD */
 
@@ -242,6 +225,7 @@
 }
 
 container3{
+  
     background-color: none;
 }
 
@@ -381,3 +365,22 @@ container3{
   font-size: 18px;
   text-align: center;
 }
+
+/* new css */
+
+.coboxContainer {
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  
+  width: 70vw;
+  max-width: 1200px;
+
+  min-height: 60%;
+  padding: 22px;
+  overflow-y: hidden;
+  overflow-x: hidden;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+
