@@ -121,7 +121,7 @@ function UserTasksView() {
 
   return (
     <div className="coboxContainer">
-      <div className="taskDescription">Task Description</div>
+      
     <div className="cobox">
       
       {loading && <p>Loading...</p>}
@@ -164,6 +164,7 @@ function UserTasksView() {
           </div>
         ))}
     </div>
+    <div className="taskDescription">Task Description</div>
     </div>
   );
 }
@@ -431,7 +432,7 @@ async function saveTask(taskId: string) {
 
   return (
     <div className="coboxContainer">
-      <div className="taskDescription">Task Description</div>
+      
   <div className="cobox">
 
     
@@ -636,6 +637,7 @@ async function saveTask(taskId: string) {
         </div>
       ))}
   </div>
+  <div className="taskDescription">Task Description</div>
   </div>
 );
 
