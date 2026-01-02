@@ -12,6 +12,7 @@ type Task = {
   empID: string;
   id: string;
   task: string;
+  description: string;
   startTime: string;
   endTime: string;
   status: string;
@@ -39,11 +40,15 @@ function safeISO(dt: string | Date) {
   const d = new Date(dt);
   if (isNaN(d.getTime())) return "";
 
-  // convert UTC → Local for datetime-local
-  const off = d.getTimezoneOffset();
-  const local = new Date(d.getTime() - off * 60000);
+  const pad = (num: number) => String(num).padStart(2, "0");
 
-  return local.toISOString().slice(0, 16);
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 
@@ -236,329 +241,271 @@ function TeamTasksView({
   openAssignModal: boolean;
   setOpenAssignModal: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
-
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null); // NEW
-
-  const empID = selectedEmp?.empID;
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [backupTask, setBackupTask] = useState<Record<string, Task>>({});
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState({
+  const empID = selectedEmp?.empID;
+
+  // New task state including description
+  const [newTask, setNewTask] = useState({
     task: "",
+    description: "",
     startTime: "",
     endTime: ""
   });
 
-  const showCreate = openAssignModal;
-const setShowCreate = setOpenAssignModal;
-
-
-const [newTask, setNewTask] = useState({
-  task: "",
-  startTime: "",
-  endTime: ""
-});
-
-function resetCreate() {
-  setNewTask({ task: "", startTime: "", endTime: "" });
-}
-
-async function createTask() {
-  if (!empID) {
-    alert("No employee selected");
-    return;
+  // HELPER: Updates a task field in the local state array
+  function updateTaskInState(taskId: string, updates: Partial<Task>) {
+    setTasks(prev => prev.map(t => (t.id === taskId ? { ...t, ...updates } : t)));
   }
 
-  const { task, startTime, endTime } = newTask;
+  useEffect(() => {
+    if (!empID) {
+      setTasks([]);
+      setLoading(false);
+      return;
+    }
+    async function loadTasks() {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/displayTasks?empID=${empID}`);
+        const data = await res.json();
+        setTasks(data.tasks || []);
+      } catch (err) {
+        console.error("Task load error", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadTasks();
+  }, [empID]);
 
-  if (!task.trim() || !startTime || !endTime) {
-    alert("Please enter task, start time and end time");
-    return;
+  async function createTask() {
+  if (!empID) return alert("No employee selected");
+  
+  // 1. Extract description from state
+  const { task, description, startTime, endTime } = newTask;
+
+  // 2. Added description.trim() to validation
+  if (!task.trim() || !description.trim() || !startTime || !endTime) {
+    return alert("Please enter title, description, start time and end time");
   }
 
-  const s = new Date(startTime);
-  const e = new Date(endTime);
-
-  if (isNaN(s.getTime()) || isNaN(e.getTime()) || e <= s) {
-    alert("Invalid date or end time must be after start time");
-    return;
-  }
-
-  // required by DB
-  const id = crypto.randomUUID(); // unique task id
-
+  const id = crypto.randomUUID();
+  
+  // 3. Ensure description is in the JSON body
   const res = await fetch(`/api/tasks`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      empID,
-      id,
-      task,
-      startTime,
+      empID, 
+      id, 
+      task, 
+      description, // <--- This sends it to your database
+      startTime, 
       endTime,
-      status: "pending",
+      status: "pending", 
       proof: ""
     })
   });
 
   const data = await res.json();
+  if (!res.ok) return alert(data.error || "Failed to create task");
 
-  if (!res.ok) {
-    alert(data.error || "Failed to create task");
-    return;
-  }
-
-  // UI update
   setTasks(prev => [...prev, data.task]);
-
-  setShowCreate(false);
-  resetCreate();
+  setOpenAssignModal(false);
+  
+  // 4. Reset the state including description
+  setNewTask({ task: "", description: "", startTime: "", endTime: "" });
 }
 
+  async function saveTask(taskId: string) {
+  const t = tasks.find(x => x.id === taskId);
+  if (!t) return;
 
+  // FIX: Fallback to empty string so .trim() doesn't crash on old tasks
+  const currentTask = t.task || "";
+  const currentDesc = t.description || ""; 
 
-  useEffect(() => {
-  
-
-  
-  if (!empID) {
-    setTasks([]);
-    setLoading(false);
+  // --- VALIDATION ---
+  if (!currentTask.trim() || !currentDesc.trim() || !t.startTime || !t.endTime) {
+    alert("All fields (Title, Description, Start, and End time) are required.");
     return;
   }
 
-  async function loadTasks() {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/displayTasks?empID=${empID}`);
-      const data = await res.json();
-      setTasks(data.tasks || []);
-    } catch (err) {
-      console.error("Task load error", err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  loadTasks();
-}, [empID]);   // <-- THIS is what links it to employee change
-
-async function deleteTask(taskId: string){
-  setTasks(prev => prev.filter(t => t.id !== taskId));
-  await fetch(`/api/tasks/${taskId}`, {
-  method: "DELETE"
-});
-}
-
-// ----- INLINE EDIT SAVE -----
-  async function saveEdit(taskId: string) {
-    setTasks(prev =>
-      prev.map(t =>
-        t.id === taskId
-          ? {
-              ...t,
-              task: editValues.task,
-              startTime: editValues.startTime,
-              endTime: editValues.endTime
-            }
-          : t
-      )
-    );
-
-    setEditingId(null);
-
-    await fetch(`/api/tasks/${taskId}`, {
+  try {
+    const res = await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        task: editValues.task,
-        startTime: editValues.startTime,
-        endTime: editValues.endTime
+        task: currentTask.trim(),
+        description: currentDesc.trim(),
+        startTime: t.startTime,
+        endTime: t.endTime
       })
     });
+
+    // IMPROVEMENT: See the actual error from the server if it fails
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.error || "Failed to save");
+    }
+
+    updateTaskInState(taskId, { isEditing: false });
+    
+    // Update the selected view to show the new description immediately
+    if (selectedTask?.id === taskId) {
+      setSelectedTask({ ...t, description: currentDesc, isEditing: false });
+    }
+
+  } catch (err: unknown) {
+    // 1. Determine the error message safely
+    const errorMessage = err instanceof Error 
+      ? err.message 
+      : "An unexpected error occurred. Please try again.";
+
+    // 2. Alert the user using the safe string
+    alert(errorMessage);
+    
+    // 3. Log the full error for debugging
+    console.error("Save error:", err);
   }
-
-  function cancelEdit() {
-    setEditingId(null);
-  }
-
-async function updateTask(taskId: string){
-
-setTasks(prev =>
-      prev.map(t =>
-        t.id === taskId ? { ...t, status: "completed" } : t
-      )
-    );
-
-  await fetch(`/api/tasks/${taskId}`, {
-  method: "PATCH",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ status: "completed" })
-});
-
 }
 
-async function saveTask(taskId: string) {
-  const task = tasks.find(t => t.id === taskId);
-  if (!task) return;
-
-  const { task: name, startTime, endTime } = task;
-
-  // 1️⃣ all fields must exist
-  if (!name.trim() || !startTime || !endTime) {
-    alert("Please enter task, start time and end time");
-    return;
+  async function deleteTask(taskId: string) {
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+    if (selectedTask?.id === taskId) setSelectedTask(null);
+    await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
   }
-
-  // 2️⃣ times must be valid dates
-  const s = new Date(startTime);
-  const e = new Date(endTime);
-
-  if (isNaN(s.getTime()) || isNaN(e.getTime())) {
-    alert("Please enter valid date & time values");
-    return;
-  }
-
-  // 3️⃣ optional: end must be after start
-  if (e < s) {
-    alert("End time cannot be earlier than start time");
-    return;
-  }
-
-  // If valid → continue saving
-  await fetch(`/api/tasks/${taskId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      task: name,
-      startTime,
-      endTime
-    })
-  });
-
-  setTasks(prev =>
-    prev.map(t =>
-      t.id === taskId ? { ...t, isEditing: false } : t
-    )
-  );
-}
-
-
-
 
   return (
-  <div className="coboxContainer">
-    <div className="cobox">
-      {showCreate && (
-        <div className="modalOverlay" onClick={(e) => { if (e.target === e.currentTarget) setShowCreate(false); }}>
-          <div className="modalBox">
-            <h3>Assign Task</h3>
-            <input placeholder="Task description" value={newTask.task} onChange={e => setNewTask(p => ({ ...p, task: e.target.value }))} />
-            <input type="datetime-local" value={newTask.startTime} onChange={e => setNewTask(p => ({ ...p, startTime: e.target.value }))} />
-            <input type="datetime-local" value={newTask.endTime} onChange={e => setNewTask(p => ({ ...p, endTime: e.target.value }))} />
-            <div className="row">
-              <button onClick={() => setShowCreate(false)}>Cancel</button>
-              <button onClick={createTask}>Create</button>
+    <div className="coboxContainer">
+      <div className="cobox">
+        {/* ASSIGN MODAL */}
+        {openAssignModal && (
+          <div className="modalOverlay" onClick={(e) => e.target === e.currentTarget && setOpenAssignModal(false)}>
+            <div className="modalBox">
+              <h3>Assign Task</h3>
+              <input placeholder="Task Title" value={newTask.task} onChange={e => setNewTask(p => ({ ...p, task: e.target.value }))} />
+              
+              <input type="datetime-local" value={newTask.startTime} onChange={e => setNewTask(p => ({ ...p, startTime: e.target.value }))} />
+              <input type="datetime-local" value={newTask.endTime} onChange={e => setNewTask(p => ({ ...p, endTime: e.target.value }))} />
+              {/* INSERT THIS BETWEEN Task Title and Start Time inputs */}
+<textarea 
+  placeholder="Enter Detailed Description" 
+  value={newTask.description} 
+  onChange={e => setNewTask(p => ({ ...p, description: e.target.value }))} 
+  style={{
+    width: "100%",
+    minHeight: "100px",
+    padding: "8px",
+    marginTop: "10px",
+    marginBottom: "10px",
+    borderRadius: "4px",
+    border: "1px solid #ccc",
+    background: "transparent",
+    color: "inherit",
+    display: "block"
+  }}
+/>
+              <div className="row">
+                <button onClick={() => setOpenAssignModal(false)}>Cancel</button>
+                <button onClick={createTask}>Create</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {!selectedEmp && <p className="select-an-employee">Select an employee or add an employee</p>}
-      {loading && <p>Loading...</p>}
+        {!selectedEmp && <p className="select-an-employee">Select an employee or add an employee</p>}
+        {loading && <p>Loading...</p>}
 
-      {!loading && tasks.map(t => (
-        <div
-          key={t.id}
-          className={`container3 ${t.isEditing ? "editing" : ""} ${selectedTask?.id === t.id ? "active-card" : ""}`}
-          onClick={() => !t.isEditing && setSelectedTask(t)} // 4. Updates detail view
-        >
-          <div className="taskText">
-            {!t.isEditing ? (
-              <>
-                {t.task} <br />
-                {prettyDateTime(t.startTime)} → {prettyDateTime(t.endTime)}
-              </>
-            ) : (
-              <div onClick={(e) => e.stopPropagation()}> {/* 5. Prevent selection while typing */}
-                <input className="edit-input" value={t.task} onChange={e => setTasks(prev => prev.map(x => x.id === t.id ? { ...x, task: e.target.value } : x))} />
-                <input type="datetime-local" className="edit-start" value={safeISO(t.startTime)} onChange={e => setTasks(prev => prev.map(x => x.id === t.id ? { ...x, startTime: e.target.value } : x))} />
-                <input type="datetime-local" className="edit-end" value={safeISO(t.endTime)} onChange={e => setTasks(prev => prev.map(x => x.id === t.id ? { ...x, endTime: e.target.value } : x))} />
+        {!loading && tasks.map(t => (
+          <div
+            key={t.id}
+            className={`container3 ${t.isEditing ? "editing" : ""} ${selectedTask?.id === t.id ? "active-card" : ""}`}
+            onClick={() => !t.isEditing && setSelectedTask(t)}
+          >
+            <div className="taskText">
+              {!t.isEditing ? (
+                <>
+                  <p>{t.task}</p> <br />
+                  <p>{prettyDateTime(t.startTime)} → {prettyDateTime(t.endTime)}</p>
+                </>
+              ) : (
+                <div className="edit-fields" onClick={(e) => e.stopPropagation()}>
+                  <input className="edit-input" value={t.task} onChange={e => updateTaskInState(t.id, { task: e.target.value })} />
+                  <textarea className="edit-input" value={t.description || ""} placeholder="Description..." onChange={e => updateTaskInState(t.id, { description: e.target.value })} />
+                  <input type="datetime-local" className="edit-input" value={safeISO(t.startTime)} onChange={e => updateTaskInState(t.id, { startTime: e.target.value })} />
+                  <input type="datetime-local" className="edit-input" value={safeISO(t.endTime)} onChange={e => updateTaskInState(t.id, { endTime: e.target.value })} />
+                </div>
+              )}
+            </div>
+
+            <div className="container2">
+              {!t.isEditing ? (
+                <>
+                  <button className="action-btn update-button" onClick={(e) => {
+                    e.stopPropagation();
+                    setBackupTask(b => ({ ...b, [t.id]: { ...t } }));
+                    updateTaskInState(t.id, { isEditing: true });
+                  }}>
+                    <Image src="/svg/updateTask.svg" alt="update" width={32} height={32} />
+                  </button>
+                  <button className="action-btn delete-button" onClick={(e) => { e.stopPropagation(); deleteTask(t.id); }}>
+                    <Image src="/svg/deleteTask.svg" alt="delete" width={32} height={32} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className="action-btn update-button" onClick={(e) => { e.stopPropagation(); saveTask(t.id); }}>
+                    <Image src="/svg/updateTask.svg" alt="save" width={32} height={32} />
+                  </button>
+                  <button className="action-btn delete-button" onClick={(e) => {
+                    e.stopPropagation();
+                    const original = backupTask[t.id];
+                    updateTaskInState(t.id, { ...original, isEditing: false });
+                  }}>
+                    <Image src="/svg/deleteTask.svg" alt="cancel" width={32} height={32} />
+                  </button>
+                </>
+              )}
+              <button className="checkbox" disabled />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* DETAIL VIEW */}
+      <div className="taskDescription">
+        {selectedTask ? (
+          <div className="description-content">
+            <h2>{selectedTask.task}</h2>
+            <hr />
+            <div style={{ marginTop: '15px' }}>
+              <strong>Description:</strong>
+              <p style={{ opacity: 0.9, marginTop: '5px', whiteSpace: 'pre-wrap' }}>
+                {selectedTask.description || "No description provided."}
+              </p>
+            </div>
+            <p style={{ marginTop: '15px' }}><strong>Status:</strong> {selectedTask.status}</p>
+            <p><strong>Start:</strong> {prettyDateTime(selectedTask.startTime)}</p>
+            <p><strong>Deadline:</strong> {prettyDateTime(selectedTask.endTime)}</p>
+            
+            {selectedTask.proof && (
+              <div className="proof-box">
+                <strong>Proof of Work:</strong>
+                <p>{selectedTask.proof}</p>
               </div>
             )}
           </div>
-
-          <div className="container2">
-            {!t.isEditing ? (
-              <>
-                <button className="action-btn update-button" onClick={(e) => {
-                  e.stopPropagation(); // 6. Prevent card selection
-                  setTasks(prev => prev.map(x => {
-                    if (x.id === t.id) {
-                      setBackupTask(b => ({ ...b, [t.id]: { ...x } }));
-                      return { ...x, isEditing: true };
-                    }
-                    return x;
-                  }));
-                }}>
-                  <Image src="/svg/updateTask.svg" alt="update" width={32} height={32} />
-                </button>
-                <button className="action-btn delete-button" onClick={(e) => { e.stopPropagation(); deleteTask(t.id); }}>
-                  <Image src="/svg/deleteTask.svg" alt="delete" width={32} height={32} />
-                </button>
-              </>
-            ) : (
-              <>
-                <button className="action-btn update-button" onClick={(e) => { e.stopPropagation(); saveTask(t.id); }}>
-                  <Image src="/svg/updateTask.svg" alt="update" width={32} height={32} />
-                </button>
-                <button className="action-btn delete-button" onClick={(e) => {
-                  e.stopPropagation();
-                  setTasks(prev => prev.map(x => x.id === t.id ? { ...backupTask[t.id], isEditing: false } : x));
-                }}>
-                  <Image src="/svg/deleteTask.svg" alt="delete" width={32} height={32} />
-                </button>
-              </>
-            )}
-            <button className="checkbox" disabled />
-          </div>
-        </div>
-      ))}
+        ) : (
+          <p className="select-prompt">Select a task from the list to view details.</p>
+        )}
+      </div>
     </div>
-
-    {/* 7. THE ACTUAL RIGHT-SIDE DIV */}
-    {/* 7. THE UPDATED RIGHT-SIDE DIV (Matches UserTasksView) */}
-<div className="taskDescription">
-  {selectedTask ? (
-    /* Wrapped in description-content for consistent styling */
-    <div className="description-content">
-      <h2>{selectedTask.task}</h2>
-      <hr /> {/* Added horizontal line to match UserView */}
-      
-      <p><strong>Status:</strong> {selectedTask.status}</p>
-      
-      {/* Added Start and Deadline labels instead of just "Time" */}
-      <p><strong>Start:</strong> {prettyDateTime(selectedTask.startTime)}</p>
-      <p><strong>Deadline:</strong> {prettyDateTime(selectedTask.endTime)}</p>
-      
-      {/* Added Proof of Work section so managers can see submissions */}
-      {selectedTask.proof && (
-        <div className="proof-box">
-          <strong>Proof of Work:</strong>
-          <p>{selectedTask.proof}</p>
-        </div>
-      )}
-    </div>
-  ) : (
-    /* Matches the empty state text from UserView */
-    <p className="select-prompt">Select a task from the list to view details.</p>
-  )}
-</div>
-  </div>
-);
-
+  );
 }
 
 /* ---------------- OTHER VIEWS ---------------- */

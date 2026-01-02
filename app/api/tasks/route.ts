@@ -7,9 +7,10 @@ export async function POST(req: Request) {
     await connectDB();
 
     const body = await req.json();
-    const { empID, id, task, startTime, endTime, status, proof } = body;
+    console.log("POST request received body:", body);
+    const { empID, id, task, description, startTime, endTime, status, proof } = body;
 
-    if (!empID || !id || !task || !startTime || !endTime) {
+    if (!empID || !id || !task || !description || !startTime || !endTime) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -20,6 +21,7 @@ export async function POST(req: Request) {
       empID,
       id,
       task,
+      description: description,
       startTime,
       endTime,
       status: status || "pending",
