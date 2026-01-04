@@ -12,9 +12,10 @@ type Props = {
     React.SetStateAction<{ name: string; empID: string } | null>
   >;
   setOpenAssignModal: React.Dispatch<React.SetStateAction<boolean>>;
+  currentManagerID: string | null;
 };
 
-export default function TopBar({ section, selectedEmp, setSelectedEmp, setOpenAssignModal }: Props) {
+export default function TopBar({ section, selectedEmp, setSelectedEmp, setOpenAssignModal,currentManagerID }: Props) {
 
     const [showPopup, setShowPopup] = useState(false);
     
@@ -25,6 +26,7 @@ export default function TopBar({ section, selectedEmp, setSelectedEmp, setOpenAs
       <>
         {showPopup && (
   <SwitchEmpPopup
+  currentManagerID={currentManagerID}
     onClose={() => setShowPopup(false)}
     onSelect={(emp) => {
       setSelectedEmp(emp);

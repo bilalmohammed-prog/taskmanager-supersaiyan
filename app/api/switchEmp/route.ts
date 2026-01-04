@@ -1,23 +1,31 @@
 import { connectDB } from "@/lib/mongoose";
 import Emp from "@/models/employeesModel";
+import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    await connectDB();
+    // 1. CRITICAL: Actually call the connection function
+    await connectDB(); 
 
-    const employees = await Emp
-      .find({ status: "active" })        // optional filter
-      .select("name empID -_id")         // only return what UI needs
-      .lean();
+    const { searchParams } = new URL(req.url);
+    const managerID = searchParams.get("managerID");
 
-    return Response.json({ employees });
+    if (!managerID) {
+      // Returning an empty list if no ID is provided is good practice
+      return NextResponse.json({ employees: [] });
+    }
+
+    // 2. Query MongoDB
+    // This looks for documents where the "managerID" field equals your variable
+    const employees = await Emp.find({ managerID: managerID });
+
+    return NextResponse.json({ employees });
   } 
   catch (err) {
     console.error("SwitchEmp API error:", err);
-    return Response.json(
+    return NextResponse.json(
       { error: "Failed to load employees" },
       { status: 500 }
     );
   }
 }
-

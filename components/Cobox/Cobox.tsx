@@ -200,6 +200,7 @@ type Props = {
 
   openAssignModal: boolean;
   setOpenAssignModal: React.Dispatch<React.SetStateAction<boolean>>;
+  currentManagerID: string | null;
 };
 
 

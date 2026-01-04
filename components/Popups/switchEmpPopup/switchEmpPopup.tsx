@@ -12,19 +12,23 @@ type Employee = {
 export default function SwitchEmpPopup({
   onClose,
   onSelect,
-  selectedEmpID
+  selectedEmpID,
+  currentManagerID
 }: {
   onClose: () => void;
   onSelect: (emp: { name: string; empID: string }) => void;
   selectedEmpID: string | null;
+  currentManagerID: string | null;
 }) {
 
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
 
   async function loadEmployees() {
+    if (!currentManagerID) return;
     try {
-      const res = await fetch("/api/switchEmp");
+      setLoading(true);
+      const res = await fetch("/api/switchEmp?managerID=" + currentManagerID);
       const data = await res.json();
       setEmployees(data.employees);
     } catch (err) {
@@ -43,7 +47,7 @@ export default function SwitchEmpPopup({
 
   useEffect(() => {
     loadEmployees();
-  }, []);
+  }, [currentManagerID]);
 
     return (
   <div className="switch-emp-modal-overlay active" id="switchEmpModalOverlay">
