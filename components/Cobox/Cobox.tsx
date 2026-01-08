@@ -543,6 +543,34 @@ function InboxView() {
   const [search, setSearch] = useState<string>("");
   const [selectedMsg, setSelectedMsg] = useState<IMessage | null>(null);
 
+  const declineInvite = async (msg: IMessage) => {
+  const confirmDecline = confirm("Are you sure you want to decline this invitation?");
+  if (!confirmDecline) return;
+
+  try {
+    const res = await fetch(`/api/invites/decline`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId: msg._id }),
+    });
+
+    if (res.ok) {
+      alert("Invitation declined.");
+      
+      // 1. Update the list so the state is consistent
+      setMessages(prev => prev.map(m => m._id === msg._id ? { ...m, status: "declined" } : m));
+      
+      // 2. IMPORTANT: Update the currently viewed message so the buttons disappear
+      setSelectedMsg({ ...msg, status: "declined" });
+    } else {
+      const errorData = await res.json();
+      alert(`Error: ${errorData.error || "Could not decline"}`);
+    }
+  } catch (err) {
+    console.error("Error declining invite:", err);
+  }
+};
+
   useEffect(() => {
     if (userEmail) {
       fetch(`/api/messages?email=${userEmail}`)
@@ -651,38 +679,63 @@ function InboxView() {
         )}
       </div>
 
-      <div className="taskDescription">
-        {selectedMsg ? (
-          <div className="description-content">
-            <h2 style={{ color: 'white' }}>{selectedMsg.subject}</h2>
-            <hr style={{ opacity: 0.2, margin: '15px 0' }} />
-            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>
-              <strong>From:</strong> {selectedMsg.senderEmail}
-            </p>
-            <p style={{ whiteSpace: 'pre-wrap', marginTop: '20px', lineHeight: '1.6', color: 'white' }}>
-              {selectedMsg.body}
-            </p>
-            
-            {selectedMsg.type === "invite" && 
-             selectedMsg.receiverEmail === userEmail && 
-             selectedMsg.status === "pending" && (
-              <button 
-                className="assignBtn" 
-                style={{ marginTop: '30px', width: '100%' }} 
-                onClick={() => acceptInvite(selectedMsg)}
-              >
-                Accept Invitation
-              </button>
-            )}
 
-            {selectedMsg.status === "accepted" && (
-              <p style={{ color: '#4dff9a', marginTop: '20px', fontWeight: 'bold' }}>✓ Invitation Accepted</p>
-            )}
-          </div>
-        ) : (
-          <p className="select-prompt">Select a message from the list to view content.</p>
-        )}
-      </div>
+
+<div className="taskDescription">
+  {selectedMsg ? (
+    <div className="description-content">
+      <h2 style={{ color: 'white' }}>{selectedMsg.subject}</h2>
+      <hr style={{ opacity: 0.2, margin: '15px 0' }} />
+      <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)' }}>
+        <strong>From:</strong> {selectedMsg.senderEmail}
+      </p>
+      <p style={{ whiteSpace: 'pre-wrap', marginTop: '20px', lineHeight: '1.6', color: 'white' }}>
+        {selectedMsg.body}
+      </p>
+      
+      {/* Updated Buttons Block */}
+      {selectedMsg.type === "invite" && 
+       selectedMsg.receiverEmail === userEmail && 
+       selectedMsg.status === "pending" && (
+        <div style={{ display: 'flex', gap: '12px', marginTop: '30px', width: '100%' }}>
+          <button 
+            className="assignBtn" 
+            style={{ flex: 1, margin: 0 }} 
+            onClick={() => acceptInvite(selectedMsg)}
+          >
+            Accept
+          </button>
+          
+          <button 
+            className="assignBtn" 
+            style={{ flex: 1, margin: 0, background: '#e53e3e' }} 
+            onClick={() => declineInvite(selectedMsg)}
+          >
+            Decline
+          </button>
+        </div>
+      )}
+
+      {/* Dynamic Status Messages */}
+
+
+{/* Dynamic Status Messages */}
+{selectedMsg.status === "accepted" && (
+  <div style={{ marginTop: '20px', padding: '10px', borderRadius: '8px', background: 'rgba(77, 255, 154, 0.1)' }}>
+    <p style={{ color: '#4dff9a', fontWeight: 'bold', margin: 0 }}>✓ Invitation Accepted</p>
+  </div>
+)}
+
+{selectedMsg.status === "declined" && (
+  <div style={{ marginTop: '20px', padding: '10px', borderRadius: '8px', background: 'rgba(255, 77, 77, 0.1)' }}>
+    <p style={{ color: '#ff4d4d', fontWeight: 'bold', margin: 0 }}>✕ Invitation Declined</p>
+  </div>
+)}
+    </div>
+  ) : (
+    <p className="select-prompt">Select a message from the list to view content.</p>
+  )}
+</div>
     </div>
   );
 }
