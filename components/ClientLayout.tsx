@@ -19,20 +19,27 @@ const { data: session } = useSession();
   const [managerID, setManagerID] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!session?.user?.email) return;
+  if (!session?.user?.email) return;
 
-    async function fetchManagerID() {
-      try {
-        const res = await fetch(`/api/get-emp?email=${session?.user?.email}`);
-        const data = await res.json();
-        // Store the manager's own empID to use as a filter for their team
-        setManagerID(data?.empID || null);
-      } catch (err) {
-        console.error("Error fetching manager data", err);
+  async function fetchManagerID() {
+    try {
+      const res = await fetch(`/api/get-emp?email=${session?.user?.email}`);
+      
+      // 1. Check if the response actually worked
+      if (!res.ok) {
+        console.error(`Error ${res.status}: Route not found or server error`);
+        return;
       }
+
+      // 2. Only parse if status is 200-299
+      const data = await res.json();
+      setManagerID(data?.empID || null);
+    } catch (err) {
+      console.error("Failed to parse JSON", err);
     }
-    fetchManagerID();
-  }, [session]);
+  }
+  fetchManagerID();
+}, [session]);
 
 
 
