@@ -150,7 +150,11 @@ function UserTasksView() {
   <div className="coboxContainer">
     <div className="cobox">
       {loading && <p>Loading...</p>}
-
+      {!loading && tasks.length === 0 && (
+        <p className="select-promptTaskLoading" style={{ textAlign: "center", marginTop: "20px" }}>
+          You have no tasks.
+        </p>
+      )}
       {!loading &&
         tasks.map((t) => (
           <div
@@ -203,7 +207,7 @@ function UserTasksView() {
           )}
         </div>
       ) : (
-        <p className="select-prompt">Select a task from the list to view details.</p>
+        <p className="select-promptTaskDesc">Select a task to view details</p>
       )}
     </div>
   </div>
@@ -401,6 +405,7 @@ function TeamTasksView({
     await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
   }
 
+  if(selectedEmp){
   return (
     <div className="coboxContainer">
       <div className="cobox">
@@ -439,7 +444,7 @@ function TeamTasksView({
           </div>
         )}
 
-        {!selectedEmp && <p className="select-an-employee">Select an employee or add an employee</p>}
+
         {loading && <p>Loading...</p>}
 
         {!loading && tasks.map(t => (
@@ -522,11 +527,14 @@ function TeamTasksView({
             )}
           </div>
         ) : (
-          <p className="select-prompt">Select a task from the list to view details.</p>
+          <p className="select-promptTaskDesc">Select a task to view details</p>
         )}
       </div>
     </div>
   );
+}else{
+  return(<p className="select-an-employee">Select an employee or add an employee</p>);
+}
 }
 
 /* ---------------- OTHER VIEWS ---------------- */

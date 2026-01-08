@@ -9,7 +9,7 @@
   grid-template-columns: 1fr auto 1fr;
   align-items:center;
 
-  background:#1E1E1E;                /* SOLID black */
+  background:#1e1e1e;                /* SOLID black */
   border-bottom:1px solid var(--soft-border);
   z-index:1000;
   padding:0 16px;

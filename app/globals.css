@@ -7,9 +7,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-
-  background-color:  #333333;
+  background-color:  #181818;
   overflow-y: auto;
   position: relative;
 }

@@ -11,7 +11,7 @@
   width: 60px;
   height: calc(100vh - 60px);   /* fills precisely remaining space */
     padding-top: 10px;
-  background:#1E1E1E;  
+  background:#1e1e1e;  
   border-right: 1px solid var(--soft-border);
   z-index: 999;
 
