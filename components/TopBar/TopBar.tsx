@@ -25,6 +25,33 @@ export default function TopBar({ section, selectedEmp, setSelectedEmp, setOpenAs
     
   const [composeMode, setComposeMode] = useState<"message" | "invite" | null>(null);
 
+  const [showChoiceModal, setShowChoiceModal] = useState(false);
+
+const handleDropEmployee = async () => {
+  if (!selectedEmp) return alert("Please select an employee to drop first.");
+  
+  const confirmDrop = confirm(`Are you sure you want to remove ${selectedEmp.name} from your team?`);
+  if (!confirmDrop) return;
+
+  try {
+    const res = await fetch(`../api/invites/drop`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ empID: selectedEmp.empID }),
+    });
+
+    if (res.ok) {
+      alert("Employee dropped successfully.");
+      setSelectedEmp(null); // Clear the selection as they are no longer yours
+      setShowChoiceModal(false);
+    } else {
+      alert("Failed to drop employee.");
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
   if (section === "teamTasks")
     return (
       <>
@@ -55,8 +82,8 @@ export default function TopBar({ section, selectedEmp, setSelectedEmp, setOpenAs
         <div className="rsidebar">
           <div className="assign">
 
-            <button className="sidebar-btn createEmp" onClick={() => setComposeMode("invite")}>
-  <Image src="/svg/createEmp.svg" alt="Draft icon" width={32} height={32}/>
+            <button className="sidebar-btn createEmp" onClick={() => setShowChoiceModal(true)}>
+  <Image src="/svg/createEmp.svg" alt="Add/Drop" width={32} height={32}/>
   <span className="tooltip">Add/Drop employee</span>
 </button>
 
@@ -99,6 +126,50 @@ export default function TopBar({ section, selectedEmp, setSelectedEmp, setOpenAs
 </div>
 
         </div>
+
+      {showChoiceModal && (
+  <div className="modalOverlay" onClick={() => setShowChoiceModal(false)}>
+    <div className="modalBox" onClick={e => e.stopPropagation()} style={{ width: '350px', textAlign: 'center' }}>
+      <h3>Manage Team</h3>
+      <p style={{ marginBottom: '20px', fontSize: '14px', opacity: 0.8 }}>
+        Would you like to add a new member or remove the currently selected employee?
+      </p>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <button 
+          className="assignBtn" 
+          onClick={() => { setComposeMode("invite"); setShowChoiceModal(false); }}
+        >
+          Add New Employee (Send Invite)
+        </button>
+        
+        <button 
+  className="assignBtn" 
+  style={{ background: '#e53e3e', opacity: 1, cursor: 'pointer' }} // Remove disabled styling
+  onClick={() => {
+    if (!selectedEmp) {
+      // If no one is selected, close choice modal and open selection popup
+      setShowChoiceModal(false);
+      setShowPopup(true); 
+    } else {
+      handleDropEmployee();
+    }
+  }}
+>
+  {selectedEmp ? `Drop ${selectedEmp.name}` : "Select an employee to Drop"}
+</button>
+        
+        <button 
+          style={{ background: 'transparent', border: 'none', color: 'gray', marginTop: '10px', cursor: 'pointer' }} 
+          onClick={() => setShowChoiceModal(false)}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
       </>
     );
   
