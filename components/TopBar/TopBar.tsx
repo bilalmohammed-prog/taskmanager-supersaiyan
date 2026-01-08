@@ -1,9 +1,12 @@
 "use client";
 
+import ComposeMessagePopup from "../Popups/ComposeMessagePopup/ComposeMessagePopup";
+
 import Image from "next/image";
 import "./TopBar.css";
 import  SwitchEmpPopup from "../Popups/switchEmpPopup/switchEmpPopup";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 
 type Props = {
   section: "tasks" | "inbox" | "progress" | "teamTasks";
@@ -17,13 +20,25 @@ type Props = {
 
 export default function TopBar({ section, selectedEmp, setSelectedEmp, setOpenAssignModal,currentManagerID }: Props) {
 
+    const { data: session } = useSession();
     const [showPopup, setShowPopup] = useState(false);
     
-
+  const [composeMode, setComposeMode] = useState<"message" | "invite" | null>(null);
 
   if (section === "teamTasks")
     return (
       <>
+
+      {/* Add this here */}
+{composeMode === "invite" && (
+  <ComposeMessagePopup 
+    userEmail={session?.user?.email || ""} 
+    currentManagerID={currentManagerID} 
+    fixedType="invite" 
+    onClose={() => setComposeMode(null)} 
+  />
+)}
+
         {showPopup && (
   <SwitchEmpPopup
   currentManagerID={currentManagerID}
@@ -40,10 +55,10 @@ export default function TopBar({ section, selectedEmp, setSelectedEmp, setOpenAs
         <div className="rsidebar">
           <div className="assign">
 
-            <button className="sidebar-btn createEmp">
-              <Image src="/svg/createEmp.svg" alt="Draft icon" width={32} height={32}/>
-              <span className="tooltip">Add/Drop employee</span>
-            </button>
+            <button className="sidebar-btn createEmp" onClick={() => setComposeMode("invite")}>
+  <Image src="/svg/createEmp.svg" alt="Draft icon" width={32} height={32}/>
+  <span className="tooltip">Add/Drop employee</span>
+</button>
 
             <button
   className="sidebar-btn assign-task-btn"
@@ -124,28 +139,30 @@ export default function TopBar({ section, selectedEmp, setSelectedEmp, setOpenAs
     
 
 
-  if (section === "inbox")
+  if (section === "inbox") {
+    return (
+      <div className="rsidebar">
+        {composeMode && (
+  <ComposeMessagePopup 
+    userEmail={session?.user?.email || ""} 
+    currentManagerID={currentManagerID} 
+    fixedType={composeMode} 
+    onClose={() => setComposeMode(null)} 
+  />
+)}
 
-return (
-  
-  <div className="rsidebar">
-            
-            <button className="sidebar-btn draft">
-            <Image
-            src="/svg/draft.svg"
-            alt="Draft icon"
-            width={32}
-            height={32}
-          />
-            <span className="tooltip">Draft</span>
+        <button className="sidebar-btn draft" onClick={() => setComposeMode("message")}>
+          <Image src="/svg/draft.svg" alt="Draft icon" width={32} height={32} />
+          <span className="tooltip">Compose</span>
         </button>
-            
-<div className="empBarInfo">
-        <span className="empDisplay"></span>
-        
-    </div>
+
+        <div className="empBarInfo">
+          <span className="empDisplay"></span>
         </div>
-  );
+      </div>
+    );
+  }
+  
 
 
   return null;
