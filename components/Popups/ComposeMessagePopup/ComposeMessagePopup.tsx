@@ -65,49 +65,54 @@ export default function ComposeMessagePopup({ userEmail, currentManagerID, onClo
 
   return (
     <div className="modalOverlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modalBox" style={{ width: '450px', background: 'white', color: '#1a1d23' }}>
-        <h3 style={{ marginBottom: '15px', fontWeight: 600 }}>
-          {fixedType === "invite" ? "Invite Employee" : "New Message"}
-        </h3>
-        
-        {/* The Category Select is removed to make it "unchangeable" */}
+  <div className="modalBox">
+    <h3>{fixedType === "invite" ? "Invite Employee" : "New Message"}</h3>
+    
+    <input 
+      name="receiverEmail"
+      placeholder="Recipient Gmail" 
+      value={form.receiverEmail} 
+      onChange={handleInputChange}
+    />
+    
+    <input 
+      name="subject"
+      placeholder="Subject" 
+      value={form.subject} 
+      onChange={handleInputChange}
+    />
 
-        <input 
-          name="receiverEmail"
-          placeholder="Recipient Gmail" 
-          value={form.receiverEmail} 
-          onChange={handleInputChange}
-          style={{ color: '#1a1d23', border: '1px solid #cbd5e0', marginBottom: '10px', padding: '10px', width: '100%', borderRadius: '4px' }}
-        />
-        
-        <input 
-          name="subject"
-          placeholder="Subject" 
-          value={form.subject} 
-          onChange={handleInputChange}
-          style={{ color: '#1a1d23', border: '1px solid #cbd5e0', marginBottom: '10px', padding: '10px', width: '100%', borderRadius: '4px' }}
-        />
+    <textarea 
+      name="body"
+      placeholder={fixedType === "invite" ? "Include a note with your invitation..." : "Type your message..."} 
+      value={form.body} 
+      onChange={handleInputChange} 
+      style={{
+        width: "95%",
+        minHeight: "150px",
+        padding: "8px",
+        marginTop: "10px",
+        marginBottom: "10px",
+        borderRadius: "4px",
+        border: "1px solid #ccc",
+        background: "transparent",
+        color: "inherit",
+        display: "block",
+        resize: "vertical"
+      }}
+    />
 
-        <textarea 
-          name="body"
-          placeholder={fixedType === "invite" ? "Include a note with your invitation..." : "Type your message..."} 
-          value={form.body} 
-          onChange={handleInputChange} 
-          style={{ minHeight: '150px', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e0', width: '100%', fontFamily: 'inherit', color: '#1a1d23' }}
-        />
-
-        <div className="row" style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-          <button type="button" onClick={onClose} className="cancel-btn-style">Cancel</button>
-          <button 
-            type="button" 
-            onClick={handleSubmit} 
-            disabled={isSending}
-            style={{ background: '#4a6df3', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '6px', cursor: isSending ? 'not-allowed' : 'pointer' }}
-          >
-            {isSending ? "Sending..." : fixedType === "invite" ? "Send Invite" : "Send Message"}
-          </button>
-        </div>
-      </div>
+    <div className="row">
+      <button type="button" onClick={onClose}>Cancel</button>
+      <button 
+        type="button" 
+        onClick={handleSubmit} 
+        disabled={isSending}
+      >
+        {isSending ? "Sending..." : fixedType === "invite" ? "Send Invite" : "Send Message"}
+      </button>
     </div>
+  </div>
+</div>
   );
 }

@@ -134,10 +134,19 @@ const handleDropEmployee = async () => {
 
           <div className="empBarInfo">
   <span className="empDisplay">
-    {selectedEmp
-      ? `${selectedEmp.name} (${selectedEmp.empID})`
-      : "No employee selected"}
-  </span>
+  {selectedEmp ? (
+    <>
+      <span style={{ fontWeight: 500, color: '#ffffff' }}>{selectedEmp.name}</span>
+      <span style={{ color: 'rgba(255,255,255,0.65)', margin: '0 6px', fontSize: '0.92em' }}>
+        ({selectedEmp.empID})
+      </span>
+    </>
+  ) : (
+    <span style={{ color: 'rgba(255,255,255,0.55)', fontStyle: 'italic' }}>
+      No employee selected
+    </span>
+  )}
+</span>
 </div>
 
         </div>

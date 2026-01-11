@@ -337,8 +337,11 @@
 .edit-input,
 .edit-start,
 .edit-end {
+  resize: vertical;
+  max-height: 50%;
   width: 90%;
   padding: 10px 12px;
+  box-sizing: border-box;
 
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.5);
@@ -350,6 +353,7 @@
   outline: none;
   transition: .18s ease;
 }
+
 
 
 /* Hover + Focus (Professional UI Glow) */
@@ -798,4 +802,5 @@
 
   text-align: center;
 }
+
 

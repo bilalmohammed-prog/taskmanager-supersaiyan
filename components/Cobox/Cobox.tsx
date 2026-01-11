@@ -424,7 +424,7 @@ function TeamTasksView({
   value={newTask.description} 
   onChange={e => setNewTask(p => ({ ...p, description: e.target.value }))} 
   style={{
-    width: "100%",
+    width: "95%",
     minHeight: "100px",
     padding: "8px",
     marginTop: "10px",
@@ -433,7 +433,8 @@ function TeamTasksView({
     border: "1px solid #ccc",
     background: "transparent",
     color: "inherit",
-    display: "block"
+    display: "block",
+    resize:"vertical"
   }}
 />
               <div className="row">
