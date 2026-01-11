@@ -15,7 +15,8 @@ export function LeftSideBar({setSection}:Props){
         <div className="lsidebar">
         
         <button className="sidebar-btn managerAccess" onClick={() => setSection("teamTasks")}>
-            <span className="tooltip">Team Tasks</span>
+            {/* <span className="tooltip">Team Tasks</span> */}
+            
             {/* TeamTasks SVG */}
             <Image
             src="/svg/teamtasks.svg"
@@ -23,6 +24,7 @@ export function LeftSideBar({setSection}:Props){
             width={32}
             height={32}
           />
+          <span className="btn-label">Team Tasks</span>
         </button>
         <button className="sidebar-btn empAccess" onClick={() => setSection("tasks")}>
             {/* Tasks */}
@@ -33,7 +35,7 @@ export function LeftSideBar({setSection}:Props){
             height={32}
           />
             <span className="tooltip">Tasks</span>
-            
+            <span className="btn-label">Tasks</span>
         </button>
         <button className="sidebar-btn inbox" onClick={() => setSection("inbox")}>
             {/* inbox */}
@@ -44,6 +46,7 @@ export function LeftSideBar({setSection}:Props){
             height={32}
           />
             <span className="tooltip">Inbox</span>
+            <span className="btn-label">Inbox</span>
         </button>
         <button className="sidebar-btn progress" onClick={() => setSection("progress")}>
             <Image
@@ -52,7 +55,8 @@ export function LeftSideBar({setSection}:Props){
             width={32}
             height={32}
           />
-            <span className="tooltip">Progress</span>
+            {/* <span className="tooltip">Progress</span> */}
+            <span className="btn-label">Progress</span>
         </button>
 
         {/* <!-- profile btn --> */}

@@ -629,7 +629,7 @@ function InboxView() {
 
   if (view === "menu") {
     return (
-      <div className="cobox" style={{ gap: "20px" }}>
+      <div className="coboxContainer" style={{ gap: "30px" }}>
         {[
           { id: "inv_sent", label: "Invitations Sent" },
           { id: "inv_rec", label: "Invitations Received" },
@@ -638,12 +638,12 @@ function InboxView() {
         ].map((cat) => (
           <div 
             key={cat.id} 
-            className="container3" 
+            className="container3 container3Message" 
             onClick={() => { setActiveCategory(cat.id); setView("list"); }}
             style={{ cursor: "pointer" }}
           >
             <div className="taskText">{cat.label}</div>
-            <div className="container2">→</div>
+            <div className="container2"></div>
           </div>
         ))}
       </div>
@@ -741,7 +741,7 @@ function InboxView() {
 )}
     </div>
   ) : (
-    <p className="select-prompt">Select a message from the list to view content.</p>
+    <p className="select-promptMessage">Select a message to view content.</p>
   )}
 </div>
     </div>

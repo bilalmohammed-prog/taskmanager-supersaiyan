@@ -91,17 +91,8 @@ body{
     appearance: none;
     -webkit-appearance: none;
 }
-.endDay:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    transition: background-color 0.2s ease, transform 0.2s ease;
-    transform: scale(1.3);
-}
-.endDay svg {
-    height: 60%;
-    width: 100%;
-    display: block;
-    object-fit: contain;
-}
+
+
 
 
 
@@ -430,17 +421,7 @@ body{
 
 
 
-.record_btn,.assign-task-btn,.createEmp,.switchEmp,.inbox,.empAccess,.managerAccess, .draft {
-    height:35px;
-    width:35px;
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    background-color: transparent;
 
-    appearance: none;
-    -webkit-appearance: none;
-}
 .draft {
   grid-column: 2;
   grid-row: 1;
@@ -453,19 +434,10 @@ body{
   align-self: center;
   justify-self: center;
 }
-.draft svg{
-  display:block;
-}
 
 
-.createEmp{
-    position:absolute;
-    
-}
-.switchEmp{
-    position:absolute;
-    
-}
+
+
 .empBarInfo{
   justify-self: end;
   color:white;
@@ -490,51 +462,137 @@ body{
 
 
 
-.createEmp:hover,.switchEmp:hover,.inbox:hover,.empAccess:hover,.managerAccess:hover, .draft:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    transition: background-color 0.2s ease, transform 0.2s ease;
-    transform: scale(1.3);
-}
-.record_btn:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    transition: background-color 0.2s ease, transform 0.2s ease;
-    transform: scale(1.3);
-}
 
 
-.record_btn svg, .managerAccess svg, .inbox svg, .createEmp svg, .switchEmp svg, .endDay svg , .progress svg, .draft svg{
-    height: 60%;
-    width: 100%;
-    display: block;
-    object-fit: contain;
-}
- .empAccess svg{
-    height:60%;
-    width:100%;
-    display: block;
-    object-fit: contain;
-   
- }
+
+
+
 /* Sidebar buttons must be relative to anchor the tooltip */
 .sidebar-btn {
     position: relative;
-    height: 35px;
-    width: 35px;
+    height: 42px;
+    width: auto;
+    border-radius: 5px;
     border: none;
-    background: transparent;
+    background-color: #26232300;
+  color: rgba(255, 255, 255, 0.92);
+
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
     cursor: pointer;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
     justify-content: center;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    
+
+  
+
+  
+  
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+    color:#ffffff;
+    font-size: 16px;
+    
+  flex-shrink: 0;
 }
 
-/* Hover style */
+.sidebar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(60%);
+  pointer-events: none;
+}
+
+/* keep tooltip hidden or dim when disabled */
+.sidebar-btn:disabled .tooltip {
+  opacity: 0.6;
+}
+
+.createEmp {
+  position: relative;
+  height: 42px;
+  width: auto;
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+
+  border-radius: 5px;
+  border: none;
+
+  background-color: #26232300;
+  color: #ffffff;
+
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+
+  cursor: pointer;
+  flex-shrink: 0;
+
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.createEmp:hover {
+  background-color: #323232;
+}
+
+.createEmp:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
+}
+
+
+
+/* Hover */
 .sidebar-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-btn img {
+  width: 22px;
+  height: 22px;
+
+}
+
+.createEmp img {
+  width: 22px;
+  height: 22px; 
+}
+
+
+
+/* Active / pressed */
+.sidebar-btn:active {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Focus (keyboard accessibility) */
+.sidebar-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+
+/* Hover style */
+/* .sidebar-btn:hover {
     background-color: rgba(255, 255, 255, 0.15);
     transition: 0.2s ease;
     transform: scale(1.2);
-}
+} */
 
 /* Tooltip base */
 .sidebar-btn .tooltip {
@@ -569,10 +627,10 @@ body{
 }
 
 /* Show tooltip on hover */
-.sidebar-btn:hover .tooltip {
+/* .sidebar-btn:hover .tooltip {
     opacity: 1;
     visibility: visible;
-}
+} */
 
 
 /* css reusable variables */
@@ -618,19 +676,10 @@ body{
     
 }
 
-.assign-task-btn:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    transition: background-color 0.2s ease, transform 0.2s ease;
-    transform: scale(1.3);
-}
 
 
-.assign-task-btn svg {
-    height: 60%;
-    width: 100%;
-    display: block;
-    object-fit: contain;
-}
+
+
 
 /* Modal Overlay */
 .assign-modal-overlay {
@@ -1191,13 +1240,6 @@ body{
     }
 }
 
-.assign-task-btn,
-.createEmp,
-.switchEmp,
-.endDay {
-    position: static; /* or just remove position entirely */
-}
-
 
 
 
@@ -1510,10 +1552,7 @@ html, body {
 }
 
 
-.sidebar-btn img {
-  width: 100%;
-  height: 60%;
-}
+
 
 body{
   overflow-y: hidden;
@@ -1524,3 +1563,22 @@ html{
   overflow-y:hidden;
 }
 
+.action-btn {
+  /* Change from fixed 34px to auto or a taller height to fit text */
+  width: 54px;         /* Slightly wider to accommodate labels */
+  height: 50px;        /* Taller to fit Icon + Text */
+  
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.08);
+
+  display: flex;
+  flex-direction: column; /* This stacks Icon on top, Label on bottom */
+  align-items: center;
+  justify-content: center;
+  gap: 4px;              /* Precise space between icon and text */
+
+  cursor: pointer;
+  transition: .18s ease;
+  flex-shrink: 0;
+}

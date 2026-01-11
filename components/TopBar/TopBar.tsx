@@ -82,13 +82,24 @@ const handleDropEmployee = async () => {
         <div className="rsidebar">
           <div className="assign">
 
-            <button className="sidebar-btn createEmp" onClick={() => setShowChoiceModal(true)}>
+            <button className="createEmp" onClick={() => setShowChoiceModal(true)}>
   <Image src="/svg/createEmp.svg" alt="Add/Drop" width={32} height={32}/>
-  <span className="tooltip">Add/Drop employee</span>
+  Add / Drop Employee
+  {/* <span className="tooltip">Add/Drop employee</span> */}
+  
 </button>
+{/* <span className="btn-label">Manage Staff</span> */}
+
+<button className="sidebar-btn switchEmp" onClick={() => setShowPopup(true)}>
+              <Image src="/svg/switchEmp.svg" alt="Draft icon" width={32} height={32}/>
+              Select Employee
+              <span className="tooltip">Switch employee</span>
+            </button>
 
             <button
   className="sidebar-btn assign-task-btn"
+  disabled={!selectedEmp}
+  title={!selectedEmp ? "Select an employee first" : "Add task"}
   onClick={() => {
     if (!selectedEmp) {
       alert("Select an employee first");
@@ -98,22 +109,26 @@ const handleDropEmployee = async () => {
   }}
 >
   <Image src="/svg/assignTask.svg" alt="Draft icon" width={32} height={32}/>
+  Add Task
   <span className="tooltip">Add task</span>
 </button>
 
 
-            <button className="sidebar-btn switchEmp" onClick={() => setShowPopup(true)}>
-              <Image src="/svg/switchEmp.svg" alt="Draft icon" width={32} height={32}/>
-              <span className="tooltip">Switch employee</span>
-            </button>
 
-            <button className="sidebar-btn endDay" onClick={() => {
+            
+
+
+            <button className="sidebar-btn endDay" 
+            disabled={!selectedEmp}
+  title={!selectedEmp ? "Select an employee first" : "Assign tasks"}onClick={() => {
     setSelectedEmp(null);      // remove employee selection
     setOpenAssignModal(false); // close assign modal if open
   }}>
               <Image src="/svg/endDay.svg" alt="Draft icon" width={32} height={32}/>
+              Assign Tasks
               <span className="tooltip">Assign</span>
             </button>
+
 
           </div>
 
@@ -130,7 +145,7 @@ const handleDropEmployee = async () => {
       {showChoiceModal && (
   <div className="modalOverlay" onClick={() => setShowChoiceModal(false)}>
     <div className="modalBox" onClick={e => e.stopPropagation()} style={{ width: '350px', textAlign: 'center' }}>
-      <h3>Manage Team</h3>
+      
       <p style={{ marginBottom: '20px', fontSize: '14px', opacity: 0.8 }}>
         Would you like to add a new member or remove the currently selected employee?
       </p>
@@ -224,8 +239,10 @@ const handleDropEmployee = async () => {
 
         <button className="sidebar-btn draft" onClick={() => setComposeMode("message")}>
           <Image src="/svg/draft.svg" alt="Draft icon" width={32} height={32} />
+          Draft
           <span className="tooltip">Compose</span>
         </button>
+
 
         <div className="empBarInfo">
           <span className="empDisplay"></span>
