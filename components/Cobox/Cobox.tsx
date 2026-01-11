@@ -448,6 +448,13 @@ function TeamTasksView({
 
         {loading && <p>Loading...</p>}
 
+
+        {!loading && tasks.length === 0 && (
+  <p className="select-promptTaskLoading" style={{ textAlign: "center", marginTop: "20px" }}>
+    This employee has no tasks.
+  </p>
+)}
+
         {!loading && tasks.map(t => (
           <div
             key={t.id}
