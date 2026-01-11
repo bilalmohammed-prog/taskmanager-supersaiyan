@@ -322,6 +322,151 @@
   box-shadow: none;
 }
 
+/* ================================
+   DARK GLASS THEME OVERRIDES
+   ================================ */
+
+/* Overlay */
+.switch-emp-modal-overlay {
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+}
+
+/* Modal container */
+.switch-emp-modal {
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  color: #eaeaea;
+}
+
+/* Header */
+.switch-emp-modal-header {
+  margin-bottom: 18px;
+}
+
+.switch-emp-modal-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: #f5f5f5;
+}
+
+.switch-emp-modal-subtitle {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Close button */
+.switch-emp-modal-close {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-radius: 6px;
+}
+
+.switch-emp-modal-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Loading */
+.switch-emp-loading {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.switch-emp-spinner {
+  border-color: rgba(255, 255, 255, 0.15);
+  border-top-color: #ffffff;
+}
+
+/* Empty state */
+.switch-emp-empty {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Scrollbar */
+.switch-emp-list-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Grid cards */
+.switch-emp-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  padding: 14px 16px;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Hover */
+.switch-emp-card:hover {
+  background: rgba(255, 255, 255, 0.07);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Selected state */
+.switch-emp-card.selected {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.switch-emp-card.selected:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Card text */
+.switch-emp-card-name {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.switch-emp-card-id {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+}
+
+/* Actions footer */
+.switch-emp-modal-actions {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Buttons */
+.switch-emp-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-radius: 8px;
+}
+
+.switch-emp-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Cancel button */
+.switch-emp-btn-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.switch-emp-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ================================
+   HARD ISOLATE MODAL OVERLAY
+   ================================ */
+
+.switch-emp-modal-overlay.active {
+  background:#00000080;
+
+}
+
+/* Kill any page noise / patterns behind */
+
+
+
 .rsidebar {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
