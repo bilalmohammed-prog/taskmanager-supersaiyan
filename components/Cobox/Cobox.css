@@ -450,6 +450,142 @@
   margin: 0;
 }
 
+/* ────────────────────────────────────────────────────────────────
+   PROFESSIONAL DARK-MODE CONFIRMATION MODAL (2026 Style)
+   ──────────────────────────────────────────────────────────────── */
+
+.modalBox {
+  background: #1f1f1f;                    /* Slightly darker than cards for contrast */
+  color: #e0e0e0;
+  padding: 24px 28px;
+  border-radius: 16px;                    /* Softer, modern radius */
+  width: 380px;                           /* A bit wider for better readability */
+  max-width: 90vw;
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;                              /* Increased gap for breathing room */
+
+  border: 1px solid rgba(255, 255, 255, 0.10); /* Subtle border */
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.55),      /* Stronger, deeper shadow */
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset; /* Inner glow */
+
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Header / Title */
+.modalBox h3 {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.01em;
+}
+
+/* Description / Warning text */
+.modalBox p {
+  color: #b0b0b0;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Warning banner (for destructive actions like "Drop") */
+.modalBox .warning {
+  background: rgba(239, 68, 68, 0.12);   /* Soft red background */
+  border-left: 4px solid #ef4444;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #f87171;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.modalBox .warning svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: #ef4444;
+}
+
+/* Buttons container */
+.modalBox .buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+/* Buttons */
+.modalBox button {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: none;
+}
+
+.modalBox button.cancel {
+  background: #333333;
+  color: #e0e0e0;
+}
+
+.modalBox button.cancel:hover {
+  background: #444444;
+}
+
+.modalBox button.destructive {
+  background: #ef4444;                   /* Tailwind-like red */
+  color: white;
+}
+
+.modalBox button.destructive:hover {
+  background: #dc2626;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Input (if you need reason field for removal) */
+.modalBox input {
+  padding: 12px 16px;
+  background: #2a2a2a;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  color: white;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.modalBox input:focus {
+  border-color: #3b82f6;                 /* Blue focus ring */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Optional: Close (X) button in top-right */
+.modalBox .close-btn {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.modalBox .close-btn:hover {
+  color: #ffffff;
+}
+
 .row {
   display: flex;
   justify-content: flex-end;

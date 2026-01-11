@@ -143,40 +143,121 @@ const handleDropEmployee = async () => {
         </div>
 
       {showChoiceModal && (
-  <div className="modalOverlay" onClick={() => setShowChoiceModal(false)}>
-    <div className="modalBox" onClick={e => e.stopPropagation()} style={{ width: '350px', textAlign: 'center' }}>
-      
-      <p style={{ marginBottom: '20px', fontSize: '14px', opacity: 0.8 }}>
-        Would you like to add a new member or remove the currently selected employee?
+  <div 
+    className="modalOverlay" 
+    onClick={() => setShowChoiceModal(false)}
+  >
+    <div 
+      className="modalBox"
+      onClick={e => e.stopPropagation()}
+    >
+      <h3 style={{ margin: '0 0 12px 0' }}>
+        Manage Team Member
+      </h3>
+
+      <p style={{ 
+        margin: '0 0 20px 0', 
+        fontSize: '14px', 
+        color: 'rgba(255,255,255,0.75)',
+        lineHeight: '1.45'
+      }}>
+        {selectedEmp 
+          ? `What would you like to do with ${selectedEmp.name} (${selectedEmp.empID})?`
+          : "Choose an action to manage your team members."
+        }
       </p>
-      
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <button 
-          className="assignBtn" 
-          onClick={() => { setComposeMode("invite"); setShowChoiceModal(false); }}
+
+      {/* Warning for destructive action - only shown when someone is selected */}
+      {selectedEmp && (
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.12)',
+          borderLeft: '4px solid #ef4444',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          margin: '0 0 20px 0',
+          fontSize: '13.5px',
+          color: '#f87171',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          <span style={{ fontSize: '18px' }}>⚠️</span>
+          <span>
+            Removing an employee will revoke their access and archive their tasks. 
+            This action cannot be undone.
+          </span>
+        </div>
+      )}
+
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px'
+      }}>
+        {/* Add New Employee Button */}
+        <button
+          className="assignBtn"
+          style={{
+            background: '#3b82f6',
+            color: 'white',
+            padding: '12px',
+            borderRadius: '10px',
+            fontWeight: 500,
+            fontSize: '14px',
+            border: 'none',
+            cursor: 'pointer'
+          }}
+          onClick={() => {
+            setComposeMode("invite");
+            setShowChoiceModal(false);
+          }}
         >
-          Add New Employee (Send Invite)
+          ➕ Add New Employee (Send Invite)
         </button>
-        
-        <button 
-  className="assignBtn" 
-  style={{ background: '#e53e3e', opacity: 1, cursor: 'pointer' }} // Remove disabled styling
-  onClick={() => {
-    if (!selectedEmp) {
-      // If no one is selected, close choice modal and open selection popup
-      setShowChoiceModal(false);
-      setShowPopup(true); 
-    } else {
-      handleDropEmployee();
-    }
-  }}
->
-  {selectedEmp ? `Drop ${selectedEmp.name}` : "Select an employee to Drop"}
-</button>
-        
-        <button 
-          style={{ background: 'transparent', border: 'none', color: 'gray', marginTop: '10px', cursor: 'pointer' }} 
+
+        {/* Drop / Select Employee Button */}
+        <button
+          className="assignBtn"
+          style={{
+            background: selectedEmp ? '#ef4444' : '#444',
+            color: 'white',
+            padding: '12px',
+            borderRadius: '10px',
+            fontWeight: 500,
+            fontSize: '14px',
+            border: 'none',
+            cursor: selectedEmp ? 'pointer' : 'not-allowed',
+            opacity: selectedEmp ? 1 : 0.6
+          }}
+          disabled={!selectedEmp}
+          onClick={() => {
+            if (!selectedEmp) {
+              setShowChoiceModal(false);
+              setShowPopup(true); // open employee selector
+              return;
+            }
+            handleDropEmployee();
+          }}
+        >
+          {selectedEmp 
+            ? `🗑️ Remove ${selectedEmp.name}` 
+            : "Select an employee first to remove"
+          }
+        </button>
+
+        {/* Cancel */}
+        <button
           onClick={() => setShowChoiceModal(false)}
+          style={{
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.2)',
+            color: '#aaa',
+            padding: '10px',
+            borderRadius: '10px',
+            fontSize: '14px',
+            cursor: 'pointer',
+            marginTop: '8px'
+          }}
         >
           Cancel
         </button>
