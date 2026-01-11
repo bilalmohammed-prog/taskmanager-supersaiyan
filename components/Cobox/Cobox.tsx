@@ -717,7 +717,7 @@ function InboxView() {
           
           <button 
             className="assignBtn" 
-            style={{ flex: 1, margin: 0, background: '#e53e3e' }} 
+            style={{ flex: 1, margin: 0, background: 'rgb(239, 68, 68)' }} 
             onClick={() => declineInvite(selectedMsg)}
           >
             Decline
