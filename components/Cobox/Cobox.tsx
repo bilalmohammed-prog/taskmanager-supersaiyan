@@ -149,7 +149,12 @@ function UserTasksView() {
   return (
   <div className="coboxContainer">
     <div className="cobox">
-      {loading && <p>Loading...</p>}
+      {loading && (
+  <div className="loading-container">
+    <div className="spinner"></div>
+    <p>Loading...</p>
+  </div>
+)}
       {!loading && tasks.length === 0 && (
         <p className="select-promptTaskLoading" style={{ textAlign: "center", marginTop: "20px" }}>
           You have no tasks.
@@ -446,7 +451,12 @@ function TeamTasksView({
         )}
 
 
-        {loading && <p>Loading...</p>}
+        {loading && (
+  <div className="loading-container">
+    <div className="spinner"></div>
+    <p>Loading...</p>
+  </div>
+)}
 
 
         {!loading && tasks.length === 0 && (
@@ -789,7 +799,10 @@ function ProgressView({ currentManagerID }: { currentManagerID: string | null })
   const getPercentage = (completed: number, total: number) => 
     total === 0 ? 0 : Math.round((completed / total) * 100);
 
-  if (loading) return <div className="cobox"><p>Loading team metrics...</p></div>;
+  if (loading) return <div className="cobox">
+    <div className="teamSpinner"></div>
+    <p className="loadingTeamMetrics">Loading team metrics...</p>
+    </div>;
 
   return (
     <div className="coboxContainer">

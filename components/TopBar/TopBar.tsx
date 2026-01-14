@@ -99,7 +99,7 @@ const handleDropEmployee = async () => {
             <button
   className="sidebar-btn assign-task-btn"
   disabled={!selectedEmp}
-  title={!selectedEmp ? "Select an employee first" : "Add task"}
+  
   onClick={() => {
     if (!selectedEmp) {
       alert("Select an employee first");
@@ -110,7 +110,7 @@ const handleDropEmployee = async () => {
 >
   <Image src="/svg/assignTask.svg" alt="Draft icon" width={32} height={32}/>
   Add Task
-  <span className="tooltip">Add task</span>
+  {/* <span className="tooltip">Add task</span> */}
 </button>
 
 
@@ -120,13 +120,13 @@ const handleDropEmployee = async () => {
 
             <button className="sidebar-btn endDay" 
             disabled={!selectedEmp}
-  title={!selectedEmp ? "Select an employee first" : "Assign tasks"}onClick={() => {
+  onClick={() => {
     setSelectedEmp(null);      // remove employee selection
     setOpenAssignModal(false); // close assign modal if open
   }}>
               <Image src="/svg/endDay.svg" alt="Draft icon" width={32} height={32}/>
               Assign Tasks
-              <span className="tooltip">Assign</span>
+              {/* <span className="tooltip">Assign</span> */}
             </button>
 
 
