@@ -3,20 +3,16 @@
 import { useState, useEffect } from "react";
 import { LeftSideBar } from "../../components/LeftSideBar/LeftSideBar";
 import TopBar from "../../components/TopBar/TopBar";
-import Cobox from "../../components/Cobox/Cobox"
+
 import { useSession } from "next-auth/react";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
-  const [section, setSection] =
-    useState<"tasks" | "inbox" | "progress" | "teamTasks">("tasks");
+  
 
-const [selectedEmp, setSelectedEmp] =
-    useState<{ name: string; empID: string } | null>(null);
-const [openAssignModal, setOpenAssignModal] = useState(false);
+
 
 const { data: session } = useSession();
 
-  const [managerID, setManagerID] = useState<string | null>(null);
 
   useEffect(() => {
   if (!session?.user?.email) return;
@@ -33,7 +29,7 @@ const { data: session } = useSession();
 
       // 2. Only parse if status is 200-299
       const data = await res.json();
-      setManagerID(data?.empID || null);
+      
     } catch (err) {
       console.error("Failed to parse JSON", err);
     }
@@ -49,12 +45,7 @@ const { data: session } = useSession();
       
       />
       <LeftSideBar />
-      <Cobox section={section}
-      selectedEmp={selectedEmp}
-      openAssignModal={openAssignModal}
-      setOpenAssignModal={setOpenAssignModal}
-      currentManagerID={managerID}
-      />
+      
       {children}
     </>
   );

@@ -24,24 +24,24 @@ export function LeftSideBar() {
       </button>
 
       <button
-        className={`sidebar-btn empAccess ${isActive("/dashboard/tasks") ? "active" : ""}`}
-        onClick={() => router.push("/dashboard/tasks")}
+        className={`sidebar-btn empAccess ${isActive("/userTasks") ? "active" : ""}`}
+        onClick={() => router.push("/userTasks")}
       >
         <Image src="/svg/tasks.svg" alt="Tasks icon" width={32} height={32} />
         <span className="btn-label">Tasks</span>
       </button>
 
       <button
-        className={`sidebar-btn inbox ${isActive("/dashboard/inbox") ? "active" : ""}`}
-        onClick={() => router.push("/dashboard/inbox")}
+        className={`sidebar-btn inbox ${isActive("/inbox") ? "active" : ""}`}
+        onClick={() => router.push("/inbox")}
       >
         <Image src="/svg/inbox.svg" alt="Inbox icon" width={32} height={32} />
         <span className="btn-label">Inbox</span>
       </button>
 
       <button
-        className={`sidebar-btn progress ${isActive("/dashboard/progress") ? "active" : ""}`}
-        onClick={() => router.push("/dashboard/progress")}
+        className={`sidebar-btn progress ${isActive("/progress") ? "active" : ""}`}
+        onClick={() => router.push("/progress")}
       >
         <Image src="/svg/progress.svg" alt="Progress icon" width={32} height={32} />
         <span className="btn-label">Progress</span>

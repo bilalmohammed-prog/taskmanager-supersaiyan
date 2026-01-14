@@ -4,6 +4,7 @@ import ComposeMessagePopup from "../Popups/ComposeMessagePopup/ComposeMessagePop
 
 import Image from "next/image";
 import "./TopBar.css";
+
 import  SwitchEmpPopup from "../Popups/switchEmpPopup/switchEmpPopup";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
@@ -32,7 +33,7 @@ export default function TopBar() {
   const [showChoiceModal, setShowChoiceModal] = useState(false);
   const isTeamTasks = pathname.startsWith("/teamTasks");
   const isInbox = pathname.startsWith("/inbox");
-  const isTasks = pathname.startsWith("/tasks");
+  const isTasks = pathname.startsWith("/userTasks");
   const isProgress = pathname.startsWith("/progress");
 
 const handleDropEmployee = async () => {
