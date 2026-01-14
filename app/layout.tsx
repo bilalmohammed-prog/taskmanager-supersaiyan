@@ -1,5 +1,5 @@
 import "./globals.css";
-import ClientLayout from "./(dashboard)/ClientLayout";
+
 import  Providers  from "./Providers";
 
 export const metadata = {
@@ -16,10 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* GOOGLE FONT */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@100..900&display=swap"
-          rel="stylesheet"
-        />
+        
       </head>
 
       <body>

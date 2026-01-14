@@ -41,9 +41,7 @@ const { data: session } = useSession();
 
   return (
     <>
-      <TopBar 
-      
-      />
+      <TopBar />
       <LeftSideBar />
       
       {children}

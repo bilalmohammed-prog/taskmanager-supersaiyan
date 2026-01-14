@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 
 import "./Cobox/Cobox.css"; // reuse styles if needed
-import { useDashboard } from "./Context/DashboardContext";
 import { useSession } from "next-auth/react";
 
 type Task = {
@@ -37,20 +36,7 @@ type Task = {
   });
 }
 
-function safeISO(dt: string | Date) {
-  const d = new Date(dt);
-  if (isNaN(d.getTime())) return "";
 
-  const pad = (num: number) => String(num).padStart(2, "0");
-
-  const year = d.getFullYear();
-  const month = pad(d.getMonth() + 1);
-  const day = pad(d.getDate());
-  const hours = pad(d.getHours());
-  const minutes = pad(d.getMinutes());
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
 
 
 export default function UserTasksView() {
