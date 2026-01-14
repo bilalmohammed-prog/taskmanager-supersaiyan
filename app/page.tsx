@@ -1,5 +1,5 @@
 "use client";
-import ClientLayout from "../components/ClientLayout";
+import ClientLayout from "./(dashboard)/ClientLayout";
 export default function Page() {
 
   

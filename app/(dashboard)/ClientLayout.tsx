@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LeftSideBar } from "./LeftSideBar/LeftSideBar";
-import TopBar from "./TopBar/TopBar";
-import Cobox from "./Cobox/Cobox"
+import { LeftSideBar } from "../../components/LeftSideBar/LeftSideBar";
+import TopBar from "../../components/TopBar/TopBar";
+import Cobox from "../../components/Cobox/Cobox"
 import { useSession } from "next-auth/react";
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -46,13 +46,9 @@ const { data: session } = useSession();
   return (
     <>
       <TopBar 
-      section={section}
-      selectedEmp={selectedEmp}
-      setSelectedEmp={setSelectedEmp}
-      setOpenAssignModal={setOpenAssignModal}
-      currentManagerID={managerID}
+      
       />
-      <LeftSideBar setSection={setSection} />
+      <LeftSideBar />
       <Cobox section={section}
       selectedEmp={selectedEmp}
       openAssignModal={openAssignModal}

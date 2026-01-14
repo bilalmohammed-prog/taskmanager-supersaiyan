@@ -7,25 +7,33 @@ import "./TopBar.css";
 import  SwitchEmpPopup from "../Popups/switchEmpPopup/switchEmpPopup";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
+import { useDashboard } from "../Context/DashboardContext";
 
-type Props = {
-  section: "tasks" | "inbox" | "progress" | "teamTasks";
-  selectedEmp: { name: string; empID: string } | null;
-  setSelectedEmp: React.Dispatch<
-    React.SetStateAction<{ name: string; empID: string } | null>
-  >;
-  setOpenAssignModal: React.Dispatch<React.SetStateAction<boolean>>;
-  currentManagerID: string | null;
-};
 
-export default function TopBar({ section, selectedEmp, setSelectedEmp, setOpenAssignModal,currentManagerID }: Props) {
+
+export default function TopBar() {
+
+    const pathname = usePathname();
 
     const { data: session } = useSession();
+
+    const {
+    selectedEmp,
+    setSelectedEmp,
+    setOpenAssignModal,
+    currentManagerID
+  } = useDashboard();
+
     const [showPopup, setShowPopup] = useState(false);
     
   const [composeMode, setComposeMode] = useState<"message" | "invite" | null>(null);
 
   const [showChoiceModal, setShowChoiceModal] = useState(false);
+  const isTeamTasks = pathname.startsWith("/teamTasks");
+  const isInbox = pathname.startsWith("/inbox");
+  const isTasks = pathname.startsWith("/tasks");
+  const isProgress = pathname.startsWith("/progress");
 
 const handleDropEmployee = async () => {
   if (!selectedEmp) return alert("Please select an employee to drop first.");
@@ -52,7 +60,7 @@ const handleDropEmployee = async () => {
   }
 };
 
-  if (section === "teamTasks")
+  if (isTeamTasks)
     return (
       <>
 
@@ -281,7 +289,7 @@ const handleDropEmployee = async () => {
 
 
   
-  if (section === "tasks")
+  if (isTasks)
     
     return (
   
@@ -298,7 +306,7 @@ const handleDropEmployee = async () => {
     
 
   
-  if (section === "progress")
+  if (isProgress)
     
     return (
   
@@ -315,7 +323,7 @@ const handleDropEmployee = async () => {
     
 
 
-  if (section === "inbox") {
+  if (isInbox) {
     return (
       <div className="rsidebar">
         {composeMode && (
