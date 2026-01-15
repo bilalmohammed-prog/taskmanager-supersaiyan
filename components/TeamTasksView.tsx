@@ -20,12 +20,7 @@ type Task = {
   isEditing?: boolean;
 };
 
-type SelectedEmp =
-  | {
-      empID: string;
-      name: string;
-    }
-  | null;
+
 
   function prettyDateTime(dt: string | Date | number) {
   const d = new Date(dt);

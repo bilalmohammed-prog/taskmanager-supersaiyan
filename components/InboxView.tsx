@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 
-import "./Cobox/Cobox.css"; // reuse styles if needed
-import { useDashboard } from "./Context/DashboardContext";
+import "./Cobox/Cobox.css";
 import { useSession } from "next-auth/react";
 
 interface IMessage {
