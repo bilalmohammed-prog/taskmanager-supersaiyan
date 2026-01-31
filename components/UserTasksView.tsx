@@ -2,27 +2,22 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-
-import "./Cobox/Cobox.css"; // reuse styles if needed
-import { useSession } from "next-auth/react";
+import "./Cobox/Cobox.css";
+import { supabase } from "@/lib/supabaseClient";
 
 type Task = {
-  empID: string;
   id: string;
   task: string;
-  description: string;
+  description: string | null;
   startTime: string;
   endTime: string;
   status: string;
-  proof: string;
-  durationHours: number;
-  submittedAt: Date;
-  isEditing?: boolean;
+  proof: string | null;
+  
+  submittedAt: string | null;
 };
 
-
-
-  function prettyDateTime(dt: string | Date | number) {
+function prettyDateTime(dt: string | Date | number) {
   const d = new Date(dt);
   if (isNaN(d.getTime())) return String(dt);
 
@@ -32,71 +27,93 @@ type Task = {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: true
+    hour12: true,
   });
 }
 
-
-
-
 export default function UserTasksView() {
-  const { data: session } = useSession();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-
+  const [loading, setLoading] = useState<boolean>(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  const email = session?.user?.email;
-
   useEffect(() => {
-    if (!email) return;
+    async function loadTasks(): Promise<void> {
+      setLoading(true);
 
-    async function load() {
-      try {
-        setLoading(true);
+      // 1️⃣ Ensure user is authenticated (client-safe)
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-        // 1️⃣ Get employee by email
-        const empRes = await fetch(`/api/get-emp?email=${email}`);
-        const empData = await empRes.json();
-
-        if (!empData?.empID) {
-          setTasks([]);
-          return;
-        }
-
-        // 2️⃣ Fetch tasks for that employee
-        const taskRes = await fetch(`/api/displayTasks?empID=${empData.empID}`);
-        const taskData = await taskRes.json();
-
-        setTasks(taskData.tasks || []);
-      } catch (e) {
-        console.error("User task load error", e);
-      } finally {
+      if (!session?.user) {
+        setTasks([]);
         setLoading(false);
+        return;
       }
+
+      // 2️⃣ RLS-enforced task fetch (NO filters)
+      const { data, error } = await supabase
+        .from("tasks")
+        .select(`
+          id,
+          task,
+          description,
+          start_time,
+          end_time,
+          status,
+          proof,
+
+          submitted_at
+        `)
+        .order("start_time", { ascending: true });
+
+      if (error) {
+        console.error("Task load error:", error.message);
+        setTasks([]);
+      } else {
+        setTasks(
+          data.map((t) => ({
+            id: t.id,
+            task: t.task,
+            description: t.description,
+            startTime: t.start_time,
+            endTime: t.end_time,
+            status: t.status,
+            proof: t.proof,
+
+            submittedAt: t.submitted_at,
+          }))
+        );
+      }
+
+      setLoading(false);
     }
 
-    load();
-  }, [email]);
+    loadTasks();
+  }, []);
 
-  async function markCompleted(task: Task) {
+  async function markCompleted(task: Task): Promise<void> {
     const proof = prompt("Enter proof of work");
     if (!proof) return alert("Proof is required");
 
-    const submittedAt = new Date();
+    const submittedAt = new Date().toISOString();
 
-    await fetch(`/api/tasks/${task.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const { error } = await supabase
+      .from("tasks")
+      .update({
         status: "completed",
-        proof,
-        submittedAt
+        proof: proof,
+        submitted_at: submittedAt,
       })
-    });
+      .eq("id", task.id);
 
-    setTasks(prev =>
-      prev.map(t =>
+    if (error) {
+      alert("Failed to mark task completed");
+      return;
+    }
+
+    setTasks((prev) =>
+      prev.map((t) =>
         t.id === task.id
           ? { ...t, status: "completed", proof, submittedAt }
           : t
@@ -104,8 +121,8 @@ export default function UserTasksView() {
     );
   }
 
-  function getStatusColor(t: Task) {
-    if (t.status !== "completed") return "gray";
+  function getStatusColor(t: Task): string {
+    if (t.status !== "completed" || !t.submittedAt) return "gray";
 
     const end = new Date(t.endTime);
     const submitted = new Date(t.submittedAt);
@@ -114,74 +131,95 @@ export default function UserTasksView() {
   }
 
   return (
-  <div className="coboxContainer">
-    <div className="cobox">
-      {loading && (
-  <div className="loading-container">
-    <div className="spinner"></div>
-    <p>Loading...</p>
-  </div>
-)}
-      {!loading && tasks.length === 0 && (
-        <p className="select-promptTaskLoading" style={{ textAlign: "center", marginTop: "20px" }}>
-          You have no tasks.
-        </p>
-      )}
-      {!loading &&
-        tasks.map((t) => (
-          <div
-            key={t.id}
-            className={`container3 ${selectedTask?.id === t.id ? "active-card" : ""}`}
-            onClick={() => setSelectedTask(t)} // 1. Updates state on click
-            style={{ cursor: "pointer" }}
-          >
-            <div className="taskText">
-              {t.task}
-              <br />
-              {prettyDateTime(t.startTime)} → {prettyDateTime(t.endTime)}
-            </div>
-
-            <div className="container2">
-              <button
-                className="action-btn completed-button"
-                onClick={(e) => {
-                  e.stopPropagation(); // 2. Prevents selecting the card when clicking button
-                  markCompleted(t);
-                }}
-                disabled={t.status === "completed"}
-              >
-                <Image src="/svg/completed.svg" alt="" width={32} height={32} />
-              </button>
-              <button
-                className="checkbox"
-                disabled
-                style={{ background: getStatusColor(t) }}
-              />
-            </div>
+    <div className="coboxContainer">
+      <div className="cobox">
+        {loading && (
+          <div className="loading-container">
+            <div className="spinner"></div>
+            <p>Loading...</p>
           </div>
-        ))}
-    </div>
+        )}
 
-    {/* 3. MOVED OUTSIDE THE LOOP: The actual Detail View */}
-    <div className="taskDescription">
-      {selectedTask ? (
-        <div className="description-content">
-          <h2>{selectedTask.task}</h2>
-          <hr />
-          <p><strong>Status:</strong> {selectedTask.status}</p>
-          <p><strong>Start:</strong> {prettyDateTime(selectedTask.startTime)}</p>
-          <p><strong>Deadline:</strong> {prettyDateTime(selectedTask.endTime)}</p>
-          {selectedTask.proof && (
-            <div className="proof-box">
-              <strong>Proof:</strong>
-              <p>{selectedTask.proof}</p>
+        {!loading && tasks.length === 0 && (
+          <p className="select-promptTaskLoading">
+            You have no tasks.
+          </p>
+        )}
+
+        {!loading &&
+          tasks.map((t) => (
+            <div
+              key={t.id}
+              className={`container3 ${
+                selectedTask?.id === t.id ? "active-card" : ""
+              }`}
+              onClick={() => setSelectedTask(t)}
+              style={{ cursor: "pointer" }}
+            >
+              <div className="taskText">
+                {t.task}
+                <br />
+                {prettyDateTime(t.startTime)} →{" "}
+                {prettyDateTime(t.endTime)}
+              </div>
+
+              <div className="container2">
+                <button
+                  className="action-btn completed-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    markCompleted(t);
+                  }}
+                  disabled={t.status === "completed"}
+                >
+                  <Image
+                    src="/svg/completed.svg"
+                    alt=""
+                    width={32}
+                    height={32}
+                  />
+                </button>
+
+                <button
+                  className="checkbox"
+                  disabled
+                  style={{ background: getStatusColor(t) }}
+                />
+              </div>
             </div>
-          )}
-        </div>
-      ) : (
-        <p className="select-promptTaskDesc">Select a task to view details</p>
-      )}
+          ))}
+      </div>
+
+      <div className="taskDescription">
+        {selectedTask ? (
+          <div className="description-content">
+            <h2>{selectedTask.task}</h2>
+            <hr />
+            <p>
+              <strong>Status:</strong> {selectedTask.status}
+            </p>
+            <p>
+              <strong>Start:</strong>{" "}
+              {prettyDateTime(selectedTask.startTime)}
+            </p>
+            <p>
+              <strong>Deadline:</strong>{" "}
+              {prettyDateTime(selectedTask.endTime)}
+            </p>
+
+            {selectedTask.proof && (
+              <div className="proof-box">
+                <strong>Proof:</strong>
+                <p>{selectedTask.proof}</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="select-promptTaskDesc">
+            Select a task to view details
+          </p>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
 }

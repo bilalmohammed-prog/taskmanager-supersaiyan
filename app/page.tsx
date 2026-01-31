@@ -1,43 +1,56 @@
 "use client";
 
-
-import { useSession, signIn } from "next-auth/react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import "./globals.css";
+
 export default function Page() {
-
-
-
-  const { data: session, status } = useSession();
   const router = useRouter();
+  const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
 
   useEffect(() => {
-    // REDIRECT LOGIC: If logged in, go to userTasks immediately
-    if (status === "authenticated") {
-      router.push("/userTasks");
+    async function checkAuth(): Promise<void> {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        router.replace("/userTasks");
+        return;
+      }
+
+      setCheckingAuth(false);
     }
-  }, [status, router]);
 
-  if (status === "loading") return <div className="loading">Loading...</div>;
+    checkAuth();
+  }, [router]);
 
-  // If not logged in, show the Login UI WITHOUT ClientLayout
-  if (!session) {
-    return (
-      <div className="login-page">
-        <div className="login-box">
-          <h1 className="login-title">Task Manager</h1>
-          <button className="google-btn" onClick={() => signIn("google")}>
-            Continue with Google
-          </button>
-        </div>
-      </div>
-    );
+  const handleGoogleLogin = async (): Promise<void> => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/userTasks`,
+      },
+    });
+  };
+
+  if (checkingAuth) {
+    return <div className="loading">Loading...</div>;
   }
 
-  
+  return (
+    <div className="login-page">
+      <div className="login-box">
+        <h1 className="login-title">Task Manager</h1>
 
-  
-
-  
+        <button
+          className="google-btn"
+          onClick={handleGoogleLogin}
+        >
+          Continue with Google
+        </button>
+      </div>
+    </div>
+  );
 }

@@ -1,25 +1,37 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabaseClient";
 import { useDashboard } from "@/components/Context/DashboardContext";
 
 export default function DashboardInit() {
-  const { data: session } = useSession();
   const { setcurrentManagerID } = useDashboard();
 
   useEffect(() => {
-    if (!session?.user?.email) return;
+    async function initDashboard(): Promise<void> {
+      // 1️⃣ Resolve auth safely
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
 
-    fetch(`/api/get-emp?email=${session.user.email}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data?.empID) {
-          setcurrentManagerID(data.empID);
-        }
-      })
-      .catch(console.error);
-  }, [session, setcurrentManagerID]);
+      if (error || !session?.user) {
+        return;
+      }
 
-  return null; // this component renders nothing
+      // 2️⃣ RLS-enforced read (row may not exist yet)
+      const { data, error: empError } = await supabase
+        .from("empid")
+        .select("managerid")
+        .maybeSingle();
+
+      if (!empError && data?.managerid) {
+        setcurrentManagerID(data.managerid);
+      }
+    }
+
+    initDashboard();
+  }, [setcurrentManagerID]);
+
+  return null;
 }

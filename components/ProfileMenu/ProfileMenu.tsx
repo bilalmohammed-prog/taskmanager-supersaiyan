@@ -1,47 +1,75 @@
 "use client";
-import { useSession, signOut } from "next-auth/react";
-import { useEffect, useState } from "react";
+
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuthEmployee } from "@/components/Context/AuthEmployeeContext";
 
 export default function ProfileMenu() {
-  const { data: session } = useSession();
+  const { employee } = useAuthEmployee();
   const [open, setOpen] = useState(false);
-  const [empID, setEmpID] = useState<string>("Loading...");
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
-  const name = session?.user?.name || "User";
-  const email = session?.user?.email || "";
-
+  // Handle click outside and Escape key
   useEffect(() => {
-    if (!email) return;
-
-    async function fetchEmp() {
-      try {
-        const res = await fetch(`/api/get-emp?email=${email}`);
-        const data = await res.json();
-        setEmpID(data?.empID || "Not Registered");
-      } catch {
-        setEmpID("Error");
+    function handleGlobalEvents(e: MouseEvent | KeyboardEvent): void {
+      if (e instanceof MouseEvent) {
+        if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+          setOpen(false);
+        }
+      }
+      if (e instanceof KeyboardEvent && e.key === "Escape") {
+        setOpen(false);
       }
     }
 
-    fetchEmp();
-  }, [email]);
+    document.addEventListener("mousedown", handleGlobalEvents);
+    document.addEventListener("keydown", handleGlobalEvents);
+    return () => {
+      document.removeEventListener("mousedown", handleGlobalEvents);
+      document.removeEventListener("keydown", handleGlobalEvents);
+    };
+  }, []);
 
-  if (!session) return null;
+  const initials = employee?.name?.charAt(0).toUpperCase() ?? "?";
+
+  async function handleLogout(): Promise<void> {
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
+
+  if (!employee) return null;
 
   return (
-    <div className="profile-wrapper">
-      <div className="profile-icon" onClick={() => setOpen(o => !o)}>
-        {name[0].toUpperCase()}
-      </div>
+    <div className="profile-wrapper" ref={wrapperRef}>
+      {/* Profile Toggle Button */}
+      <button
+        type="button"
+        className="profile-icon"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="true"
+        aria-expanded={open}
+      >
+        {initials}
+      </button>
 
-      <div className={`profile-dropdown ${open ? "show" : ""}`}>
-        <p className="profile-name">{name}</p>
-        <p className="profile-email">{email}</p>
-        <p className="profile-id">{empID}</p>
+      {/* Dropdown Menu: 
+          We use the "show" class from your CSS to trigger the 
+          opacity/transform animations.
+      */}
+      <div className={`profile-dropdown ${open ? "show" : ""}`} role="menu">
+        <div className="profile-header">
+          <p className="profile-name">{employee.name}</p>
+          <p className="profile-email">{employee.email}</p>
+          <span className="profile-id">ID: {employee.emp_id}</span>
+        </div>
 
-        <button
-          className="logout-btn"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+        <button 
+          className="logout-btn" 
+          onClick={handleLogout}
+          role="menuitem"
         >
           Logout
         </button>

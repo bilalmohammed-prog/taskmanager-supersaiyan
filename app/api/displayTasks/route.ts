@@ -1,62 +1,71 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseServer } from "@/lib/supabaseServer";
 
-export async function GET(req: Request) {
+interface TaskRow {
+  id: string;
+  task_title: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  proof_url: string | null;
+}
+
+export async function GET(): Promise<NextResponse> {
   try {
-    // 1. Authenticate Session - Use a check that ensures the user exists
-    const session = await getServerSession(authOptions);
-    
-    // We check for user to ensure the session is active
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const supabase = await getSupabaseServer();
+
+    // 1️⃣ Authenticate via Supabase Auth
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    // 2. Extract Query Parameters
-    const { searchParams } = new URL(req.url);
-    const empID = searchParams.get("empID");
-
-    if (!empID) {
-      return NextResponse.json({ error: "Employee ID is required" }, { status: 400 });
-    }
-
-    // 3. Database Query
-    // Using supabaseAdmin bypasses RLS safely because we verified the session above.
-    const { data: tasks, error } = await supabaseAdmin
+    // 2️⃣ RLS-enforced query (NO filters)
+    const { data, error } = await supabase
       .from("tasks")
-      .select("*")
-      .eq("emp_id", empID); // Ensure your DB column is named emp_id
-      
+      .select(`
+        id,
+        task_title,
+        start_time,
+        end_time,
+        proof_url
+      `);
 
     if (error) {
-      console.error("[DATABASE_ERROR]:", error.message);
-      // Return the error message in JSON so the frontend doesn't get "Unexpected end of input"
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[TASK_QUERY_ERROR]", error.message);
+      return NextResponse.json(
+        { error: "Failed to fetch tasks" },
+        { status: 500 }
+      );
     }
 
-    /** * 4. Professional Mapping
-     * Your frontend expects 'task', 'startTime', and 'endTime'.
-     * Postgres returns 'task_title', 'start_time', and 'end_time'.
-     * We map them here so the functionality remains identical for the UI.
-     */
-    const formattedTasks = (tasks || []).map((t) => ({
-      ...t,
-      task: t.task_title || t.task, // Fallback in case of naming mismatch
+    // 3️⃣ Map DB fields → frontend contract
+    const formattedTasks = (data ?? []).map((t: TaskRow) => ({
+      id: t.id,
+      task: t.task_title,
       startTime: t.start_time,
       endTime: t.end_time,
-      proof: t.proof_url
+      proof: t.proof_url,
     }));
 
-    return NextResponse.json({ tasks: formattedTasks }, { status: 200 });
-
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Internal Server Error";
-    console.error("[DISPLAY_TASKS_EXCEPTION]:", msg);
-
-    // Always return JSON
     return NextResponse.json(
-      { error: msg },
+      { tasks: formattedTasks },
+      { status: 200 }
+    );
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : "Internal Server Error";
+
+    console.error("[TASK_ROUTE_EXCEPTION]", message);
+
+    return NextResponse.json(
+      { error: message },
       { status: 500 }
     );
   }

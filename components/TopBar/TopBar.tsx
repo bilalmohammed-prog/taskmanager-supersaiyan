@@ -7,7 +7,9 @@ import "./TopBar.css";
 
 import  SwitchEmpPopup from "../Popups/switchEmpPopup/switchEmpPopup";
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { supabase } from "@/lib/supabaseClient";
+import { useEffect } from "react";
+
 import { usePathname } from "next/navigation";
 import { useDashboard } from "../Context/DashboardContext";
 
@@ -17,8 +19,9 @@ export default function TopBar() {
 
     const pathname = usePathname();
 
-    const { data: session } = useSession();
+    const [userEmail, setUserEmail] = useState<string | null>(null);
 
+  
     const {
     selectedEmp,
     setSelectedEmp,
@@ -35,6 +38,37 @@ export default function TopBar() {
   const isInbox = pathname.startsWith("/inbox");
   const isTasks = pathname.startsWith("/userTasks");
   const isProgress = pathname.startsWith("/progress");
+  const [authChecked, setAuthChecked] = useState(false);
+
+
+useEffect(() => {
+  async function loadUser(): Promise<void> {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      console.error("Failed to load session:", error.message);
+      setAuthChecked(true);
+      return;
+    }
+
+    if (session?.user?.email) {
+      setUserEmail(session.user.email);
+    }
+
+    setAuthChecked(true);
+  }
+
+  loadUser();
+}, []);
+
+
+
+
+if (!authChecked) return null;
+
 
 const handleDropEmployee = async () => {
   if (!selectedEmp) return alert("Please select an employee to drop first.");
@@ -68,7 +102,8 @@ const handleDropEmployee = async () => {
       {/* Add this here */}
 {composeMode === "invite" && (
   <ComposeMessagePopup 
-    userEmail={session?.user?.email || ""} 
+    userEmail={userEmail ?? ""
+} 
     currentManagerID={currentManagerID} 
     fixedType="invite" 
     onClose={() => setComposeMode(null)} 
@@ -329,7 +364,7 @@ const handleDropEmployee = async () => {
       <div className="rsidebar">
         {composeMode && (
   <ComposeMessagePopup 
-    userEmail={session?.user?.email || ""} 
+    userEmail={userEmail ?? ""}
     currentManagerID={currentManagerID} 
     fixedType={composeMode} 
     onClose={() => setComposeMode(null)} 

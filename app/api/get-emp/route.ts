@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
-import {connectDB as db} from "@/lib/mongoose";          // your DB connect
-import Employee from "@/models/employeesModel";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET(req: Request) {
-  await db();   // ensure DB connected
-
   const { searchParams } = new URL(req.url);
   const email = searchParams.get("email");
 
@@ -15,9 +12,21 @@ export async function GET(req: Request) {
     );
   }
 
-  const emp = await Employee.findOne({ email });
+  const { data, error } = await supabaseAdmin
+    .from("empid")
+    .select("emp_id, name")
+    .eq("email", email)
+    .maybeSingle();
 
-  if (!emp) {
+  if (error && error.code !== "PGRST116") {
+    console.error("Supabase error:", error);
+    return NextResponse.json(
+      { error: "Database error" },
+      { status: 500 }
+    );
+  }
+
+  if (!data) {
     return NextResponse.json(
       { empID: null },
       { status: 200 }
@@ -25,7 +34,7 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({
-    empID: emp.empID,
-    name: emp.name
+    empID: data.emp_id,
+    name: data.name,
   });
 }

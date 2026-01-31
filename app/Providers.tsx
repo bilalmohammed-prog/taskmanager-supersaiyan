@@ -1,12 +1,20 @@
 "use client";
 
 import { DashboardProvider } from "@/components/Context/DashboardContext";
-import { SessionProvider } from "next-auth/react";
+import { AuthEmployeeProvider } from "@/components/Context/AuthEmployeeContext";
+import AuthBootstrap from "@/components/Auth/AuthBootstrap";
 
-export default function Providers({ children }: { children: React.ReactNode }) {
-  return <SessionProvider>
-    <DashboardProvider>
-    {children}
-    </DashboardProvider>
-    </SessionProvider>;
+interface ProvidersProps {
+  children: React.ReactNode;
+}
+
+export default function Providers({ children }: ProvidersProps) {
+  return (
+    <AuthEmployeeProvider>
+      <AuthBootstrap />
+      <DashboardProvider>
+        {children}
+      </DashboardProvider>
+    </AuthEmployeeProvider>
+  );
 }
