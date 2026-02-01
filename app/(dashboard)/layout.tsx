@@ -25,11 +25,11 @@ function DashboardShell({ children }: DashboardShellProps) {
       // 2️⃣ RLS-enforced query (NO filters)
       const { data, error } = await supabase
         .from("empid")
-        .select("managerid")
+        .select("manager_id")
         .maybeSingle();
 
-      if (!error && data?.managerid) {
-        setcurrentManagerID(data.managerid);
+      if (!error && data?.manager_id) {
+        setcurrentManagerID(data.manager_id);
       }
     }
 

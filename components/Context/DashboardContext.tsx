@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState } from "react";
 
-type SelectedEmp = { empID: string; name: string } | null;
+type SelectedEmp = { emp_id: string; name: string } | null;
 
 type DashboardContextType = {
   selectedEmp: SelectedEmp;

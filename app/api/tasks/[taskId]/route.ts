@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-// 1. Define strict interfaces for the incoming request and the DB schema
 interface UpdateTaskRequest {
   task?: string;
   description?: string;
@@ -20,24 +17,39 @@ interface TaskTableSchema {
   status?: string;
 }
 
+async function authenticate(req: Request) {
+  const authHeader = req.headers.get("authorization");
+
+  if (!authHeader) return null;
+
+  const token = authHeader.replace("Bearer ", "");
+
+  const {
+    data: { user },
+    error,
+  } = await supabaseAdmin.auth.getUser(token);
+
+  if (error || !user) return null;
+
+  return user;
+}
+
+/* ================= PATCH ================= */
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await authenticate(req);
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { taskId } = await params;
-    
-    // 2. Cast the body to our interface
     const body: UpdateTaskRequest = await req.json();
 
-    // 3. Use the Schema interface for the payload instead of 'any'
     const updatePayload: TaskTableSchema = {};
-    
+
     if (body.task) updatePayload.task = body.task;
     if (body.description !== undefined) updatePayload.description = body.description;
     if (body.startTime) updatePayload.start_time = body.startTime;
@@ -48,7 +60,6 @@ export async function PATCH(
       return NextResponse.json({ error: "No changes detected" }, { status: 400 });
     }
 
-    // 4. Database execution
     const { data, error } = await supabaseAdmin
       .from("tasks")
       .update(updatePayload)
@@ -61,46 +72,35 @@ export async function PATCH(
     }
 
     return NextResponse.json({ task: data }, { status: 200 });
-
   } catch (err) {
-    // 5. Exhaustive error checking
-    const message = err instanceof Error ? err.message : "Unknown Error";
-    console.error("[PATCH_TASK_EXCEPTION]:", message);
+    console.error("[PATCH_TASK_EXCEPTION]:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 
+/* ================= DELETE ================= */
 export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
-    // 1. Verify Identity
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await authenticate(req);
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Resolve Async Params
     const { taskId } = await params;
 
-    if (!taskId) {
-      return NextResponse.json({ error: "Task ID is required" }, { status: 400 });
-    }
-
-    // 3. Database Operation
     const { error } = await supabaseAdmin
       .from("tasks")
       .delete()
       .eq("id", taskId);
 
     if (error) {
-      console.error("[DELETE_TASK_ERROR]:", error.message);
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
     return NextResponse.json({ message: "Task deleted successfully" }, { status: 200 });
-
   } catch (err) {
     console.error("[DELETE_TASK_EXCEPTION]:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -80,7 +80,7 @@ const handleDropEmployee = async () => {
     const res = await fetch(`../api/invites/drop`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ empID: selectedEmp.empID }),
+      body: JSON.stringify({ emp_id: selectedEmp.emp_id }),
     });
 
     if (res.ok) {
@@ -118,7 +118,7 @@ const handleDropEmployee = async () => {
       setSelectedEmp(emp);
       setShowPopup(false);
     }}
-    selectedEmpID={selectedEmp?.empID || null}
+    selectedEmpID={selectedEmp?.emp_id || null}
   />
 )}
 
@@ -182,7 +182,7 @@ const handleDropEmployee = async () => {
     <>
       <span style={{ fontWeight: 500, color: '#ffffff' }}>{selectedEmp.name}</span>
       <span style={{ color: 'rgba(255,255,255,0.65)', margin: '0 6px', fontSize: '0.92em' }}>
-        ({selectedEmp.empID})
+        ({selectedEmp.emp_id})
       </span>
     </>
   ) : (
@@ -215,7 +215,7 @@ const handleDropEmployee = async () => {
         lineHeight: '1.45'
       }}>
         {selectedEmp 
-          ? `What would you like to do with ${selectedEmp.name} (${selectedEmp.empID})?`
+          ? `What would you like to do with ${selectedEmp.name} (${selectedEmp.emp_id})?`
           : "Choose an action to manage your team members."
         }
       </p>

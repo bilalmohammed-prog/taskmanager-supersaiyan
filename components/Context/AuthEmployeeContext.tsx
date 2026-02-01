@@ -10,7 +10,7 @@ export interface AuthEmployee {
   emp_id: string;
   email: string;
   name: string;
-  managerid: string | null;
+  manager_id: string | null;
 }
 
 interface AuthEmployeeContextType {

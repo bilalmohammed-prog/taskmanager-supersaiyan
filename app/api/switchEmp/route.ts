@@ -1,31 +1,55 @@
-import { connectDB } from "@/lib/mongoose";
-import Emp from "@/models/employeesModel";
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function GET(req: Request) {
   try {
-    // 1. CRITICAL: Actually call the connection function
-    await connectDB(); 
+    /* 1️⃣ AUTH */
+    const authHeader = req.headers.get("authorization");
 
-    const { searchParams } = new URL(req.url);
-    const managerID = searchParams.get("managerID");
-
-    if (!managerID) {
-      // Returning an empty list if no ID is provided is good practice
+    if (!authHeader) {
       return NextResponse.json({ employees: [] });
     }
 
-    // 2. Query MongoDB
-    // This looks for documents where the "managerID" field equals your variable
-    const employees = await Emp.find({ managerID: managerID });
+    const token = authHeader.replace("Bearer ", "");
+
+    const {
+      data: { user },
+      error,
+    } = await supabaseAdmin.auth.getUser(token);
+
+    console.log("AUTH HEADER:", authHeader);
+console.log("USER:", user);
+
+
+    if (!user || error) {
+      return NextResponse.json({ employees: [] });
+    }
+
+    /* 2️⃣ QUERY EMPLOYEES USING LOGGED-IN USER ID */
+    const { data, error: empError } = await supabaseAdmin
+      .from("empid")
+      .select("emp_id, name")
+      .eq("manager_id", user.id);
+
+    if (empError) {
+      return NextResponse.json({ employees: [] });
+    }
+
+    /* 3️⃣ FORMAT */
+    const employees =
+      data?.map((e) => ({
+        emp_id: e.emp_id,
+        name: e.name,
+      })) ?? [];
 
     return NextResponse.json({ employees });
-  } 
-  catch (err) {
-    console.error("SwitchEmp API error:", err);
-    return NextResponse.json(
-      { error: "Failed to load employees" },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error("Error fetching employees:", err);
+    return NextResponse.json({ employees: [] });
   }
 }

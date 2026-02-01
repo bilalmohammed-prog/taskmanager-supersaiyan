@@ -18,7 +18,7 @@ export default function AuthBootstrap() {
 
       const { data, error: empError } = await supabase
         .from("empid")
-        .select("emp_id, email, name, managerid")
+        .select("emp_id, email, name, manager_id")
         .eq("user_id", session.user.id)
         .maybeSingle();
 

@@ -6,10 +6,12 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuthEmployee } from "@/components/Context/AuthEmployeeContext";
 
 export default function ProfileMenu() {
+  
   const { employee } = useAuthEmployee();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
 
   // Handle click outside and Escape key
   useEffect(() => {
@@ -40,7 +42,7 @@ export default function ProfileMenu() {
     router.refresh();
   }
 
-  if (!employee) return null;
+
 
   return (
     <div className="profile-wrapper" ref={wrapperRef}>
@@ -61,9 +63,9 @@ export default function ProfileMenu() {
       */}
       <div className={`profile-dropdown ${open ? "show" : ""}`} role="menu">
         <div className="profile-header">
-          <p className="profile-name">{employee.name}</p>
-          <p className="profile-email">{employee.email}</p>
-          <span className="profile-id">ID: {employee.emp_id}</span>
+          <p className="profile-name">{employee?.name}</p>
+          <p className="profile-email">{employee?.email}</p>
+          <span className="profile-id">ID: {employee?.emp_id}</span>
         </div>
 
         <button 
