@@ -1,43 +1,95 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongoose";
-import Message from "@/models/messageModel";
-import User from "@/models/employeesModel"; // Or your Employee/User model
+import { createClient } from "@supabase/supabase-js";
+
+/* ===================== ADMIN CLIENT ===================== */
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // SERVER ONLY
+);
 
 export async function POST(req: Request) {
   try {
-    await connectDB();
-    const { messageId, managerID, empEmail } = await req.json();
+    const { messageId } = await req.json();
 
-    // 1. Update the Message status to 'accepted'
-    const updatedMessage = await Message.findByIdAndUpdate(
-      messageId,
-      { status: "accepted" },
-      { new: true }
-    );
-
-    if (!updatedMessage) {
-      return NextResponse.json({ error: "Message not found" }, { status: 404 });
+    if (!messageId) {
+      return NextResponse.json(
+        { error: "Message ID required" },
+        { status: 400 }
+      );
     }
 
-    // 2. Link the Employee to the Manager
-    // Update the user whose email matches the receiverEmail of the invite
-    const updatedUser = await User.findOneAndUpdate(
-      { email: empEmail },
-      { managerID: managerID }, // Set the managerID allotted by the invite
-      { new: true }
-    );
+    /* ===================== 1️⃣ GET MESSAGE ===================== */
+    const { data: message, error: msgError } = await supabaseAdmin
+      .from("messages")
+      .select("*")
+      .eq("id", messageId)
+      .single();
 
-    if (!updatedUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (msgError || !message) {
+      return NextResponse.json(
+        { error: "Message not found" },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Invitation accepted and manager linked." 
+    if (message.type !== "invite") {
+      return NextResponse.json(
+        { error: "Not an invite" },
+        { status: 400 }
+      );
+    }
+
+    if (message.status !== "pending") {
+      return NextResponse.json(
+        { error: "Invite already processed" },
+        { status: 400 }
+      );
+    }
+
+    if (!message.sender_id || !message.receiver_id) {
+      return NextResponse.json(
+        { error: "Corrupted invite data" },
+        { status: 500 }
+      );
+    }
+
+    /* ===================== 2️⃣ LINK EMPLOYEE TO MANAGER ===================== */
+    console.log("Linking employee", message.receiver_id, "to manager", message.sender_id);
+    const { error: empError } = await supabaseAdmin
+      .from("empid")
+      .update({ manager_id: message.sender_id }) // manager = sender
+      .eq("user_id", message.receiver_id);       // employee = receiver
+
+    if (empError) {
+      return NextResponse.json(
+        { error: empError.message },
+        { status: 500 }
+      );
+    }
+
+    /* ===================== 3️⃣ MARK MESSAGE ACCEPTED ===================== */
+    const { error: statusError } = await supabaseAdmin
+      .from("messages")
+      .update({ status: "accepted" })
+      .eq("id", messageId);
+
+    if (statusError) {
+      return NextResponse.json(
+        { error: statusError.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Invitation accepted and manager linked.",
     });
-    
-  } catch (error) {
-    console.error("Accept Invite Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+
+  } catch (err) {
+    console.error("Accept Invite Error:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }

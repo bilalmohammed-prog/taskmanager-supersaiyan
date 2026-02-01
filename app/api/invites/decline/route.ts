@@ -1,23 +1,43 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongoose";
-// Replace with your actual Message model import
-import Message from "@/models/messageModel"; 
+import { createClient } from "@supabase/supabase-js";
+
+/* ===================== ADMIN CLIENT ===================== */
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // SERVER ONLY
+);
 
 export async function POST(req: Request) {
   try {
-    await connectDB();
     const { messageId } = await req.json();
 
-    const updatedMsg = await Message.findByIdAndUpdate(
-      messageId,
-      { status: "declined" },
-      { new: true }
-    );
+    if (!messageId) {
+      return NextResponse.json(
+        { error: "Message ID required" },
+        { status: 400 }
+      );
+    }
 
-    if (!updatedMsg) return NextResponse.json({ error: "Message not found" }, { status: 404 });
+    /* ===================== UPDATE MESSAGE ===================== */
+    const { error } = await supabaseAdmin
+      .from("messages")
+      .update({ status: "declined" })
+      .eq("id", messageId);
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
+
+  } catch (err) {
+    console.error("Decline Invite Error:", err);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }

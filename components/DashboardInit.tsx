@@ -22,11 +22,11 @@ export default function DashboardInit() {
       // 2️⃣ RLS-enforced read (row may not exist yet)
       const { data, error: empError } = await supabase
         .from("empid")
-        .select("managerid")
+        .select("manager_id")
         .maybeSingle();
 
-      if (!empError && data?.managerid) {
-        setcurrentManagerID(data.managerid);
+      if (!empError && data?.manager_id) {
+        setcurrentManagerID(data.manager_id);
       }
     }
 

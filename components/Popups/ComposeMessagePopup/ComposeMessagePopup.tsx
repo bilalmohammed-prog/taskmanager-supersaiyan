@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, ChangeEvent, useEffect } from "react";
-
+import { useEffect,useState, ChangeEvent } from "react";
+import { supabase } from "@/lib/supabaseClient";
 interface IMessageForm {
   receiverEmail: string;
   subject: string;
@@ -10,109 +10,166 @@ interface IMessageForm {
 }
 
 type Props = {
-  userEmail: string; 
+  userEmail: string;
   currentManagerID: string | null;
   onClose: () => void;
-  fixedType: "message" | "invite"; // New Prop
+  fixedType: "message" | "invite";
 };
 
-export default function ComposeMessagePopup({ userEmail, currentManagerID, onClose, fixedType }: Props) {
+export default function ComposeMessagePopup({
+  userEmail,
+  currentManagerID,
+  onClose,
+  fixedType,
+}: Props) {
   const [form, setForm] = useState<IMessageForm>({
     receiverEmail: "",
-    subject: fixedType === "invite" ? "Manager Invitation" : "", // Pre-fill subject for invites
+    subject: fixedType === "invite" ? "Manager Invitation" : "",
     body: "",
-    type: fixedType // Initialize with fixed type
+    type: fixedType,
   });
 
-  const [isSending, setIsSending] = useState<boolean>(false);
+  const [isSending, setIsSending] = useState(false);
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  /* ===================== SEND MESSAGE ===================== */
+  
+
   const handleSubmit = async () => {
-    if (!userEmail) return alert("Session expired. Please login again.");
-    if (!form.receiverEmail || !form.subject || !form.body) {
-      return alert("All fields are required");
+  if (!userEmail) {
+    alert("Session expired. Please login again.");
+    return;
+  }
+
+  if (!form.receiverEmail || !form.subject || !form.body) {
+    alert("All fields are required");
+    return;
+  }
+
+  setIsSending(true);
+
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      alert("Session expired");
+      return;
     }
 
-    setIsSending(true);
-    try {
-      const res = await fetch("/api/messages/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form,
-          senderEmail: userEmail,
-          managerID: form.type === "invite" ? currentManagerID : null,
-        })
-      });
+    const senderId = session.user.id; // 🔥 THIS IS THE MANAGER
 
-      if (res.ok) {
-        alert(form.type === "invite" ? "Invitation sent!" : "Message sent!");
-        onClose();
-      } else {
-        const err = await res.json();
-        alert(err.error || "Failed to send");
-      }
-    } catch (error) {
-      alert("Error connecting to server.");
-    } finally {
-      setIsSending(false);
+    const res = await fetch("/api/messages/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        receiverEmail: form.receiverEmail,
+        subject: form.subject,
+        body: form.body,
+        type: form.type,
+        manager_id: form.type === "invite" ? senderId : null, // 🔥 KEY LINE
+      }),
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      alert(result.error || "Failed to send");
+      return;
     }
-  };
 
+    alert(
+      form.type === "invite"
+        ? "Invitation sent!"
+        : "Message sent!"
+    );
+
+    onClose();
+  } catch {
+    alert("Network error. Please try again.");
+  } finally {
+    setIsSending(false);
+  }
+};
+
+
+  /* ===================== UI ===================== */
   return (
-    <div className="modalOverlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-  <div className="modalBox">
-    <h3>{fixedType === "invite" ? "Invite Employee" : "New Message"}</h3>
-    
-    <input 
-      name="receiverEmail"
-      placeholder="Recipient Gmail" 
-      value={form.receiverEmail} 
-      onChange={handleInputChange}
-    />
-    
-    <input 
-      name="subject"
-      placeholder="Subject" 
-      value={form.subject} 
-      onChange={handleInputChange}
-    />
+    <div
+      className="modalOverlay"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="modalBox">
+        <h3>
+          {fixedType === "invite" ? "Invite Employee" : "New Message"}
+        </h3>
 
-    <textarea 
-      name="body"
-      placeholder={fixedType === "invite" ? "Include a note with your invitation..." : "Type your message..."} 
-      value={form.body} 
-      onChange={handleInputChange} 
-      style={{
-        width: "95%",
-        minHeight: "150px",
-        padding: "8px",
-        marginTop: "10px",
-        marginBottom: "10px",
-        borderRadius: "4px",
-        border: "1px solid #ccc",
-        background: "transparent",
-        color: "inherit",
-        display: "block",
-        resize: "vertical"
-      }}
-    />
+        <input
+          name="receiverEmail"
+          placeholder="Recipient Gmail"
+          value={form.receiverEmail}
+          onChange={handleInputChange}
+        />
 
-    <div className="row">
-      <button type="button" onClick={onClose}>Cancel</button>
-      <button 
-        type="button" 
-        onClick={handleSubmit} 
-        disabled={isSending}
-      >
-        {isSending ? "Sending..." : fixedType === "invite" ? "Send Invite" : "Send Message"}
-      </button>
+        <input
+          name="subject"
+          placeholder="Subject"
+          value={form.subject}
+          onChange={handleInputChange}
+        />
+
+        <textarea
+          name="body"
+          placeholder={
+            fixedType === "invite"
+              ? "Include a note with your invitation..."
+              : "Type your message..."
+          }
+          value={form.body}
+          onChange={handleInputChange}
+          style={{
+            width: "95%",
+            minHeight: "150px",
+            padding: "8px",
+            marginTop: "10px",
+            marginBottom: "10px",
+            borderRadius: "4px",
+            border: "1px solid #ccc",
+            background: "transparent",
+            color: "inherit",
+            display: "block",
+            resize: "vertical",
+          }}
+        />
+
+        <div className="row">
+          <button type="button" onClick={onClose}>
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSending}
+          >
+            {isSending
+              ? "Sending..."
+              : fixedType === "invite"
+              ? "Send Invite"
+              : "Send Message"}
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
   );
 }

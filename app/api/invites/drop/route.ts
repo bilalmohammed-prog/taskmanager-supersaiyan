@@ -1,23 +1,43 @@
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongoose";
-import User from "@/models/employeesModel";
+import { createClient } from "@supabase/supabase-js";
+
+/* ===================== ADMIN CLIENT ===================== */
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // SERVER ONLY
+);
 
 export async function POST(req: Request) {
   try {
-    await connectDB();
     const { empID } = await req.json();
 
-    // Simply remove the managerID field from the employee
-    const updatedUser = await User.findOneAndUpdate(
-      { empID: empID },
-      { $unset: { managerID: "" } }, // Removes the field entirely
-      { new: true }
-    );
+    if (!empID) {
+      return NextResponse.json(
+        { error: "Employee ID required" },
+        { status: 400 }
+      );
+    }
 
-    if (!updatedUser) return NextResponse.json({ error: "User not found" }, { status: 404 });
+    /* ===================== REMOVE MANAGER ===================== */
+    const { error } = await supabaseAdmin
+      .from("empid")
+      .update({ manager_id: null })   // 🔥 PostgreSQL way
+      .eq("emp_id", empID);
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
+
+  } catch (err) {
+    console.error("Drop Manager Error:", err);
+    return NextResponse.json(
+      { error: "Server Error" },
+      { status: 500 }
+    );
   }
 }

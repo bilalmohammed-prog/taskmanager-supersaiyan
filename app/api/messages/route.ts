@@ -1,22 +1,56 @@
 // app/api/messages/route.ts
 import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongoose";
-import Message from "@/models/messageModel";
+import { createClient } from "@supabase/supabase-js";
 
-export async function GET(req: Request) {
+/* ===================== CLIENTS ===================== */
+
+// For reading current user
+const supabaseAuth = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+// For DB read
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+/* ===================== GET ===================== */
+export async function GET() {
   try {
-    await connectDB();
-    const { searchParams } = new URL(req.url);
-    const email = searchParams.get("email");
+    /* 1️⃣ Get Logged In User */
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseAuth.auth.getUser();
 
-    if (!email) return NextResponse.json({ error: "Email required" }, { status: 400 });
+    if (!user || authError) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
-    const messages = await Message.find({
-      $or: [{ senderEmail: email }, { receiverEmail: email }]
-    }).sort({ createdAt: -1 });
+    /* 2️⃣ Fetch Messages */
+    const { data, error } = await supabaseAdmin
+      .from("messages")
+      .select("*")
+      .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+      .order("created_at", { ascending: false });
 
-    return NextResponse.json(messages);
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(data);
   } catch (err) {
-    return NextResponse.json({ error: "Fetch failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Fetch failed" },
+      { status: 500 }
+    );
   }
 }
