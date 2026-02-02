@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { createClient } from "@supabase/supabase-js";
 
-// Define a strict interface for the Task
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
 interface TaskRequest {
   empID: string;
   id: string;
@@ -17,63 +19,68 @@ interface TaskRequest {
 
 export async function POST(req: Request) {
   try {
-    // 1. Authenticate the Session (The Gateway)
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
+    /* 1️⃣ AUTH VIA TOKEN */
+    const authHeader = req.headers.get("authorization");
+
+    if (!authHeader) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Parse and Validate Body
+    const token = authHeader.replace("Bearer ", "");
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseAdmin.auth.getUser(token);
+
+    if (!user || authError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    /* 2️⃣ PARSE BODY */
     const body: TaskRequest = await req.json();
     const { empID, id, task, description, startTime, endTime, status, proof } = body;
 
-    // Required field validation
     if (!empID || !id || !task || !startTime || !endTime) {
       return NextResponse.json(
-        { error: "Missing required fields: empID, id, task, startTime, and endTime are mandatory." },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // 3. Database Operation using Admin Client
-    // We map the object explicitly to avoid mass-assignment vulnerabilities
+    /* 3️⃣ INSERT */
     const { data, error } = await supabaseAdmin
       .from("tasks")
       .insert([
         {
           id,
           emp_id: empID,
-          task: task,
-          description: description || "",
+          task,
+          description: description ?? "",
           start_time: startTime,
           end_time: endTime,
-          status: status || "pending",
-          proof: proof || "",
-
+          status: status ?? "pending",
+          proof: proof ?? "",
+          
         },
       ])
       .select()
       .single();
 
     if (error) {
-      console.error("Supabase Insertion Error:", error.message);
-      return NextResponse.json({ error: "Database operation failed" }, { status: 400 });
+      console.error(error.message);
+      return NextResponse.json({ error: "Database failed" }, { status: 400 });
     }
 
-    // 4. Success Response
     return NextResponse.json(
-      { message: "Task successfully created", task: data },
+      { message: "Task created", task: data },
       { status: 201 }
     );
 
   } catch (err) {
-    // Strict Error Handling
-    const message = err instanceof Error ? err.message : "Internal Server Error";
-    console.error("Task API Catch Block:", message);
-
+    console.error(err);
     return NextResponse.json(
-      { error: "An unexpected error occurred" },
+      { error: "Server error" },
       { status: 500 }
     );
   }

@@ -5,6 +5,7 @@ import Image from "next/image";
 
 import "./Cobox/Cobox.css"; // reuse styles if needed
 import { useDashboard } from "./Context/DashboardContext";
+import { supabase } from "@/lib/supabaseClient";
 
 type Task = {
   empID: string;
@@ -64,7 +65,7 @@ export default function TeamTasksView() {
     setOpenAssignModal
   } = useDashboard();
 
-  const empID = selectedEmp?.empID;
+  const empID = selectedEmp?.emp_id;
 
   // New task state including description
   const [newTask, setNewTask] = useState({
@@ -114,9 +115,22 @@ export default function TeamTasksView() {
   const id = crypto.randomUUID();
   
   // 3. Ensure description is in the JSON body
-  const res = await fetch(`/api/tasks`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  const {
+  data: { session },
+} = await supabase.auth.getSession();
+
+if (!session) {
+  alert("Not logged in");
+  return;
+}
+
+const res = await fetch(`/api/tasks`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${session.access_token}`,
+  },
+
     body: JSON.stringify({
       empID, 
       id, 
@@ -154,10 +168,25 @@ export default function TeamTasksView() {
   }
 
   try {
-    const res = await fetch(`/api/tasks/${taskId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+    const {
+  data: { session },
+} = await supabase.auth.getSession();
+
+if (!session) {
+  alert("Not logged in");
+  return;
+}
+
+const res = await fetch(`/api/tasks`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${session.access_token}`,
+  },
+
       body: JSON.stringify({
+        empID: selectedEmp?.emp_id,
+        id: taskId,
         task: currentTask.trim(),
         description: currentDesc.trim(),
         startTime: t.startTime,
