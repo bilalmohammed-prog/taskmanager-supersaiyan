@@ -8,7 +8,7 @@ import { useDashboard } from "./Context/DashboardContext";
 import { supabase } from "@/lib/supabaseClient";
 
 type Task = {
-  empID: string;
+  emp_id: string;
   id: string;
   task: string;
   description: string;
@@ -16,8 +16,7 @@ type Task = {
   endTime: string;
   status: string;
   proof: string;
-  durationHours: number;
-  submittedAt: Date;
+  
   isEditing?: boolean;
 };
 
@@ -65,7 +64,7 @@ export default function TeamTasksView() {
     setOpenAssignModal
   } = useDashboard();
 
-  const empID = selectedEmp?.emp_id;
+  const emp_id = selectedEmp?.emp_id;
 
   // New task state including description
   const [newTask, setNewTask] = useState({
@@ -81,28 +80,51 @@ export default function TeamTasksView() {
   }
 
   useEffect(() => {
-    if (!empID) {
+    if (!emp_id) {
       setTasks([]);
       setLoading(false);
       return;
     }
     async function loadTasks() {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/displayTasks?empID=${empID}`);
-        const data = await res.json();
-        setTasks(data.tasks || []);
-      } catch (err) {
-        console.error("Task load error", err);
-      } finally {
-        setLoading(false);
-      }
+      console.log("FRONTEND EMP ID:", emp_id);
+
+  setLoading(true);
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      console.log("No session");
+      setTasks([]);
+      return;
     }
+
+    const res = await fetch(`/api/displayTasks?emp_id=${emp_id}`, {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+
+    const data = await res.json();
+    setTasks(Array.isArray(data.tasks) ? data.tasks : []);
+  } catch (err) {
+    console.error("Task load error", err);
+  } finally {
+    setLoading(false);
+  }
+}
+
     loadTasks();
-  }, [empID]);
+  }, [emp_id]);
+useEffect(() => {
+  supabase.auth.onAuthStateChange((event, session) => {
+    console.log("SESSION READY", session);
+  });
+}, []);
 
   async function createTask() {
-  if (!empID) return alert("No employee selected");
+  if (!emp_id) return alert("No employee selected");
   
   // 1. Extract description from state
   const { task, description, startTime, endTime } = newTask;
@@ -115,9 +137,15 @@ export default function TeamTasksView() {
   const id = crypto.randomUUID();
   
   // 3. Ensure description is in the JSON body
-  const {
-  data: { session },
-} = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
+
+if (!user) {
+  console.log("No user yet");
+  return;
+}
+
+const { data: { session } } = await supabase.auth.getSession();
+
 
 if (!session) {
   alert("Not logged in");
@@ -132,7 +160,7 @@ const res = await fetch(`/api/tasks`, {
   },
 
     body: JSON.stringify({
-      empID, 
+      emp_id, 
       id, 
       task, 
       description, // <--- This sends it to your database
@@ -185,7 +213,7 @@ const res = await fetch(`/api/tasks`, {
   },
 
       body: JSON.stringify({
-        empID: selectedEmp?.emp_id,
+        emp_id: selectedEmp?.emp_id,
         id: taskId,
         task: currentTask.trim(),
         description: currentDesc.trim(),

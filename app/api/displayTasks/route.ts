@@ -1,71 +1,106 @@
 import { NextResponse } from "next/server";
-import { getSupabaseServer } from "@/lib/supabaseServer";
+import { createClient } from "@supabase/supabase-js";
 
-interface TaskRow {
+type TaskRow = {
   id: string;
-  task_title: string | null;
+  task: string | null;
+  description: string | null;
   start_time: string | null;
   end_time: string | null;
-  proof_url: string | null;
-}
+  status: string | null;
+  proof: string | null;
+  emp_id: string | null;
+};
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(req: Request): Promise<NextResponse> {
   try {
-    const supabase = await getSupabaseServer();
+    console.log("Fetching tasks...");
 
-    // 1️⃣ Authenticate via Supabase Auth
+    /* ================= AUTH HEADER ================= */
+    const authHeader = req.headers.get("authorization");
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log("Missing or invalid Authorization header");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    /* ================= SUPABASE CLIENT ================= */
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`, // critical for RLS
+          },
+        },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      }
+    );
+
+    /* ================= AUTH USER ================= */
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
 
+    console.log("USER UUID:", user?.id);
+
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2️⃣ RLS-enforced query (NO filters)
+    /* ================= PARAMS ================= */
+    const { searchParams } = new URL(req.url);
+    const emp_id = searchParams.get("emp_id");
+
+    if (!emp_id) {
+      return NextResponse.json({ tasks: [] });
+    }
+
+    console.log("EMP ID:", emp_id);
+
+    /* ================= QUERY ================= */
     const { data, error } = await supabase
       .from("tasks")
-      .select(`
-        id,
-        task_title,
-        start_time,
-        end_time,
-        proof_url
-      `);
+      .select("*")
+      .eq("emp_id", emp_id)
+      .order("end_time", { ascending: true });
 
     if (error) {
-      console.error("[TASK_QUERY_ERROR]", error.message);
+      console.error("DB ERROR:", error);
       return NextResponse.json(
         { error: "Failed to fetch tasks" },
         { status: 500 }
       );
     }
 
-    // 3️⃣ Map DB fields → frontend contract
-    const formattedTasks = (data ?? []).map((t: TaskRow) => ({
-      id: t.id,
-      task: t.task_title,
-      startTime: t.start_time,
-      endTime: t.end_time,
-      proof: t.proof_url,
-    }));
+    /* ================= MAP ================= */
+    const formattedTasks =
+      (data as TaskRow[] | null)?.map((t) => ({
+        id: t.id,
+        emp_id: t.emp_id,
+        task: t.task ?? "",
+        description: t.description ?? "",
+        startTime: t.start_time,
+        endTime: t.end_time,
+        status: t.status ?? "pending",
+        proof: t.proof ?? "",
+      })) ?? [];
 
+    console.log("Tasks fetched:", formattedTasks);
+
+    return NextResponse.json({ tasks: formattedTasks });
+  } catch (err) {
+    console.error("[TASK_ROUTE_EXCEPTION]", err);
     return NextResponse.json(
-      { tasks: formattedTasks },
-      { status: 200 }
-    );
-  } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : "Internal Server Error";
-
-    console.error("[TASK_ROUTE_EXCEPTION]", message);
-
-    return NextResponse.json(
-      { error: message },
+      { error: "Internal Server Error" },
       { status: 500 }
     );
   }

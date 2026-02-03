@@ -14,7 +14,7 @@ type Task = {
   status: string;
   proof: string | null;
   
-  submittedAt: string | null;
+
 };
 
 function prettyDateTime(dt: string | Date | number) {
@@ -61,9 +61,7 @@ export default function UserTasksView() {
           start_time,
           end_time,
           status,
-          proof,
-
-          submitted_at
+          proof
         `)
         .order("start_time", { ascending: true });
 
@@ -81,7 +79,6 @@ export default function UserTasksView() {
             status: t.status,
             proof: t.proof,
 
-            submittedAt: t.submitted_at,
           }))
         );
       }
@@ -103,7 +100,7 @@ export default function UserTasksView() {
       .update({
         status: "completed",
         proof: proof,
-        submitted_at: submittedAt,
+
       })
       .eq("id", task.id);
 
@@ -121,13 +118,13 @@ export default function UserTasksView() {
     );
   }
 
-  function getStatusColor(t: Task): string {
-    if (t.status !== "completed" || !t.submittedAt) return "gray";
+  function getStatusColor(t: Task){
+    if (t.status !== "completed") return "gray";
 
-    const end = new Date(t.endTime);
-    const submitted = new Date(t.submittedAt);
 
-    return submitted <= end ? "limegreen" : "gold";
+
+
+
   }
 
   return (
