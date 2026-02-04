@@ -107,7 +107,21 @@ export default function TeamTasksView() {
     });
 
     const data = await res.json();
-    setTasks(Array.isArray(data.tasks) ? data.tasks : []);
+    setTasks(
+  Array.isArray(data.tasks)
+    ? data.tasks.map((t: Task) => ({
+        emp_id: t.emp_id,
+        id: t.id,
+        task: t.task,
+        description: t.description,
+        startTime: t.startTime,
+        endTime: t.endTime,
+        status: t.status,
+        proof: t.proof
+      }))
+    : []
+);
+
   } catch (err) {
     console.error("Task load error", err);
   } finally {
@@ -170,7 +184,19 @@ const res = await fetch(`/api/tasks`, {
   const data = await res.json();
   if (!res.ok) return alert(data.error || "Failed to create task");
 
-  setTasks(prev => [...prev, data.task]);
+  const normalizedTask: Task = {
+  emp_id: data.task.emp_id,
+  id: data.task.id,
+  task: data.task.task,
+  description: data.task.description,
+  startTime: data.task.start_time,
+  endTime: data.task.end_time,
+  status: data.task.status,
+  proof: data.task.proof
+};
+
+setTasks(prev => [...prev, normalizedTask]);
+
   setOpenAssignModal(false);
   
   // 4. Reset the state including description
@@ -214,7 +240,8 @@ const res = await fetch(`/api/tasks`, {
         task: currentTask.trim(),
         description: currentDesc.trim(),
         startTime: t.startTime,
-        endTime: t.endTime
+        endTime: t.endTime,
+        proof: "not provided"
       })
     });
 

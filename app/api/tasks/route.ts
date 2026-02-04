@@ -7,7 +7,7 @@ const supabaseAdmin = createClient(
 );
 
 interface TaskRequest {
-  empID: string;
+  emp_id: string;
   id: string;
   task: string;
   description?: string;
@@ -39,9 +39,9 @@ export async function POST(req: Request) {
 
     /* 2️⃣ PARSE BODY */
     const body: TaskRequest = await req.json();
-    const { empID, id, task, description, startTime, endTime, status, proof } = body;
+    const { emp_id, id, task, description, startTime, endTime, status, proof } = body;
 
-    if (!empID || !id || !task || !startTime || !endTime) {
+    if (!emp_id || !id || !task || !startTime || !endTime) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       .insert([
         {
           id,
-          emp_id: empID,
+          emp_id: emp_id,
           task,
           description: description ?? "",
           start_time: startTime,

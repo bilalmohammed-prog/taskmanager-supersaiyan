@@ -55,6 +55,7 @@ export async function PATCH(
     if (body.startTime) updatePayload.start_time = body.startTime;
     if (body.endTime) updatePayload.end_time = body.endTime;
     if (body.status) updatePayload.status = body.status;
+    
 
     if (Object.keys(updatePayload).length === 0) {
       return NextResponse.json({ error: "No changes detected" }, { status: 400 });
