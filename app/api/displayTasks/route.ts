@@ -14,7 +14,7 @@ type TaskRow = {
 
 export async function GET(req: Request): Promise<NextResponse> {
   try {
-    console.log("Fetching tasks...");
+
 
     /* ================= AUTH HEADER ================= */
     const authHeader = req.headers.get("authorization");
@@ -50,7 +50,7 @@ export async function GET(req: Request): Promise<NextResponse> {
       error: authError,
     } = await supabase.auth.getUser();
 
-    console.log("USER UUID:", user?.id);
+
 
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -64,7 +64,7 @@ export async function GET(req: Request): Promise<NextResponse> {
       return NextResponse.json({ tasks: [] });
     }
 
-    console.log("EMP ID:", emp_id);
+
 
     /* ================= QUERY ================= */
     const { data, error } = await supabase
@@ -94,7 +94,6 @@ export async function GET(req: Request): Promise<NextResponse> {
         proof: t.proof ?? "",
       })) ?? [];
 
-    console.log("Tasks fetched:", formattedTasks);
 
     return NextResponse.json({ tasks: formattedTasks });
   } catch (err) {

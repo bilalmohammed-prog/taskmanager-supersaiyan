@@ -86,7 +86,6 @@ export default function TeamTasksView() {
       return;
     }
     async function loadTasks() {
-      console.log("FRONTEND EMP ID:", emp_id);
 
   setLoading(true);
   try {
@@ -117,11 +116,7 @@ export default function TeamTasksView() {
 
     loadTasks();
   }, [emp_id]);
-useEffect(() => {
-  supabase.auth.onAuthStateChange((event, session) => {
-    console.log("SESSION READY", session);
-  });
-}, []);
+
 
   async function createTask() {
   if (!emp_id) return alert("No employee selected");
