@@ -72,23 +72,43 @@ if (!authChecked) return null;
 
 const handleDropEmployee = async () => {
   if (!selectedEmp) return alert("Please select an employee to drop first.");
-  
-  const confirmDrop = confirm(`Are you sure you want to remove ${selectedEmp.name} from your team?`);
+
+  const confirmDrop = confirm(
+    `Are you sure you want to remove ${selectedEmp.name} from your team?`
+  );
   if (!confirmDrop) return;
+const { data: { user } } = await supabase.auth.getUser();
+console.log("Logged in user:", user);
 
   try {
-    const res = await fetch(`../api/invites/drop`, {
+    // 1️⃣ Get session
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      alert("Not logged in");
+      return;
+    }
+
+    // 2️⃣ Send token
+    const res = await fetch(`/api/invites/drop`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
       body: JSON.stringify({ emp_id: selectedEmp.emp_id }),
     });
 
+    const data = await res.json();
+
     if (res.ok) {
       alert("Employee dropped successfully.");
-      setSelectedEmp(null); // Clear the selection as they are no longer yours
+      setSelectedEmp(null);
       setShowChoiceModal(false);
     } else {
-      alert("Failed to drop employee.");
+      alert(data.error || "Failed to drop employee.");
     }
   } catch (err) {
     console.error(err);

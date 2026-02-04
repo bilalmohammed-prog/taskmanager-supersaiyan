@@ -1,28 +1,57 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-/* ===================== ADMIN CLIENT ===================== */
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // SERVER ONLY
-);
-
 export async function POST(req: Request) {
   try {
-    const { empID } = await req.json();
+    const { emp_id } = await req.json();
 
-    if (!empID) {
+    if (!emp_id) {
       return NextResponse.json(
         { error: "Employee ID required" },
         { status: 400 }
       );
     }
 
-    /* ===================== REMOVE MANAGER ===================== */
-    const { error } = await supabaseAdmin
-      .from("empid")
-      .update({ manager_id: null })   // 🔥 PostgreSQL way
-      .eq("emp_id", empID);
+    /* 1️⃣ Get JWT from header */
+    const token = req.headers.get("authorization")?.replace("Bearer ", "");
+
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+
+    /* 2️⃣ Create Supabase client WITH anon key + user token */
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      }
+    );
+
+const { data: check } = await supabase
+  .from("empid")
+  .select("emp_id, manager_id")
+  .eq("emp_id", emp_id);
+
+console.log("Visible row:", check);
+
+
+    const { data, error, status } = await supabase
+  .from("empid")
+  .update({ manager_id: null })
+  .eq("emp_id", emp_id)
+  .select();
+
+console.log("Status:", status);
+console.log("Error:", error);
+console.log("Updated rows:", data);
+
+
 
     if (error) {
       return NextResponse.json(
