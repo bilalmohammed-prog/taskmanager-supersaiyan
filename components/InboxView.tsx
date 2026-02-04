@@ -108,25 +108,36 @@ export default function InboxView() {
 
 
   async function declineInvite(msg: IMessage) {
+  const { data: { session } } = await supabase.auth.getSession();
+
   const res = await fetch("/api/invites/decline", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session?.access_token}`,
+    },
     body: JSON.stringify({ messageId: msg.id }),
   });
 
   const data = await res.json();
-
   if (!res.ok) {
     alert(data.error);
     return;
   }
 
+  // update list
   setMessages(prev =>
     prev.map(m =>
       m.id === msg.id ? { ...m, status: "declined" } : m
     )
   );
+
+  // update detail view
+  setSelectedMsg(prev =>
+    prev ? { ...prev, status: "declined" } : null
+  );
 }
+
 
 
   /* ===================== MENU VIEW ===================== */

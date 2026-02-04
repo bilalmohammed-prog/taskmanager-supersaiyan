@@ -22,9 +22,6 @@ export async function GET(req: Request) {
       error,
     } = await supabaseAdmin.auth.getUser(token);
 
-    console.log("AUTH HEADER:", authHeader);
-console.log("USER:", user);
-
 
     if (!user || error) {
       return NextResponse.json({ employees: [] });
