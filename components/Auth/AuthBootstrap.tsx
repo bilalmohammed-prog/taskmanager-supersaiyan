@@ -5,31 +5,47 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuthEmployee } from "@/components/Context/AuthEmployeeContext";
 
 export default function AuthBootstrap() {
-  const { setEmployee } = useAuthEmployee();
+  const { setEmployee, setHydrated } = useAuthEmployee();
 
   useEffect(() => {
-    async function bootstrap(): Promise<void> {
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
+    let mounted = true;
 
-      if (error || !session?.user) return;
+    async function init() {
+      try {
+        console.log("BOOTSTRAP START");
 
-      const { data, error: empError } = await supabase
-        .from("empid")
-        .select("emp_id, email, name, manager_id, user_id")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
+        const { data: { session } } = await supabase.auth.getSession();
 
-      if (!empError && data) {
-        setEmployee(data);
+        if (!mounted) return;
+
+        if (session?.user) {
+          const { data } = await supabase
+            .from("empid")
+            .select("emp_id, email, name, manager_id, user_id")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+
+          if (data && mounted) {
+            setEmployee(data);
+          }
+        }
+
+      } catch (err) {
+        console.error("BOOTSTRAP ERROR:", err);
+      } finally {
+        if (mounted) {
+          console.log("SETTING HYDRATED TRUE");
+          setHydrated(true);   // GUARANTEED
+        }
       }
     }
 
-    bootstrap();
-  }, [setEmployee]);
-  
+    init();
 
-  return null;
+    return () => {
+      mounted = false;
+    };
+  }, [setEmployee, setHydrated]);
+
+  return <></>;
 }
