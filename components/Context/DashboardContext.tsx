@@ -1,8 +1,8 @@
 "use client";
-
+//global storage box for ui dashboard states in react
 import { createContext, useContext, useState } from "react";
 
-type SelectedEmp = { emp_id: string; name: string } | null;
+type SelectedEmp = { emp_id: string; name: string; user_id: string; } | null;
 
 type DashboardContextType = {
   selectedEmp: SelectedEmp;

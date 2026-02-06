@@ -7,16 +7,16 @@ import { supabase } from "@/lib/supabaseClient"; // 🔴 MISSING IMPORT
 type Employee = {
   emp_id: string;
   name: string;
+  user_id: string;
 };
 
 export default function SwitchEmpPopup({
   onClose,
   onSelect,
-  selectedEmpID,
-  currentManagerID
+  selectedEmpID
 }: {
   onClose: () => void;
-  onSelect: (emp: { name: string; emp_id: string }) => void;
+  onSelect: (emp: { name: string; emp_id: string; user_id: string }) => void;
   selectedEmpID: string | null;
   currentManagerID: string | null;
 }) {
@@ -98,7 +98,7 @@ export default function SwitchEmpPopup({
                   className={`switch-emp-card ${
                     selectedEmpID === e.emp_id ? "selected" : ""
                   }`}
-                  onClick={() => onSelect({ emp_id: e.emp_id, name: e.name })}
+                  onClick={() => onSelect({ emp_id: e.emp_id, name: e.name, user_id: e.user_id })}
                 >
                   <div className="switch-emp-card-name">{e.name}</div>
                   <div className="switch-emp-card-id">ID: {e.emp_id}</div>

@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 type Task = {
   emp_id: string;
+  user_id: string;
   id: string;
   task: string;
   description: string;
@@ -65,6 +66,7 @@ export default function TeamTasksView() {
   } = useDashboard();
 
   const emp_id = selectedEmp?.emp_id;
+  const user_id = selectedEmp?.user_id;
 
   // New task state including description
   const [newTask, setNewTask] = useState({
@@ -111,6 +113,7 @@ export default function TeamTasksView() {
   Array.isArray(data.tasks)
     ? data.tasks.map((t: Task) => ({
         emp_id: t.emp_id,
+        user_id: t.user_id,
         id: t.id,
         task: t.task,
         description: t.description,
@@ -138,6 +141,7 @@ export default function TeamTasksView() {
   
   // 1. Extract description from state
   const { task, description, startTime, endTime } = newTask;
+    
 
   // 2. Added description.trim() to validation
   if (!task.trim() || !description.trim() || !startTime || !endTime) {
@@ -170,22 +174,26 @@ const res = await fetch(`/api/tasks`, {
   },
 
     body: JSON.stringify({
-      emp_id, 
+      emp_id,
+
       id, 
-      task, 
+      task,
+      user_id:user_id,
       description, // <--- This sends it to your database
       startTime, 
       endTime,
       status: "pending", 
       proof: ""
     })
+    
   });
-
+console.log(user_id);
   const data = await res.json();
   if (!res.ok) return alert(data.error || "Failed to create task");
 
   const normalizedTask: Task = {
   emp_id: data.task.emp_id,
+  user_id: data.task.user_id,
   id: data.task.id,
   task: data.task.task,
   description: data.task.description,

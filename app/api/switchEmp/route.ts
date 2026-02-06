@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     /* 2️⃣ QUERY EMPLOYEES USING LOGGED-IN USER ID */
     const { data, error: empError } = await supabaseAdmin
       .from("empid")
-      .select("emp_id, name")
+      .select("emp_id, name, user_id")
       .eq("manager_id", user.id);
 
     if (empError) {
@@ -42,6 +42,7 @@ export async function GET(req: Request) {
       data?.map((e) => ({
         emp_id: e.emp_id,
         name: e.name,
+        user_id: e.user_id,
       })) ?? [];
 
     return NextResponse.json({ employees });

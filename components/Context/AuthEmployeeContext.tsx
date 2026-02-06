@@ -10,6 +10,7 @@ export interface AuthEmployee {
   emp_id: string;
   email: string;
   name: string;
+  user_id: string | null;//migh be cause of break  
   manager_id: string | null;
 }
 
