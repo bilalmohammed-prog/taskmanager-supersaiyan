@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 type Task = {
   id: string;
+  user_id: string | null;
   task: string;
   description: string | null;
   startTime: string;
@@ -54,16 +55,19 @@ export default function UserTasksView() {
       // 2️⃣ RLS-enforced task fetch (NO filters)
       const { data, error } = await supabase
         .from("tasks")
-        .select(`
-          id,
-          task,
-          description,
-          start_time,
-          end_time,
-          status,
-          proof
-        `)
-        .order("start_time", { ascending: true });
+.select(`
+  id,
+  task,
+  user_id,
+  description,
+  start_time,
+  end_time,
+  status,
+  proof
+`)
+.eq("user_id", session.user.id)
+.order("start_time", { ascending: true });
+
 
       if (error) {
         console.error("Task load error:", error.message);
@@ -72,6 +76,7 @@ export default function UserTasksView() {
         setTasks(
           data.map((t) => ({
             id: t.id,
+            user_id: t.user_id,
             task: t.task,
             description: t.description,
             startTime: t.start_time,
