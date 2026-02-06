@@ -10,6 +10,7 @@ type TaskRow = {
   status: string | null;
   proof: string | null;
   emp_id: string | null;
+  user_id: string | null;
 };
 
 export async function GET(req: Request): Promise<NextResponse> {
@@ -58,7 +59,7 @@ export async function GET(req: Request): Promise<NextResponse> {
 
     /* ================= PARAMS ================= */
     const { searchParams } = new URL(req.url);
-    const emp_id = searchParams.get("emp_id");
+    const emp_id = searchParams.get("user_id");
 
     if (!emp_id) {
       return NextResponse.json({ tasks: [] });
@@ -70,7 +71,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     const { data, error } = await supabase
       .from("tasks")
       .select("*")
-      .eq("emp_id", emp_id)
+      .eq("user_id", emp_id)
       .order("end_time", { ascending: true });
 
     if (error) {
@@ -86,6 +87,7 @@ export async function GET(req: Request): Promise<NextResponse> {
       (data as TaskRow[] | null)?.map((t) => ({
         id: t.id,
         emp_id: t.emp_id,
+        user_id: t.user_id, // <-- This is the critical fix
         task: t.task ?? "",
         description: t.description ?? "",
         startTime: t.start_time,

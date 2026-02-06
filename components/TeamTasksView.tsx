@@ -102,7 +102,7 @@ export default function TeamTasksView() {
     }
 
       
-    const res = await fetch(`/api/displayTasks?emp_id=${emp_id}`, {
+    const res = await fetch(`/api/displayTasks?user_id=${user_id}`, {
       headers: {
         Authorization: `Bearer ${session.access_token}`,
       },
@@ -133,7 +133,7 @@ export default function TeamTasksView() {
 }
 
     loadTasks();
-  }, [emp_id]);
+  }, [user_id]);
 
 
   async function createTask() {
