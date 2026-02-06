@@ -281,10 +281,26 @@ const res = await fetch(`/api/tasks`, {
 }
 
   async function deleteTask(taskId: string) {
-    setTasks(prev => prev.filter(t => t.id !== taskId));
-    if (selectedTask?.id === taskId) setSelectedTask(null);
-    await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    alert("Not logged in");
+    return;
   }
+
+  setTasks(prev => prev.filter(t => t.id !== taskId));
+  if (selectedTask?.id === taskId) setSelectedTask(null);
+
+  await fetch(`/api/tasks/${taskId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
+}
+
 
   if(selectedEmp){
   return (
