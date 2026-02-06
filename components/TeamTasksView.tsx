@@ -235,8 +235,8 @@ if (!session) {
   return;
 }
 
-const res = await fetch(`/api/tasks`, {
-  method: "POST",
+const res = await fetch(`/api/tasks/${taskId}`, {
+  method: "PATCH",
   headers: {
     "Content-Type": "application/json",
     Authorization: `Bearer ${session.access_token}`,
