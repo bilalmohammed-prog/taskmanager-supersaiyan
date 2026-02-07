@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import "./Cobox/Cobox.css";
 import { supabase } from "@/lib/supabaseClient";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 
 type Task = {
   id: string;
@@ -31,6 +33,33 @@ function prettyDateTime(dt: string | Date | number) {
     hour12: true,
   });
 }
+function randomEmpId() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let result = "EMP-";
+  for (let i = 0; i < 6; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return result;
+}
+async function generateUniqueEmpId(supabase: SupabaseClient) {
+
+  let unique = false;
+  let newId = "";
+
+  while (!unique) {
+    newId = randomEmpId();
+
+    const { data } = await supabase
+      .from("empid")
+      .select("emp_id")
+      .eq("emp_id", newId)
+      .maybeSingle();
+
+    if (!data) unique = true;
+  }
+
+  return newId;
+}
 
 export default function UserTasksView() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -38,6 +67,7 @@ export default function UserTasksView() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
+    console.log("login event fired");
     async function loadTasks(): Promise<void> {
       setLoading(true);
 
@@ -51,6 +81,39 @@ export default function UserTasksView() {
         setLoading(false);
         return;
       }
+      if (session?.user) {
+  const user = session.user;
+
+// Check if employee exists
+const { data: existingEmp, error: empFetchErr } = await supabase
+  .from("empid")
+  .select("id")
+  .eq("user_id", user.id)
+  .maybeSingle();
+
+if (empFetchErr) {
+  console.error("Employee check error:", empFetchErr.message);
+}
+
+  // 2. If not found → create
+  if (!existingEmp) {
+  const newEmpId = await generateUniqueEmpId(supabase);
+
+const { error: insertErr } = await supabase.from("empid").insert({
+  email: user.email,
+  name: user.user_metadata?.full_name || "Unknown",
+  emp_id: newEmpId,
+  user_id: user.id,
+  manager_id: null,
+});
+
+
+  if (insertErr) {
+    console.error("Employee insert error:", insertErr.message);
+  }
+}
+}
+
 
       // 2️⃣ RLS-enforced task fetch (NO filters)
       const { data, error } = await supabase
