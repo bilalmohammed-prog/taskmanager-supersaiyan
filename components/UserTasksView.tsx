@@ -68,6 +68,9 @@ export default function UserTasksView() {
 
   useEffect(() => {
     console.log("login event fired");
+
+    
+
     async function loadTasks(): Promise<void> {
       setLoading(true);
 
@@ -99,19 +102,27 @@ if (empFetchErr) {
   if (!existingEmp) {
   const newEmpId = await generateUniqueEmpId(supabase);
 
-const { error: insertErr } = await supabase.from("empid").insert({
-  email: user.email,
-  name: user.user_metadata?.full_name || "Unknown",
-  emp_id: newEmpId,
-  user_id: user.id,
-  manager_id: null,
-});
-
+  const { error: insertErr } = await supabase.from("empid").insert({
+    email: user.email,
+    name: user.user_metadata?.full_name || "Unknown",
+    emp_id: newEmpId,
+    user_id: user.id,
+    manager_id: null,
+  });
 
   if (insertErr) {
     console.error("Employee insert error:", insertErr.message);
+  } else {
+    // 🔹 FIRST ACCOUNT CREATION → HARD RELOAD ONCE
+    if (!sessionStorage.getItem("firstAccountReload")) {
+      sessionStorage.setItem("firstAccountReload", "true");
+      window.location.reload();
+      return;
+    }
   }
 }
+
+
 }
 
 
@@ -156,6 +167,7 @@ const { error: insertErr } = await supabase.from("empid").insert({
 
     loadTasks();
   }, []);
+  
 
   async function markCompleted(task: Task): Promise<void> {
     const proof = prompt("Enter proof of work");
