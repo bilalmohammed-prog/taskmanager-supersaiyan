@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import "./Cobox/Cobox.css";
 import { supabase } from "@/lib/supabaseClient";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+
 
 
 type Task = {
@@ -61,112 +63,151 @@ async function generateUniqueEmpId(supabase: SupabaseClient) {
   return newId;
 }
 
+
+async function ensureEmployeeProfile(
+  user: { id: string; email?: string; user_metadata?: { full_name?: string } },
+  supabase: SupabaseClient
+) {
+  const { data: existingEmp } = await supabase
+    .from("empid")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (existingEmp) return true;
+
+  const { error } = await supabase.from("empid").upsert(
+    {
+      user_id: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || "Unknown",
+      emp_id: await generateUniqueEmpId(supabase),
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (error && error.code !== "23505") {
+    console.error(error);
+    return false;
+  }
+
+  // 🔑 Critical step
+  await supabase.auth.refreshSession();
+
+  const { data } = await supabase
+    .from("empid")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  return !!data;
+}
+
+
+
 export default function UserTasksView() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
+  const initRef = useRef(false);
+
 
   useEffect(() => {
-    console.log("login event fired");
+    let mounted = true;
 
-    
+    async function loadTasks() {
+      try {
+        // Prevent concurrent initialization
+        if (initRef.current) return;
+initRef.current = true;
 
-    async function loadTasks(): Promise<void> {
-      setLoading(true);
 
-      // 1️⃣ Ensure user is authenticated (client-safe)
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        setLoading(true);
+        setInitializationError(null);
+   
 
-      if (!session?.user) {
-        setTasks([]);
-        setLoading(false);
-        return;
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.user) {
+          if (mounted) {
+            setLoading(false);
+            initRef.current = false;
+
+
+          }
+          return;
+        }
+
+        const user = session.user;
+
+        // Ensure employee profile exists and is ready
+        const profileReady = await ensureEmployeeProfile(user, supabase);
+        
+        if (!profileReady) {
+          if (mounted) {
+            setInitializationError("Failed to initialize employee profile. Please refresh the page.");
+            setLoading(false);
+            initRef.current = false;
+
+
+          }
+          return;
+        }
+
+        // Fetch Tasks
+        const { data, error } = await supabase
+          .from("tasks")
+          .select(`id, task, user_id, description, start_time, end_time, status, proof`)
+          .eq("user_id", user.id)
+          .order("start_time", { ascending: true });
+
+        if (mounted) {
+          if (!error && data) {
+            setTasks(data.map(t => ({
+              id: t.id,
+              user_id: t.user_id,
+              task: t.task,
+              description: t.description,
+              startTime: t.start_time,
+              endTime: t.end_time,
+              status: t.status,
+              proof: t.proof,
+            })));
+          }
+          setLoading(false);
+          initRef.current = false;
+
+
+        }
+      } catch (err) {
+        console.error("Error in loadTasks:", err);
+        if (mounted) {
+          setInitializationError("An error occurred while loading tasks.");
+          setLoading(false);
+          initRef.current = false;
+
+
+        }
       }
-      if (session?.user) {
-  const user = session.user;
-
-// Check if employee exists
-const { data: existingEmp, error: empFetchErr } = await supabase
-  .from("empid")
-  .select("id")
-  .eq("user_id", user.id)
-  .maybeSingle();
-
-if (empFetchErr) {
-  console.error("Employee check error:", empFetchErr.message);
-}
-
-  // 2. If not found → create
-  if (!existingEmp) {
-  const newEmpId = await generateUniqueEmpId(supabase);
-
-  const { error: insertErr } = await supabase.from("empid").insert({
-    email: user.email,
-    name: user.user_metadata?.full_name || "Unknown",
-    emp_id: newEmpId,
-    user_id: user.id,
-    manager_id: null,
-  });
-
-  if (insertErr) {
-    console.error("Employee insert error:", insertErr.message);
-  } else {
-    // 🔹 FIRST ACCOUNT CREATION → HARD RELOAD ONCE
-    if (!sessionStorage.getItem("firstAccountReload")) {
-      sessionStorage.setItem("firstAccountReload", "true");
-      window.location.reload();
-      return;
-    }
-  }
-}
-
-
-}
-
-
-      // 2️⃣ RLS-enforced task fetch (NO filters)
-      const { data, error } = await supabase
-        .from("tasks")
-.select(`
-  id,
-  task,
-  user_id,
-  description,
-  start_time,
-  end_time,
-  status,
-  proof
-`)
-.eq("user_id", session.user.id)
-.order("start_time", { ascending: true });
-
-
-      if (error) {
-        console.error("Task load error:", error.message);
-        setTasks([]);
-      } else {
-        setTasks(
-          data.map((t) => ({
-            id: t.id,
-            user_id: t.user_id,
-            task: t.task,
-            description: t.description,
-            startTime: t.start_time,
-            endTime: t.end_time,
-            status: t.status,
-            proof: t.proof,
-
-          }))
-        );
-      }
-
-      setLoading(false);
     }
 
     loadTasks();
-  }, []);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && mounted) {
+        console.log("🔐 SIGNED_IN event detected");
+        loadTasks();
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []); // Keep dependencies empty
+
+
   
 
   async function markCompleted(task: Task): Promise<void> {
@@ -198,14 +239,11 @@ if (empFetchErr) {
     );
   }
 
-  function getStatusColor(t: Task){
-    if (t.status !== "completed") return "gray";
+  function getStatusColor(t: Task) {
+  if (t.status === "completed") return "green";
+  return "gray";
+}
 
-
-
-
-
-  }
 
   return (
     <div className="coboxContainer">
@@ -265,6 +303,28 @@ if (empFetchErr) {
               </div>
             </div>
           ))}
+          {initializationError && !loading && (
+  <div className="error-container" style={{ 
+    color: 'red', 
+    padding: '20px', 
+    textAlign: 'center',
+    background: '#fee',
+    borderRadius: '8px',
+    margin: '20px'
+  }}>
+    <p>{initializationError}</p>
+    <button 
+      onClick={() => window.location.reload()} 
+      style={{ 
+        marginTop: '10px',
+        padding: '8px 16px',
+        cursor: 'pointer'
+      }}
+    >
+      Retry
+    </button>
+  </div>
+)}
       </div>
 
       <div className="taskDescription">

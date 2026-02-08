@@ -1,11 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
-/**
- * Verified employee identity for the currently authenticated user.
- * CACHE only — not source of truth.
- */
 export interface AuthEmployee {
   emp_id: string;
   email: string;
@@ -17,8 +14,6 @@ export interface AuthEmployee {
 interface AuthEmployeeContextType {
   employee: AuthEmployee | null;
   setEmployee: (employee: AuthEmployee | null) => void;
-
-  // ADD THESE 👇
   hydrated: boolean;
   setHydrated: (v: boolean) => void;
 }
@@ -26,23 +21,53 @@ interface AuthEmployeeContextType {
 const AuthEmployeeContext =
   createContext<AuthEmployeeContextType | undefined>(undefined);
 
-export function AuthEmployeeProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function AuthEmployeeProvider({ children }: { children: React.ReactNode }) {
   const [employee, setEmployee] = useState<AuthEmployee | null>(null);
-
-  // ADD THIS 👇
   const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    async function fetchEmployee() {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session?.user) {
+        setEmployee(null);
+        setHydrated(true);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("empid")
+        .select("*")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      setEmployee(data ?? null);
+      setHydrated(true);
+    }
+
+    // Initial fetch
+    fetchEmployee();
+
+    // Listen for login/logout
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange((_event, session) => {
+        if (session) fetchEmployee();
+        else {
+          setEmployee(null);
+          setHydrated(true);
+        }
+      });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <AuthEmployeeContext.Provider
       value={{
         employee,
         setEmployee,
-        hydrated,     // ADD
-        setHydrated,  // ADD
+        hydrated,
+        setHydrated,
       }}
     >
       {children}
@@ -53,9 +78,7 @@ export function AuthEmployeeProvider({
 export function useAuthEmployee(): AuthEmployeeContextType {
   const ctx = useContext(AuthEmployeeContext);
   if (!ctx) {
-    throw new Error(
-      "useAuthEmployee must be used inside AuthEmployeeProvider"
-    );
+    throw new Error("useAuthEmployee must be used inside AuthEmployeeProvider");
   }
   return ctx;
 }

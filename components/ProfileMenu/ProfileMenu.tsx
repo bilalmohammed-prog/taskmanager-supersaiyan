@@ -11,8 +11,21 @@ export default function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+// 1. Add this state at the top of ProfileMenu
+const [metaName, setMetaName] = useState("");
 
+// 2. Add this tiny effect to grab metadata instantly
+useEffect(() => {
+  supabase.auth.getSession().then(({ data }) => {
+    setMetaName(data.session?.user?.user_metadata?.full_name || "");
+  });
+}, []);
 
+// 3. Update your initials line to use the fallback
+const displayName = employee?.name || metaName;
+const initials = displayName?.charAt(0).toUpperCase() ?? "?";
+// INSERT THIS: Listen for login to refresh employee context
+ // Watch 'employee' to know when it finally arrives
   // Handle click outside and Escape key
   useEffect(() => {
     function handleGlobalEvents(e: MouseEvent | KeyboardEvent): void {
@@ -34,7 +47,6 @@ export default function ProfileMenu() {
     };
   }, []);
 
-  const initials = employee?.name?.charAt(0).toUpperCase() ?? "?";
 
   async function handleLogout(): Promise<void> {
     await supabase.auth.signOut();
@@ -63,9 +75,12 @@ export default function ProfileMenu() {
       */}
       <div className={`profile-dropdown ${open ? "show" : ""}`} role="menu">
         <div className="profile-header">
-          <p className="profile-name">{employee?.name}</p>
-          <p className="profile-email">{employee?.email}</p>
-          <span className="profile-id">ID: {employee?.emp_id}</span>
+          <p className="profile-name">{employee?.name || metaName || "User"}</p>
+<p className="profile-email">{employee?.email || ""}</p>
+<span className="profile-id">
+  ID: {employee?.emp_id || "Loading..."}
+</span>
+
         </div>
 
         <button 
