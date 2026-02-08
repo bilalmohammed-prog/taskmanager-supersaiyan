@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import "./Cobox/Cobox.css";
 import { supabase } from "@/lib/supabaseClient";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { useRouter } from "next/navigation";
 
 
 
@@ -35,81 +33,12 @@ function prettyDateTime(dt: string | Date | number) {
     hour12: true,
   });
 }
-function randomEmpId() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let result = "EMP-";
-  for (let i = 0; i < 6; i++) {
-    result += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return result;
-}
-async function generateUniqueEmpId(supabase: SupabaseClient) {
-
-  let unique = false;
-  let newId = "";
-
-  while (!unique) {
-    newId = randomEmpId();
-
-    const { data } = await supabase
-      .from("empid")
-      .select("emp_id")
-      .eq("emp_id", newId)
-      .maybeSingle();
-
-    if (!data) unique = true;
-  }
-
-  return newId;
-}
-
-
-async function ensureEmployeeProfile(
-  user: { id: string; email?: string; user_metadata?: { full_name?: string } },
-  supabase: SupabaseClient
-) {
-  const { data: existingEmp } = await supabase
-    .from("empid")
-    .select("id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (existingEmp) return true;
-
-  const { error } = await supabase.from("empid").upsert(
-    {
-      user_id: user.id,
-      email: user.email,
-      name: user.user_metadata?.full_name || "Unknown",
-      emp_id: await generateUniqueEmpId(supabase),
-    },
-    { onConflict: "user_id" }
-  );
-
-  if (error && error.code !== "23505") {
-    console.error(error);
-    return false;
-  }
-
-  // 🔑 Critical step
-  await supabase.auth.refreshSession();
-
-  const { data } = await supabase
-    .from("empid")
-    .select("id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  return !!data;
-}
-
-
 
 export default function UserTasksView() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [initializationError, setInitializationError] = useState<string | null>(null);
+
   const initRef = useRef(false);
 
 
@@ -124,7 +53,7 @@ initRef.current = true;
 
 
         setLoading(true);
-        setInitializationError(null);
+
    
 
         const { data: { session } } = await supabase.auth.getSession();
@@ -141,19 +70,7 @@ initRef.current = true;
 
         const user = session.user;
 
-        // Ensure employee profile exists and is ready
-        const profileReady = await ensureEmployeeProfile(user, supabase);
         
-        if (!profileReady) {
-          if (mounted) {
-            setInitializationError("Failed to initialize employee profile. Please refresh the page.");
-            setLoading(false);
-            initRef.current = false;
-
-
-          }
-          return;
-        }
 
         // Fetch Tasks
         const { data, error } = await supabase
@@ -183,7 +100,7 @@ initRef.current = true;
       } catch (err) {
         console.error("Error in loadTasks:", err);
         if (mounted) {
-          setInitializationError("An error occurred while loading tasks.");
+
           setLoading(false);
           initRef.current = false;
 
@@ -196,7 +113,6 @@ initRef.current = true;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && mounted) {
-        console.log("🔐 SIGNED_IN event detected");
         loadTasks();
       }
     });
@@ -303,28 +219,7 @@ initRef.current = true;
               </div>
             </div>
           ))}
-          {initializationError && !loading && (
-  <div className="error-container" style={{ 
-    color: 'red', 
-    padding: '20px', 
-    textAlign: 'center',
-    background: '#fee',
-    borderRadius: '8px',
-    margin: '20px'
-  }}>
-    <p>{initializationError}</p>
-    <button 
-      onClick={() => window.location.reload()} 
-      style={{ 
-        marginTop: '10px',
-        padding: '8px 16px',
-        cursor: 'pointer'
-      }}
-    >
-      Retry
-    </button>
-  </div>
-)}
+          
       </div>
 
       <div className="taskDescription">
