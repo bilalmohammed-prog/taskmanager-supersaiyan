@@ -1,39 +1,40 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-export async function GET(req: Request) {
+export async function GET() {
   try {
+    const cookieStore = await cookies();
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
+
     /* 1️⃣ AUTH */
-    const authHeader = req.headers.get("authorization");
-
-    if (!authHeader) {
-      return NextResponse.json({ employees: [] });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-
     const {
       data: { user },
-      error,
-    } = await supabaseAdmin.auth.getUser(token);
+    } = await supabase.auth.getUser();
 
-
-    if (!user || error) {
+    if (!user) {
       return NextResponse.json({ employees: [] });
     }
 
-    /* 2️⃣ QUERY EMPLOYEES USING LOGGED-IN USER ID */
-    const { data, error: empError } = await supabaseAdmin
+    /* 2️⃣ QUERY EMPLOYEES */
+    const { data, error } = await supabase
       .from("empid")
       .select("emp_id, name, user_id")
       .eq("manager_id", user.id);
 
-    if (empError) {
+    if (error) {
+      console.error(error);
       return NextResponse.json({ employees: [] });
     }
 
@@ -46,6 +47,7 @@ export async function GET(req: Request) {
       })) ?? [];
 
     return NextResponse.json({ employees });
+
   } catch (err) {
     console.error("Error fetching employees:", err);
     return NextResponse.json({ employees: [] });

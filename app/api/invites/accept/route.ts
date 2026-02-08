@@ -1,14 +1,34 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-/* ===================== ADMIN CLIENT ===================== */
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // SERVER ONLY
-);
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 export async function POST(req: Request) {
   try {
+    const cookieStore = await cookies();
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+        },
+      }
+    );
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const { messageId } = await req.json();
 
     if (!messageId) {
@@ -19,7 +39,7 @@ export async function POST(req: Request) {
     }
 
     /* ===================== 1️⃣ GET MESSAGE ===================== */
-    const { data: message, error: msgError } = await supabaseAdmin
+    const { data: message, error: msgError } = await supabase
       .from("messages")
       .select("*")
       .eq("id", messageId)
@@ -33,10 +53,7 @@ export async function POST(req: Request) {
     }
 
     if (message.type !== "invite") {
-      return NextResponse.json(
-        { error: "Not an invite" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Not an invite" }, { status: 400 });
     }
 
     if (message.status !== "pending") {
@@ -46,19 +63,19 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!message.sender_id || !message.receiver_id) {
+    /* 🔒 EXTRA CHECK */
+    if (message.receiver_id !== user.id) {
       return NextResponse.json(
-        { error: "Corrupted invite data" },
-        { status: 500 }
+        { error: "You are not the invite receiver" },
+        { status: 403 }
       );
     }
 
-    /* ===================== 2️⃣ LINK EMPLOYEE TO MANAGER ===================== */
-    console.log("Linking employee", message.receiver_id, "to manager", message.sender_id);
-    const { error: empError } = await supabaseAdmin
+    /* ===================== 2️⃣ LINK EMPLOYEE ===================== */
+    const { error: empError } = await supabase
       .from("empid")
-      .update({ manager_id: message.sender_id }) // manager = sender
-      .eq("user_id", message.receiver_id);       // employee = receiver
+      .update({ manager_id: message.sender_id })
+      .eq("user_id", message.receiver_id);
 
     if (empError) {
       return NextResponse.json(
@@ -68,7 +85,7 @@ export async function POST(req: Request) {
     }
 
     /* ===================== 3️⃣ MARK MESSAGE ACCEPTED ===================== */
-    const { error: statusError } = await supabaseAdmin
+    const { error: statusError } = await supabase
       .from("messages")
       .update({ status: "accepted" })
       .eq("id", messageId);
@@ -84,7 +101,6 @@ export async function POST(req: Request) {
       success: true,
       message: "Invitation accepted and manager linked.",
     });
-
   } catch (err) {
     console.error("Accept Invite Error:", err);
     return NextResponse.json(
