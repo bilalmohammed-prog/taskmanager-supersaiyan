@@ -26,7 +26,7 @@ export async function proxy(request: NextRequest) {
 
   // If no session → go login
   if (!session) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.redirect(new URL("/", request.url))
   }
 
   return response
