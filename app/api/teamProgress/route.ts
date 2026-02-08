@@ -19,11 +19,6 @@ type EmpRow = {
   manager_id: string;
 };
 
-type TaskJoinRow = {
-  user_id: string;
-  status: string;
-  empid: EmpRow | EmpRow[] | null;
-};
 
 
 export async function GET(req: Request) {
