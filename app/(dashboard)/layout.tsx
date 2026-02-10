@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { DashboardProvider, useDashboard } from "@/components/Context/DashboardContext";
 import { LeftSideBar } from "@/components/LeftSideBar/LeftSideBar";
-import TopBar from "@/components/TopBar/TopBar";
+import TopBar from "@/components/TopBar";
 import { supabase } from "@/lib/supabaseClient";
 
 interface DashboardShellProps {

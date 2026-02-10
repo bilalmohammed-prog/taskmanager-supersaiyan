@@ -1,25 +1,36 @@
 "use client";
 
-import ComposeMessagePopup from "../Popups/ComposeMessagePopup/ComposeMessagePopup";
+import ComposeMessagePopup from "./Popups/ComposeMessagePopup/ComposeMessagePopup";
 
 import Image from "next/image";
-import "./TopBar.css";
 
-import  SwitchEmpPopup from "../Popups/switchEmpPopup/switchEmpPopup";
+
+import  SwitchEmpPopup from "./Popups/switchEmpPopup/switchEmpPopup";
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useEffect } from "react";
 
 import { usePathname } from "next/navigation";
-import { useDashboard } from "../Context/DashboardContext";
+import { useDashboard } from "./Context/DashboardContext";
 
-
+import { Button } from "./ui/button";
 
 export default function TopBar() {
 
     const pathname = usePathname();
 
     const [userEmail, setUserEmail] = useState<string | null>(null);
+
+    const topbarCls = `
+  fixed top-0 left-0 right-0
+  h-16
+  grid grid-cols-[1fr_auto_auto_1fr]
+  items-center
+  bg-[#1E1E1E]
+  border-b border-white/25
+  px-4
+  z-[1000]
+`;
 
   
     const {
@@ -143,55 +154,55 @@ console.log("Logged in user:", user);
 )}
 
 
-        <div className="rsidebar">
+        <div className={topbarCls}>
+
           <div className="assign">
 
-            <button className="createEmp" onClick={() => setShowChoiceModal(true)}>
-  <Image src="/svg/createEmp.svg" alt="Add/Drop" width={32} height={32}/>
+            <Button variant="topbar" onClick={() => setShowChoiceModal(true)}>
+  <Image src="/svg/createEmp.svg" alt="Create Employee" width={22} height={22}/>
   Add / Drop Employee
-  {/* <span className="tooltip">Add/Drop employee</span> */}
+</Button>
+
+
+<Button variant="topbar" onClick={() => setShowPopup(true)}>
+  <Image src="/svg/switchEmp.svg"
+  alt="Select Employee" 
+  width={22} 
+  height={22}/>
+  Select Employee
+</Button>
+
+
+            <Button
+  variant="topbar"
   
-</button>
-{/* <span className="btn-label">Manage Staff</span> */}
-
-<button className="sidebar-btn switchEmp" onClick={() => setShowPopup(true)}>
-              <Image src="/svg/switchEmp.svg" alt="Draft icon" width={32} height={32}/>
-              Select Employee
-              <span className="tooltip">Switch employee</span>
-            </button>
-
-            <button
-  className="sidebar-btn assign-task-btn"
   disabled={!selectedEmp}
-  
   onClick={() => {
-    if (!selectedEmp) {
-      alert("Select an employee first");
-      return;
-    }
+    if (!selectedEmp) return alert("Select an employee first");
     setOpenAssignModal(true);
   }}
 >
-  <Image src="/svg/assignTask.svg" alt="Draft icon" width={32} height={32}/>
+  <Image src="/svg/assignTask.svg" alt="Assign Task" width={22} height={22}/>
   Add Task
-  {/* <span className="tooltip">Add task</span> */}
-</button>
+</Button>
+
 
 
 
             
 
 
-            <button className="sidebar-btn endDay" 
-            disabled={!selectedEmp}
+            <Button
+  variant="topbar"
+  disabled={!selectedEmp}
   onClick={() => {
-    setSelectedEmp(null);      // remove employee selection
-    setOpenAssignModal(false); // close assign modal if open
-  }}>
-              <Image src="/svg/endDay.svg" alt="Draft icon" width={32} height={32}/>
-              Assign Tasks
-              {/* <span className="tooltip">Assign</span> */}
-            </button>
+    setSelectedEmp(null);
+    setOpenAssignModal(false);
+  }}
+>
+  <Image src="/svg/endDay.svg" alt="End Day" width={22} height={22}/>
+  Assign Tasks
+</Button>
 
 
           </div>
@@ -349,7 +360,8 @@ console.log("Logged in user:", user);
     
     return (
   
-  <div className="rsidebar">
+  <div className={topbarCls}>
+
             
             
             
@@ -366,7 +378,8 @@ console.log("Logged in user:", user);
     
     return (
   
-  <div className="rsidebar">
+  <div className={topbarCls}>
+
             
             
             
@@ -381,7 +394,8 @@ console.log("Logged in user:", user);
 
   if (isInbox) {
     return (
-      <div className="rsidebar">
+      <div className={topbarCls}>
+
         {composeMode && (
   <ComposeMessagePopup 
     userEmail={userEmail ?? ""}
@@ -391,11 +405,11 @@ console.log("Logged in user:", user);
   />
 )}
 
-        <button className="sidebar-btn draft" onClick={() => setComposeMode("message")}>
-          <Image src="/svg/draft.svg" alt="Draft icon" width={32} height={32} />
-          Draft
-          <span className="tooltip">Compose</span>
-        </button>
+        <Button variant="topbar" onClick={() => setComposeMode("message")}>
+  <Image src="/svg/draft.svg" alt="Draft" width={22} height={22}/>
+  Draft
+</Button>
+
 
 
         <div className="empBarInfo">

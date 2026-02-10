@@ -18,7 +18,9 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
-        popup_action_btn: "bg-secondary hover:bg-slate-700 text-secondary-foreground"
+        popup: "bg-secondary hover:bg-secondary-hover text-secondary-foreground",
+        topbar: "relative h-10 px-3 flex items-center gap-3 rounded-md text-white text-sm font-medium bg-transparent hover:bg-white/10 active:bg-white/20 transition-colors"
+
 
 
 

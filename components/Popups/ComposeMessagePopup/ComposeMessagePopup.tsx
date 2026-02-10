@@ -140,31 +140,32 @@ export default function ComposeMessagePopup({
           }
           value={form.body}
           onChange={handleInputChange}
-          style={{
-            width: "95%",
-            minHeight: "150px",
-            padding: "8px",
-            marginTop: "10px",
-            marginBottom: "10px",
-            borderRadius: "4px",
-            border: "1px solid #ccc",
-            background: "transparent",
-            color: "inherit",
-            display: "block",
-            resize: "vertical",
-          }}
+          className="
+  w-[95%]
+  min-h-[150px]
+  p-2
+  mt-[10px]
+  mb-[10px]
+  rounded
+  border
+  border-[#ccc]
+  bg-transparent
+  block
+  max-h-[200px]
+"
+
         />
 
-        <div className="flex gap-6 justify-end mt-4 px-4 py-3 bg-red-500 rounded-md">
+        <div className="flex gap-2 justify-end mt-4 px-4 py-3 rounded-md">
 
-  <Button className="mr-10" variant="popup_action_btn" onClick={onClose}>
+  <Button variant="popup" onClick={onClose}>
     Cancel
   </Button>
 
   <Button
     onClick={handleSubmit}
     disabled={isSending}
-    variant="popup_action_btn"
+    variant="popup"
   >
     {isSending
       ? "Sending..."
