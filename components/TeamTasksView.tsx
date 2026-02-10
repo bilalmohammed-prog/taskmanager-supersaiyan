@@ -443,6 +443,6 @@ const res = await fetch(`/api/tasks/${taskId}`, {
     </div>
   );
 }else{
-  return(<p className="select-an-employee">Select an employee or add an employee</p>);
+  return(<p className="select-an-employee">Select or add an employee to manage tasks</p>);
 }
 }

@@ -1,3 +1,13 @@
+
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 html{
     height:100%;
 }
@@ -14,7 +24,6 @@ body {
   position: relative;
 }
 
-
 /* Add the noise texture */
 body::before {
   content: '';
@@ -30,19 +39,13 @@ body::after {
   content: '';
   position: fixed;
   inset: 0;
-  
+
   pointer-events: none;
   z-index: 2;
 }
 body{
   padding-top:60px;   /* same as rsidebar height */
 }
-
-
-
-
-
-
 
 .task {
     position: absolute;
@@ -52,7 +55,7 @@ body{
     padding-right: 40px;
     padding-left: 40px;
     border-radius: 14px;
-    
+
     background-color: #2f2f2f;
     /* background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E"); */
     font-size: 20px;
@@ -79,7 +82,7 @@ body{
 }
 .endDay{
     position: absolute;
-    
+
     height:35px;
     width:35px;
     border: none;
@@ -92,24 +95,15 @@ body{
     -webkit-appearance: none;
 }
 
-
-
-
-
-
-
 .assign {
-    
+
     display: flex;
     flex-direction: horizontal;
     gap: 12px;
-    
+
     background-color: transparent;
-   
+
 }
-
-
-
 
 .instructions{
     position:fixed;
@@ -135,8 +129,6 @@ body{
     color: rgb(0, 255, 238);
 }
 
-
-
 .popup{
     position:fixed;
     width:500px;
@@ -155,7 +147,7 @@ body{
     visibility: hidden;
     opacity: 0;
     transition: opacity 0.2s ease, visibility 0.2s ease;
-    
+
 }
 .active{
     opacity:1;
@@ -205,7 +197,6 @@ body{
 .overlay.active {
   display: block;
 }
-
 
 .notaskc{
     position: absolute;
@@ -323,7 +314,7 @@ body{
     top:10px;
     right:68px;
     font-weight: 450;
-    
+
 }
 .AIp{
     font-family: 'Roboto', sans-serif;
@@ -418,10 +409,6 @@ body{
     margin: 5px 0;
 }
 
-
-
-
-
 .draft {
   grid-column: 2;
   grid-row: 1;
@@ -435,9 +422,6 @@ body{
   justify-self: center;
 }
 
-
-
-
 .empBarInfo{
   justify-self: end;
   color:white;
@@ -445,11 +429,9 @@ body{
   font-size:16px;
 }
 
-
 .empDisplay{
   white-space:nowrap;
 }
-
 
 .empDisplay,
 .actualEmpDisplay{
@@ -459,13 +441,6 @@ body{
   color:white;
   white-space:nowrap;
 }
-
-
-
-
-
-
-
 
 /* Sidebar buttons must be relative to anchor the tooltip */
 .sidebar-btn {
@@ -486,12 +461,7 @@ body{
     flex-direction: row;
     align-items: center;
     gap: 12px;
-    
 
-  
-
-  
-  
   cursor: pointer;
 
   transition:
@@ -499,7 +469,7 @@ body{
     box-shadow 0.15s ease;
     color:#ffffff;
     font-size: 16px;
-    
+
   flex-shrink: 0;
 }
 
@@ -525,7 +495,6 @@ body{
   align-items: center;
   justify-content: center;
   gap: 12px;
-
 
   border-radius: 5px;
   border: none;
@@ -555,8 +524,6 @@ body{
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
 }
 
-
-
 /* Hover */
 .sidebar-btn:hover {
   background-color: rgba(255, 255, 255, 0.08);
@@ -573,8 +540,6 @@ body{
   height: 22px; 
 }
 
-
-
 /* Active / pressed */
 .sidebar-btn:active {
   background-color: rgba(255, 255, 255, 0.12);
@@ -585,7 +550,6 @@ body{
   outline: none;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
 }
-
 
 /* Hover style */
 /* .sidebar-btn:hover {
@@ -632,13 +596,69 @@ body{
     visibility: visible;
 } */
 
-
 /* css reusable variables */
-:root{
-  --soft-border: rgba(255, 255, 255, 0.287);
+:root {
+  /* radius */
+  --radius: 0.625rem;
+
+  /* ========= CORE BACKGROUNDS ========= */
+
+  --background: #181818;         /* body bg */
+  --foreground: #ffffff;         /* main text */
+
+  --card: #2f2f2f;               /* .task, .time */
+  --card-foreground: #ffffff;
+
+  --popover: #2f2f2f;
+  --popover-foreground: #ffffff;
+
+  /* ========= PRIMARY BUTTON (WHITE) ========= */
+
+    --primary: #323232;
+  --primary-foreground: #ffffff;
+    
+  --secondary: #343434;
+  --secondary-foreground: #ededed;
+
+  /* ========= SECONDARY / ACCENT ========= */
+
+  
+
+  --muted: #2a2a2a;
+  --muted-foreground: #bdbdbd;
+
+  --accent: #3a3a3a;
+  --accent-foreground: #ffffff;
+
+  /* ========= ACTION COLORS ========= */
+
+  --success: rgb(68,255,136);     /* confirm / ok */
+  --danger: rgb(218,62,62);       /* cancel / delete */
+  --warning: rgb(245,255,131);    /* popup yellow */
+
+  --destructive: rgb(218,62,62);
+
+  /* ========= BORDERS / INPUTS ========= */
+
+  --border: rgba(255,255,255,0.25);
+  --input: rgba(255,255,255,0.25);
+  --ring: rgba(255,255,255,0.5);
+
+  /* ========= SIDEBAR ========= */
+
+  --sidebar: #1e1e1e;
+  --sidebar-foreground: #ffffff;
+  --sidebar-border: rgba(255,255,255,0.15);
+  --sidebar-ring: rgba(255,255,255,0.35);
+
+  /* ========= EFFECTS ========= */
+
+  --soft-border: rgba(255,255,255,0.287);
   --soft-shadow: 0 8px 20px rgba(0,0,0,0.35);
   --inset-highlight: rgba(255,255,255,0.02);
 }
+
+
 
 /* Smooth borders & anti-aliased rounded corners */
 
@@ -656,14 +676,11 @@ body{
   transform: translateZ(0);           /* promote to composite layer to reduce rendering artifacts */
 }
 
-
-
 /* Optional: tighter radius for tiny controls so corners stay crisp */
-
 
 /* If you still see jagged edges, avoid fractional pixel offsets (use whole px values)
    and ensure devicePixelRatio isn't being scaled by transforms. */
-  
+
 /* claude */
 /* ===============================================
    TASK ASSIGNMENT MODAL STYLES
@@ -673,13 +690,8 @@ body{
 /* Trigger Button in Sidebar */
 .assign-task-btn{
     position:absolute;
-    
+
 }
-
-
-
-
-
 
 /* Modal Overlay */
 .assign-modal-overlay {
@@ -710,7 +722,7 @@ body{
     max-width: 500px;
     padding: 30px;
     position: relative;
-    
+
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
     background-clip: padding-box;
     -webkit-background-clip: padding-box;
@@ -973,7 +985,7 @@ body{
     position: relative;
     display: flex;
     flex-direction: column;
-    
+
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
     background-clip: padding-box;
     -webkit-background-clip: padding-box;
@@ -1212,12 +1224,7 @@ body{
 }
 /* DEFAULT LAYOUT ACROSS ALL DEVICES */
 
-
-
-
 /* Main content box */
-
-
 
 /* Responsive */
 @media (max-width: 600px) {
@@ -1240,17 +1247,9 @@ body{
     }
 }
 
-
-
-
 .hidden {
     display: none !important;
 }
-
-
-
-
-
 
 .draftPopup{
     position:fixed;
@@ -1270,7 +1269,7 @@ body{
     visibility: hidden;
     opacity: 0;
     transition: opacity 0.2s ease, visibility 0.2s ease;
-    
+
 }
 /* ================= DRAFT POPUP ================= */
 .draft-modal-overlay {
@@ -1377,9 +1376,6 @@ body{
   transform:scale(1.05);
 }
 
-
-
-
 /* Left text / editor area always takes space */
 .taskText{
   flex:1;                        /* reserve width always */
@@ -1390,20 +1386,13 @@ body{
 }
 /* Increase text size inside container3 */
 
-
 /* Increase gap between task name and time line */
-
-
 
 /* Right button column never shrinks or moves */
 
-
-
 /* profile btn */
 
-
 /* Push profile section to bottom */
-
 
 /* Profile */
 /* ============================================================
@@ -1438,9 +1427,7 @@ body{
   user-select: none;
 }
 
-
 /* 3. The Dropdown: Styled like your Task modals */
-
 
 /* Toggle Class */
 .profile-dropdown.show {
@@ -1469,12 +1456,10 @@ body{
 
 /* 5. The Separator and Logout Action */
 
-
 .profile-dropdown .logout-btn {
   width: 100%;
   padding: 12px;
   border-radius: 10px;
-
 
   color: #ff4747;
   font-size: 14px;
@@ -1485,7 +1470,6 @@ body{
   align-items: center;
   justify-content: center;
 }
-
 
 /* ============================================================
    PROFILE BUTTON & DROPDOWN – MATCHED TO YOUR CURRENT DARK THEME
@@ -1537,7 +1521,7 @@ body{
   box-shadow: 
     0 20px 60px rgba(0, 0, 0, 0.65),
     inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-  
+
   backdrop-filter: blur(10px);            /* light glass effect */
   -webkit-backdrop-filter: blur(10px);
 
@@ -1552,7 +1536,6 @@ body{
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: 99999;
 }
-
 
 /* 3. Name, Email, ID – hierarchy matching your UI */
 .profile-name {
@@ -1584,7 +1567,6 @@ body{
 
 /* 4. Separator line */
 
-
 /* 5. Logout Button – matches your red destructive buttons */
 .profile-dropdown .logout-btn {
   width: 100%;
@@ -1601,8 +1583,6 @@ body{
   text-align: center;
 }
 
-
-
 /* 6. Mobile / small screen adjustments */
 @media (max-width: 768px) {
   .profile-dropdown {
@@ -1613,7 +1593,6 @@ body{
     max-width: calc(100vw - 32px);
   }
 }
-
 
 /* Center buttons (middle column) */
 .assign{
@@ -1628,9 +1607,6 @@ body{
   margin-right:0;     /* remove your override */
 }
 
-
-
-
 @media(max-width:768px){
   .profile-dropdown{
     left: 60px;
@@ -1640,18 +1616,11 @@ body{
   }
 }
 
-
-
-
-
 html, body {
   overflow-x: hidden;
 }
 
-
 /* FINAL OVERRIDE — KEEP BUTTONS RIGHT + HORIZONTAL */
-
-
 
 /* Assign buttons group */
 .assign{
@@ -1672,9 +1641,6 @@ html, body {
   justify-self:end;
 }
 
-
-
-
 body{
   overflow-y: hidden;
   overflow-x: hidden;
@@ -1688,7 +1654,7 @@ html{
   /* Change from fixed 34px to auto or a taller height to fit text */
   width: 54px;         /* Slightly wider to accommodate labels */
   height: 50px;        /* Taller to fit Icon + Text */
-  
+
   border-radius: 6px;
   border: 1px solid rgba(255,255,255,0.2);
   background: rgba(255,255,255,0.08);
@@ -1702,4 +1668,88 @@ html{
   cursor: pointer;
   transition: .18s ease;
   flex-shrink: 0;
+}
+
+@theme inline {
+    --radius-sm:calc(var(--radius) - 4px);
+    --radius-md:calc(var(--radius) - 2px);
+    --radius-lg:var(--radius);
+    --radius-xl:calc(var(--radius) + 4px);
+    --radius-2xl:calc(var(--radius) + 8px);
+    --radius-3xl:calc(var(--radius) + 12px);
+    --radius-4xl:calc(var(--radius) + 16px);
+    --color-background:var(--background);
+    --color-foreground:var(--foreground);
+    --color-card:var(--card);
+    --color-card-foreground:var(--card-foreground);
+    --color-popover:var(--popover);
+    --color-popover-foreground:var(--popover-foreground);
+    --color-primary:var(--primary);
+    --color-primary-foreground:var(--primary-foreground);
+    --color-secondary:var(--secondary);
+    --color-secondary-foreground:var(--secondary-foreground);
+    --color-muted:var(--muted);
+    --color-muted-foreground:var(--muted-foreground);
+    --color-accent:var(--accent);
+    --color-accent-foreground:var(--accent-foreground);
+    --color-destructive:var(--destructive);
+    --color-border:var(--border);
+    --color-input:var(--input);
+    --color-ring:var(--ring);
+    --color-chart-1:var(--chart-1);
+    --color-chart-2:var(--chart-2);
+    --color-chart-3:var(--chart-3);
+    --color-chart-4:var(--chart-4);
+    --color-chart-5:var(--chart-5);
+    --color-sidebar:var(--sidebar);
+    --color-sidebar-foreground:var(--sidebar-foreground);
+    --color-sidebar-primary:var(--sidebar-primary);
+    --color-sidebar-primary-foreground:var(--sidebar-primary-foreground);
+    --color-sidebar-accent:var(--sidebar-accent);
+    --color-sidebar-accent-foreground:var(--sidebar-accent-foreground);
+    --color-sidebar-border:var(--sidebar-border);
+    --color-sidebar-ring:var(--sidebar-ring);
+}
+
+.dark {
+    --background:oklch(0.129 0.042 264.695);
+    --foreground:oklch(0.984 0.003 247.858);
+    --card:oklch(0.208 0.042 265.755);
+    --card-foreground:oklch(0.984 0.003 247.858);
+    --popover:oklch(0.208 0.042 265.755);
+    --popover-foreground:oklch(0.984 0.003 247.858);
+    --primary:oklch(0.929 0.013 255.508);
+    --primary-foreground:oklch(0.208 0.042 265.755);
+    --secondary:oklch(0.279 0.041 260.031);
+    --secondary-foreground:oklch(0.984 0.003 247.858);
+    --muted:oklch(0.279 0.041 260.031);
+    --muted-foreground:oklch(0.704 0.04 256.788);
+    --accent:oklch(0.279 0.041 260.031);
+    --accent-foreground:oklch(0.984 0.003 247.858);
+    --destructive:oklch(0.704 0.191 22.216);
+    --border:oklch(1 0 0 / 10%);
+    --input:oklch(1 0 0 / 15%);
+    --ring:oklch(0.551 0.027 264.364);
+    --chart-1:oklch(0.488 0.243 264.376);
+    --chart-2:oklch(0.696 0.17 162.48);
+    --chart-3:oklch(0.769 0.188 70.08);
+    --chart-4:oklch(0.627 0.265 303.9);
+    --chart-5:oklch(0.645 0.246 16.439);
+    --sidebar:oklch(0.208 0.042 265.755);
+    --sidebar-foreground:oklch(0.984 0.003 247.858);
+    --sidebar-primary:oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground:oklch(0.984 0.003 247.858);
+    --sidebar-accent:oklch(0.279 0.041 260.031);
+    --sidebar-accent-foreground:oklch(0.984 0.003 247.858);
+    --sidebar-border:oklch(1 0 0 / 10%);
+    --sidebar-ring:oklch(0.551 0.027 264.364);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
 }

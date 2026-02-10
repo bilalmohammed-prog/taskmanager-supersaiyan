@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect,useState, ChangeEvent } from "react";
+import { useState, ChangeEvent } from "react";
 import { supabase } from "@/lib/supabaseClient";
+
+import { Button } from "@/components/ui/button";
+
 interface IMessageForm {
   receiverEmail: string;
   subject: string;
@@ -18,7 +21,7 @@ type Props = {
 
 export default function ComposeMessagePopup({
   userEmail,
-  currentManagerID,
+
   onClose,
   fixedType,
 }: Props) {
@@ -152,23 +155,25 @@ export default function ComposeMessagePopup({
           }}
         />
 
-        <div className="row">
-          <button type="button" onClick={onClose}>
-            Cancel
-          </button>
+        <div className="flex gap-6 justify-end mt-4 px-4 py-3 bg-red-500 rounded-md">
 
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSending}
-          >
-            {isSending
-              ? "Sending..."
-              : fixedType === "invite"
-              ? "Send Invite"
-              : "Send Message"}
-          </button>
-        </div>
+  <Button className="mr-10" variant="popup_action_btn" onClick={onClose}>
+    Cancel
+  </Button>
+
+  <Button
+    onClick={handleSubmit}
+    disabled={isSending}
+    variant="popup_action_btn"
+  >
+    {isSending
+      ? "Sending..."
+      : fixedType === "invite"
+      ? "Send Invite"
+      : "Send Message"}
+  </Button>
+</div>
+
       </div>
     </div>
   );

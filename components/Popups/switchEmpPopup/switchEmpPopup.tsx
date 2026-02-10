@@ -1,5 +1,7 @@
 "use client";
 
+
+
 import "./switchEmpPopup.css";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient"; // 🔴 MISSING IMPORT
