@@ -19,7 +19,11 @@ const buttonVariants = cva(
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
         popup: "bg-secondary hover:bg-secondary-hover text-secondary-foreground",
-        topbar: "relative h-10 px-3 flex items-center gap-3 rounded-md text-white text-sm font-medium bg-transparent hover:bg-white/10 active:bg-white/20 transition-colors"
+        topbar: "relative h-10 px-3 flex items-center gap-3 rounded-md text-white text-sm font-medium bg-transparent hover:bg-white/10 active:bg-white/20 transition-colors",
+        sidebar:
+"!flex !flex-col !items-center !justify-center !h-[68px] !w-[68px] !gap-[10px] !rounded-[5px] !bg-transparent !text-[10px] !font-medium !text-white hover:!bg-white/10 transition-all relative",
+
+
 
 
 

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { DashboardProvider, useDashboard } from "@/components/Context/DashboardContext";
-import { LeftSideBar } from "@/components/LeftSideBar/LeftSideBar";
+import { LeftSideBar } from "@/components/LeftSideBar";
 import TopBar from "@/components/TopBar";
 import { supabase } from "@/lib/supabaseClient";
 

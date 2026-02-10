@@ -1,6 +1,6 @@
 "use client";
 
-import { LeftSideBar } from "../../components/LeftSideBar/LeftSideBar";
+import { LeftSideBar } from "../../components/LeftSideBar";
 import TopBar from "../../components/TopBar";
 
 interface ClientLayoutProps {
