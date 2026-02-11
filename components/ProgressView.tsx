@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import "./Cobox/Cobox.css";
+import "./Cobox.css";
 
 type EmployeeProgress = {
   name: string;

@@ -5,7 +5,7 @@ import ComposeMessagePopup from "./Popups/ComposeMessagePopup/ComposeMessagePopu
 import Image from "next/image";
 
 
-import  SwitchEmpPopup from "./Popups/switchEmpPopup/switchEmpPopup";
+import  SwitchEmpPopup from "./switchEmpPopup";
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useEffect } from "react";
@@ -156,7 +156,12 @@ console.log("Logged in user:", user);
 
         <div className={topbarCls}>
 
-          <div className="assign">
+          <div className="
+  col-[2]
+  flex items-center justify-center
+  gap-3
+">
+
 
             <Button variant="topbar" onClick={() => setShowChoiceModal(true)}>
   <Image src="/svg/createEmp.svg" alt="Create Employee" width={22} height={22}/>
@@ -207,8 +212,15 @@ console.log("Logged in user:", user);
 
           </div>
 
-          <div className="empBarInfo">
-  <span className="empDisplay">
+          <div className="
+  col-[4]
+  justify-self-end
+  text-white
+  text-[16px]
+  whitespace-nowrap
+">
+<div className="col-[2] flex justify-center">
+
   {selectedEmp ? (
     <>
       <span style={{ fontWeight: 500, color: '#ffffff' }}>{selectedEmp.name}</span>
@@ -221,20 +233,37 @@ console.log("Logged in user:", user);
       No employee selected
     </span>
   )}
-</span>
+</div>
 </div>
 
         </div>
 
       {showChoiceModal && (
-  <div 
-    className="modalOverlay" 
-    onClick={() => setShowChoiceModal(false)}
-  >
-    <div 
-      className="modalBox"
-      onClick={e => e.stopPropagation()}
-    >
+  <div
+  className="
+    fixed inset-0
+    bg-black/60
+    backdrop-blur-sm
+    flex items-center justify-center
+    z-[2000]
+  "
+  onClick={() => setShowChoiceModal(false)}
+>
+
+    <div
+  className="
+    w-[90%] max-w-[420px]
+    bg-[#1e1e1e]
+    border border-white/15
+    rounded-xl
+    p-6
+    shadow-2xl
+    text-white
+    flex flex-col gap-3
+  "
+  onClick={e => e.stopPropagation()}
+>
+
       <h3 style={{ margin: '0 0 12px 0' }}>
         Manage Team Member
       </h3>
@@ -365,8 +394,15 @@ console.log("Logged in user:", user);
             
             
             
-<div className="empBarInfo">
-        <span className="empDisplay"></span>
+<div className="
+  col-[4]
+  justify-self-end
+  text-white
+  text-[16px]
+  whitespace-nowrap
+">
+<span className="whitespace-nowrap">
+</span>
         
     </div>
         </div>
@@ -383,8 +419,15 @@ console.log("Logged in user:", user);
             
             
             
-<div className="empBarInfo">
-        <span className="empDisplay"></span>
+<div className="
+  col-[4]
+  justify-self-end
+  text-white
+  text-[16px]
+  whitespace-nowrap
+">
+<span className="whitespace-nowrap">
+</span>
         
     </div>
         </div>
@@ -412,8 +455,15 @@ console.log("Logged in user:", user);
 
 
 
-        <div className="empBarInfo">
-          <span className="empDisplay"></span>
+        <div className="
+  col-[4]
+  justify-self-end
+  text-white
+  text-[16px]
+  whitespace-nowrap
+">
+<span className="whitespace-nowrap">
+</span>
         </div>
       </div>
     );

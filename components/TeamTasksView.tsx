@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 
-import "./Cobox/Cobox.css"; // reuse styles if needed
+import "./Cobox.css";
 import { useDashboard } from "./Context/DashboardContext";
 import { supabase } from "@/lib/supabaseClient";
 

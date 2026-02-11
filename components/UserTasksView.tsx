@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import "./Cobox/Cobox.css";
+import "./Cobox.css";
 import { supabase } from "@/lib/supabaseClient";
 
 
