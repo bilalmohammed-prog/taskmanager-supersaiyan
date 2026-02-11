@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
-import ProfileMenu from "./ProfileMenu/ProfileMenu";
+import ProfileMenu from "./ProfileMenu";
 import { Button } from "./ui/button";
 
 export function LeftSideBar() {

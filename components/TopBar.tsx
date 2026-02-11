@@ -1,6 +1,6 @@
 "use client";
 
-import ComposeMessagePopup from "./Popups/ComposeMessagePopup/ComposeMessagePopup";
+import ComposeMessagePopup from "./ComposeMessagePopup";
 
 import Image from "next/image";
 
