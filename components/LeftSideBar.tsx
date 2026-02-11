@@ -15,9 +15,12 @@ export function LeftSideBar() {
   return (
     <div
   className="
-    fixed left-0 top-[60px]
-    w-[72px]
-    h-[calc(100vh-60px)]
+    fixed left-0
+    w-16
+    top-13
+bottom-0
+h-auto
+
     pt-[10px]
     bg-[#1e1e1e]
     border-r border-white/20

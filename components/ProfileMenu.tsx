@@ -59,7 +59,7 @@ const initials = displayName?.charAt(0).toUpperCase() ?? "?";
   return (
     <div
   ref={wrapperRef}
-  className="relative flex justify-center items-center mt-auto py-[10px]"
+  className="relative flex justify-center items-center mt-auto"
 >
 
       {/* Profile Toggle Button */}

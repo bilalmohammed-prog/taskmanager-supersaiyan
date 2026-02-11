@@ -23,7 +23,7 @@ export default function TopBar() {
 
     const topbarCls = `
   fixed top-0 left-0 right-0
-  h-16
+  h-13
   grid grid-cols-[1fr_auto_auto_1fr]
   items-center
   bg-[#1E1E1E]
