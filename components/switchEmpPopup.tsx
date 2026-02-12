@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 type Employee = {
-  emp_id: string;
+  id: string;
   name: string;
   user_id: string;
+  emp_id: string;
 };
 
 export default function SwitchEmpPopup({
@@ -15,9 +16,9 @@ export default function SwitchEmpPopup({
   selectedEmpID
 }: {
   onClose: () => void;
-  onSelect: (emp: { name: string; emp_id: string; user_id: string }) => void;
+  onSelect: (emp: { name: string; id: string; user_id: string; emp_id: string }) => void;
   selectedEmpID: string | null;
-  currentManagerID: string | null;
+
 }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,7 +142,7 @@ export default function SwitchEmpPopup({
 
               {employees.map(e => (
                 <div
-                  key={e.emp_id}
+                  key={e.id}
                   className={`
     mt-[10px]
     flex flex-col gap-[6px]
@@ -153,14 +154,20 @@ export default function SwitchEmpPopup({
     transition-all duration-200
     hover:bg-white/10 hover:-translate-y-[2px]
     hover:shadow-[0_10px_24px_rgba(0,0,0,0.5)]
-    ${selectedEmpID === e.emp_id ? "bg-white/15 border-white/30 shadow-none translate-y-0" : ""}
+    ${selectedEmpID === e.id ? "bg-white/15 border-white/30 shadow-none translate-y-0" : ""}
   `}
-                  onClick={() => onSelect({ emp_id: e.emp_id, name: e.name, user_id: e.user_id })}
+                  onClick={() => onSelect({
+  id: e.id,
+  name: e.name,
+  user_id: e.user_id,
+  emp_id: e.emp_id
+})
+}
                 >
                   <div className="text-white text-[16px] font-medium">
 {e.name}</div>
                   <div className="text-white/55 text-[13px]">
-ID: {e.emp_id}</div>
+ID: {e.id}</div>
                 </div>
               ))}
             </div>

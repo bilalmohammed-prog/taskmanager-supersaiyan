@@ -21,7 +21,7 @@ export default function DashboardInit() {
 
       // 2️⃣ RLS-enforced read (row may not exist yet)
       const { data, error: empError } = await supabase
-        .from("empid")
+        .from("employees")
         .select("manager_id")
         .maybeSingle();
 

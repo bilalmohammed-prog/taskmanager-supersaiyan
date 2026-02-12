@@ -94,7 +94,7 @@ export async function PATCH(
       .update(updatePayload)
       .eq("id", taskId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

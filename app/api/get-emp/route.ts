@@ -25,8 +25,8 @@ export async function GET(req: Request) {
   }
 
   const { data, error } = await supabase
-    .from("empid")
-    .select("emp_id, name")
+    .from("employees")
+    .select("id, name")
     .eq("email", email)
     .maybeSingle();
 
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json({
-    empID: data.emp_id,
+    empID: data.id,
     name: data.name,
   });
 }

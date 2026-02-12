@@ -29,8 +29,8 @@ export async function GET() {
 
     /* 2️⃣ QUERY EMPLOYEES */
     const { data, error } = await supabase
-      .from("empid")
-      .select("emp_id, name, user_id")
+      .from("employees")
+      .select("id, name, user_id, emp_id")
       .eq("manager_id", user.id);
 
     if (error) {
@@ -41,9 +41,10 @@ export async function GET() {
     /* 3️⃣ FORMAT */
     const employees =
       data?.map((e) => ({
-        emp_id: e.emp_id,
+        id: e.id,
         name: e.name,
         user_id: e.user_id,
+        emp_id: e.emp_id,
       })) ?? [];
 
     return NextResponse.json({ employees });

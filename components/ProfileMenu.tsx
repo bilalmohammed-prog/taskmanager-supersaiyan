@@ -55,7 +55,7 @@ const initials = displayName?.charAt(0).toUpperCase() ?? "?";
   }
 
 
-
+ 
   return (
     <div
   ref={wrapperRef}
@@ -136,7 +136,7 @@ const initials = displayName?.charAt(0).toUpperCase() ?? "?";
     self-start
   "
 >
-  ID: {employee?.emp_id || "Loading..."}
+  ID: {employee?.id || "Loading..."}
 </span>
 
 

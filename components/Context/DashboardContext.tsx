@@ -2,7 +2,7 @@
 //global storage box for ui dashboard states in react
 import { createContext, useContext, useState } from "react";
 
-type SelectedEmp = { emp_id: string; name: string; user_id: string; } | null;
+type SelectedEmp = { id: string; name: string; user_id: string; emp_id: string } | null;
 
 type DashboardContextType = {
   selectedEmp: SelectedEmp;

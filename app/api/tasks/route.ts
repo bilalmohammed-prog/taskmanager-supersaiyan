@@ -33,19 +33,19 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { emp_id,user_id, id, task, description, startTime, endTime, status, proof } = body;
+    const {employee_id, id, task, description, startTime, endTime, status, proof } = body;
 
-    if (!emp_id || !id || !task || !startTime || !endTime || !user_id) {
+    if (!employee_id || !id || !task || !startTime || !endTime) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+console.log("EMPLOYEE ID SENT:", employee_id);
 
     const { data, error } = await supabase
       .from("tasks")
       .insert([
         {
           id,
-          emp_id,
-          user_id:user_id,
+          employee_id:employee_id,
           task,
           description: description ?? "",
           start_time: startTime,

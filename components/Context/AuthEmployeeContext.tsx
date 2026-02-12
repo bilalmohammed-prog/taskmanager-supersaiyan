@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 export interface AuthEmployee {
-  emp_id: string;
+  id: string;
   email: string;
   name: string;
   user_id: string | null;

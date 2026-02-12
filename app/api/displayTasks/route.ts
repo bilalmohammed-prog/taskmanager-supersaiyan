@@ -9,8 +9,7 @@ type TaskRow = {
   end_time: string | null;
   status: string | null;
   proof: string | null;
-  emp_id: string | null;
-  user_id: string | null;
+  employee_id: string | null;
 };
 
 export async function GET(req: Request): Promise<NextResponse> {
@@ -59,9 +58,10 @@ export async function GET(req: Request): Promise<NextResponse> {
 
     /* ================= PARAMS ================= */
     const { searchParams } = new URL(req.url);
-    const emp_id = searchParams.get("user_id");
+    const employee_id = searchParams.get("employee_id");
 
-    if (!emp_id) {
+
+    if (!employee_id) {
       return NextResponse.json({ tasks: [] });
     }
 
@@ -71,7 +71,8 @@ export async function GET(req: Request): Promise<NextResponse> {
     const { data, error } = await supabase
       .from("tasks")
       .select("*")
-      .eq("user_id", emp_id)
+      .eq("employee_id", employee_id)
+
       .order("end_time", { ascending: true });
 
     if (error) {
@@ -86,8 +87,8 @@ export async function GET(req: Request): Promise<NextResponse> {
     const formattedTasks =
       (data as TaskRow[] | null)?.map((t) => ({
         id: t.id,
-        emp_id: t.emp_id,
-        user_id: t.user_id, // <-- This is the critical fix
+        employee_id: t.employee_id,
+
         task: t.task ?? "",
         description: t.description ?? "",
         startTime: t.start_time,

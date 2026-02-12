@@ -109,7 +109,7 @@ console.log("Logged in user:", user);
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ emp_id: selectedEmp.emp_id }),
+      body: JSON.stringify({ id: selectedEmp.id }),
     });
 
     const data = await res.json();
@@ -143,13 +143,12 @@ console.log("Logged in user:", user);
 
         {showPopup && (
   <SwitchEmpPopup
-  currentManagerID={currentManagerID}
     onClose={() => setShowPopup(false)}
     onSelect={(emp) => {
       setSelectedEmp(emp);
       setShowPopup(false);
     }}
-    selectedEmpID={selectedEmp?.emp_id || null}
+    selectedEmpID={selectedEmp?.id || null}
   />
 )}
 

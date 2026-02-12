@@ -8,8 +8,7 @@ import { useDashboard } from "./Context/DashboardContext";
 import { supabase } from "@/lib/supabaseClient";
 
 type Task = {
-  emp_id: string;
-  user_id: string;
+  employee_id: string;
   id: string;
   task: string;
   description: string;
@@ -65,8 +64,9 @@ export default function TeamTasksView() {
     setOpenAssignModal
   } = useDashboard();
 
-  const emp_id = selectedEmp?.emp_id;
-  const user_id = selectedEmp?.user_id;
+
+  const employee_id = selectedEmp?.id;
+
 
   // New task state including description
   const [newTask, setNewTask] = useState({
@@ -82,7 +82,7 @@ export default function TeamTasksView() {
   }
 
   useEffect(() => {
-    if (!emp_id) {
+    if (!employee_id) {
       setTasks([]);
       setLoading(false);
       return;
@@ -102,7 +102,7 @@ export default function TeamTasksView() {
     }
 
       
-    const res = await fetch(`/api/displayTasks?user_id=${user_id}`, {
+    const res = await fetch(`/api/displayTasks?employee_id=${employee_id}`, {
       headers: {
         Authorization: `Bearer ${session.access_token}`,
       },
@@ -112,8 +112,8 @@ export default function TeamTasksView() {
     setTasks(
   Array.isArray(data.tasks)
     ? data.tasks.map((t: Task) => ({
-        emp_id: t.emp_id,
-        user_id: t.user_id,
+
+        employee_id: t.employee_id,
         id: t.id,
         task: t.task,
         description: t.description,
@@ -133,11 +133,11 @@ export default function TeamTasksView() {
 }
 
     loadTasks();
-  }, [user_id]);
+  }, [employee_id]);
 
 
   async function createTask() {
-  if (!emp_id) return alert("No employee selected");
+  if (!employee_id) return alert("No employee selected");
   
   // 1. Extract description from state
   const { task, description, startTime, endTime } = newTask;
@@ -167,6 +167,7 @@ if (!session) {
 }
 
 const res = await fetch(`/api/tasks`, {
+  
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -174,11 +175,10 @@ const res = await fetch(`/api/tasks`, {
   },
 
     body: JSON.stringify({
-      emp_id,
 
       id, 
       task,
-      user_id:user_id,
+      employee_id: employee_id,
       description, // <--- This sends it to your database
       startTime, 
       endTime,
@@ -187,13 +187,14 @@ const res = await fetch(`/api/tasks`, {
     })
     
   });
-console.log(user_id);
+console.log("EMPLOYEE ID SENT:", employee_id);
+
   const data = await res.json();
   if (!res.ok) return alert(data.error || "Failed to create task");
 
   const normalizedTask: Task = {
-  emp_id: data.task.emp_id,
-  user_id: data.task.user_id,
+
+  employee_id: data.task.employee_id,
   id: data.task.id,
   task: data.task.task,
   description: data.task.description,
@@ -243,7 +244,7 @@ const res = await fetch(`/api/tasks/${taskId}`, {
   },
 
       body: JSON.stringify({
-        emp_id: selectedEmp?.emp_id,
+
         id: taskId,
         task: currentTask.trim(),
         description: currentDesc.trim(),
