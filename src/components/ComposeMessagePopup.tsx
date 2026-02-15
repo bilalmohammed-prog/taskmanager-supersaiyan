@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, ChangeEvent } from "react";
-import { supabase } from "@/src/lib/supabase/supabaseClient";
+import { supabase } from "@/lib/supabase/client";
 
-import { Button } from "@/src/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 interface IMessageForm {
   receiverEmail: string;
@@ -14,7 +14,7 @@ interface IMessageForm {
 
 type Props = {
   userEmail: string;
-  currentManagerID: string | null;
+
   onClose: () => void;
   fixedType: "message" | "invite";
 };

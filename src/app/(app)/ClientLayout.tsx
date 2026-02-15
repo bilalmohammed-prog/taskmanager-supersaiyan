@@ -1,7 +1,7 @@
 "use client";
 
-import { LeftSideBar } from "../../components/LeftSideBar";
-import TopBar from "../../components/TopBar";
+import  LeftSideBar  from "@/components/layout/LeftSideBar";
+import TopBar from "@/components/layout/TopBar";
 
 interface ClientLayoutProps {
   children: React.ReactNode;

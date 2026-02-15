@@ -3,24 +3,25 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import "./Cobox.css";
-import { supabase } from "@/src/lib/supabase/supabaseClient";
+import { supabase } from "@/lib/supabase/client";
 
+import type { Tables } from "@/lib/supabase/types";
+
+type TaskRow = Tables<"tasks">;
 
 
 type Task = {
   id: string;
-  user_id: string | null;
-  task: string;
+  title: string;
   description: string | null;
-  startTime: string;
-  endTime: string;
-  status: string;
-  proof: string | null;
-  
-
+  due_date: string | null;
+  status: string | null;
 };
 
-function prettyDateTime(dt: string | Date | number) {
+
+
+function prettyDateTime(dt: string | Date | number | null) {
+  if (!dt) return "-";
   const d = new Date(dt);
   if (isNaN(d.getTime())) return String(dt);
 
@@ -33,6 +34,7 @@ function prettyDateTime(dt: string | Date | number) {
     hour12: true,
   });
 }
+
 
 export default function UserTasksView() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -74,24 +76,25 @@ initRef.current = true;
 
         // Fetch Tasks
         const { data, error } = await supabase
-          .from("tasks")
-          .select(`id, task, user_id, description, start_time, end_time, status, proof`)
-          .eq("user_id", user.id)
-          .order("start_time", { ascending: true });
+  .from("tasks")
+  .select("id, title, description, due_date, status")
+  .order("created_at", { ascending: true });
+
 
         if (mounted) {
-          if (!error && data) {
-            setTasks(data.map(t => ({
-              id: t.id,
-              user_id: t.user_id,
-              task: t.task,
-              description: t.description,
-              startTime: t.start_time,
-              endTime: t.end_time,
-              status: t.status,
-              proof: t.proof,
-            })));
-          }
+         if (!error && data) {
+  const rows = data as TaskRow[];
+
+  setTasks(data.map(t => ({
+  id: t.id,
+  title: t.title,
+  description: t.description,
+  due_date: t.due_date,
+  status: t.status,
+})));
+
+}
+
           setLoading(false);
           initRef.current = false;
 
@@ -126,39 +129,43 @@ initRef.current = true;
 
   
 
-  async function markCompleted(task: Task): Promise<void> {
-    const proof = prompt("Enter proof of work");
-    if (!proof) return alert("Proof is required");
+async function markCompleted(task: Task): Promise<void> {
+  const proof = prompt("Enter proof of work");
+  if (!proof) return alert("Proof is required");
 
-    const submittedAt = new Date().toISOString();
+  const { error } = await supabase
+    .from("tasks")
+    .update({
+      status: "done",
+      proof: proof,
+    })
+    .eq("id", task.id);
 
-    const { error } = await supabase
-      .from("tasks")
-      .update({
-        status: "completed",
-        proof: proof,
-
-      })
-      .eq("id", task.id);
-
-    if (error) {
-      alert("Failed to mark task completed");
-      return;
-    }
-
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === task.id
-          ? { ...t, status: "completed", proof, submittedAt }
-          : t
-      )
-    );
+  if (error) {
+    alert("Failed to mark task completed");
+    return;
   }
 
+  setTasks((prev) =>
+    prev.map((t) =>
+      t.id === task.id
+        ? { ...t, status: "done", proof }
+        : t
+    )
+  );
+  setSelectedTask(prev =>
+  prev && prev.id === task.id
+    ? { ...prev, status: "done", proof }
+    : prev
+);
+
+}
+
   function getStatusColor(t: Task) {
-  if (t.status === "completed") return "green";
+  if (t.status === "done") return "green";
   return "gray";
 }
+
 
 
   return (
@@ -188,10 +195,9 @@ initRef.current = true;
               style={{ cursor: "pointer" }}
             >
               <div className="taskText">
-                {t.task}
+                {t.title}
                 <br />
-                {prettyDateTime(t.startTime)} →{" "}
-                {prettyDateTime(t.endTime)}
+                {prettyDateTime(t.due_date)}
               </div>
 
               <div className="container2">
@@ -201,7 +207,8 @@ initRef.current = true;
                     e.stopPropagation();
                     markCompleted(t);
                   }}
-                  disabled={t.status === "completed"}
+                  disabled={t.status === "done"}
+
                 >
                   <Image
                     src="/svg/completed.svg"
@@ -225,26 +232,18 @@ initRef.current = true;
       <div className="taskDescription">
         {selectedTask ? (
           <div className="description-content">
-            <h2>{selectedTask.task}</h2>
+            <h2>{selectedTask.title}</h2>
             <hr />
             <p>
               <strong>Status:</strong> {selectedTask.status}
             </p>
-            <p>
-              <strong>Start:</strong>{" "}
-              {prettyDateTime(selectedTask.startTime)}
-            </p>
+            
             <p>
               <strong>Deadline:</strong>{" "}
-              {prettyDateTime(selectedTask.endTime)}
+              {prettyDateTime(selectedTask.due_date)}
             </p>
 
-            {selectedTask.proof && (
-              <div className="proof-box">
-                <strong>Proof:</strong>
-                <p>{selectedTask.proof}</p>
-              </div>
-            )}
+            
           </div>
         ) : (
           <p className="select-promptTaskDesc">

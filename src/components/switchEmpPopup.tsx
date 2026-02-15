@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/src/lib/supabase/supabaseClient";
+import { supabase } from "@/lib/supabase/client";
 
 type Employee = {
   id: string;

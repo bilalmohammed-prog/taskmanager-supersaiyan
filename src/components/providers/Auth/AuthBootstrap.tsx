@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { supabase } from "@/src/lib/supabase/supabaseClient";
-import { useAuthEmployee } from "@/src/components/Context/AuthEmployeeContext";
+import { supabase } from "@/lib/supabase/client";
+import { useAuthEmployee } from "@/components/providers/auth/AuthContext";
 
 export default function AuthBootstrap() {
   const { setEmployee, setHydrated } = useAuthEmployee();
@@ -11,31 +11,50 @@ export default function AuthBootstrap() {
     let mounted = true;
 
     async function init() {
-      try {
-        console.log("BOOTSTRAP START");
+      console.log("BOOTSTRAP START");
 
-        const { data: { session } } = await supabase.auth.getSession();
+      try {
+        const {
+  data: { user },
+  error,
+} = await supabase.auth.getUser();
+
+if (error) {
+  // only log real failures
+  if (!error.message.includes("session")) {
+    console.error("Auth error:", error.message);
+  }
+}
+
 
         if (!mounted) return;
 
-        if (session?.user) {
-          const { data } = await supabase
-            .from("empid")
-            .select("emp_id, email, name, manager_id, user_id")
-            .eq("user_id", session.user.id)
-            .maybeSingle();
-
-          if (data && mounted) {
-            setEmployee(data);
-          }
+        // No user = normal state
+        if (!user) {
+          setEmployee(null);
+          return;
         }
 
+        const { data, error: profileError } = await supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("Profile fetch failed:", profileError.message);
+        }
+
+        if (mounted) {
+          setEmployee(data ?? null);
+        }
       } catch (err) {
-        console.error("BOOTSTRAP ERROR:", err);
+        // Only unexpected exceptions land here
+        console.error("BOOTSTRAP UNEXPECTED ERROR:", err);
       } finally {
         if (mounted) {
           console.log("SETTING HYDRATED TRUE");
-          setHydrated(true);   // GUARANTEED
+          setHydrated(true);
         }
       }
     }
@@ -47,5 +66,5 @@ export default function AuthBootstrap() {
     };
   }, [setEmployee, setHydrated]);
 
-  return <></>;
+  return null;
 }

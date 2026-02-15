@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/src/lib/supabase/supabaseClient";
-import { useAuthEmployee } from "@/src/components/Context/AuthEmployeeContext";
+import { supabase } from "@/lib/supabase/client";
+import { useAuthEmployee } from "@/components/providers/auth/AuthContext";
 
 export default function ProfileMenu() {
-  
+  const [email, setEmail] = useState("");
   const { employee } = useAuthEmployee();
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -16,13 +16,15 @@ const [metaName, setMetaName] = useState("");
 
 // 2. Add this tiny effect to grab metadata instantly
 useEffect(() => {
-  supabase.auth.getSession().then(({ data }) => {
-    setMetaName(data.session?.user?.user_metadata?.full_name || "");
+  supabase.auth.getUser().then(({ data }) => {
+    setMetaName(data.user?.user_metadata?.full_name || "");
+    setEmail(data.user?.email || "");
   });
 }, []);
 
+
 // 3. Update your initials line to use the fallback
-const displayName = employee?.name || metaName;
+const displayName = employee?.full_name || metaName;
 const initials = displayName?.charAt(0).toUpperCase() ?? "?";
 // INSERT THIS: Listen for login to refresh employee context
  // Watch 'employee' to know when it finally arrives
@@ -118,11 +120,11 @@ const initials = displayName?.charAt(0).toUpperCase() ?? "?";
 
         <div className="profile-header">
           <p className="font-semibold text-[16.5px] text-white m-0">
-  {employee?.name || metaName || "User"}
+  {employee?.full_name || metaName || "User"}
 </p>
 
 <p className="text-[13px] text-white/45 mt-[2px] mb-[12px] break-all">
-  {employee?.email || ""}
+  {email}
 </p>
 
 <span

@@ -1,61 +1,56 @@
 "use client";
 
 import { useEffect } from "react";
-import { DashboardProvider, useDashboard } from "@/src/components/Context/DashboardContext";
-import { LeftSideBar } from "@/src/components/LeftSideBar";
-import TopBar from "@/src/components/TopBar";
-import { supabase } from "@/src/lib/supabase/supabaseClient";
+import { DashboardProvider, useDashboard } from "@/components/providers/dashboard/DashboardContext";
+import LeftSideBar from "@/components/layout/LeftSideBar";
+import TopBar from "@/components/layout/TopBar";
+import { supabase } from "@/lib/supabase/client";
 
 interface DashboardShellProps {
   children: React.ReactNode;
 }
 
 function DashboardShell({ children }: DashboardShellProps) {
-  const { setcurrentManagerID } = useDashboard();
+  const { setCurrentUserId } = useDashboard();
 
   useEffect(() => {
-    async function loadManager(): Promise<void> {
-      // 1️⃣ Get authenticated user (cookie-based)
+    async function loadUser(): Promise<void> {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) return;
 
-      // 2️⃣ RLS-enforced query (NO filters)
-      const { data, error } = await supabase
-        .from("empid")
-        .select("manager_id")
+      // Use profiles instead of empid
+      const { data } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user.id)
         .maybeSingle();
 
-      if (!error && data?.manager_id) {
-        setcurrentManagerID(data.manager_id);
+      if (data?.id) {
+        setCurrentUserId(data.id);
       }
     }
 
-    loadManager();
-  }, [setcurrentManagerID]);
+    loadUser();
+  }, [setCurrentUserId]);
 
   return (
-  <div className="dashboard-shell">
-    <TopBar />
-    <LeftSideBar />
-    <main>{children}</main>
-  </div>
-);
-
+    <div className="dashboard-shell flex min-h-screen">
+      <LeftSideBar />
+      <div className="flex-1">
+        <TopBar />
+        <main className="p-4">{children}</main>
+      </div>
+    </div>
+  );
 }
 
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-}
-
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <DashboardProvider>
-      <DashboardShell>
-        {children}
-      </DashboardShell>
+      <DashboardShell>{children}</DashboardShell>
     </DashboardProvider>
   );
 }

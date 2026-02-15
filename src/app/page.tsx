@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/src/lib/supabase/supabaseClient";
+import { supabase } from "@/lib/supabase/client";
 import "./globals.css";
 
 export default function Page() {

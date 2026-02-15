@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuthEmployee } from "@/src/components/Context/AuthEmployeeContext";
+import { useAuthEmployee } from "@/components/providers/auth/AuthContext";
 
 export default function AppGate({ children }: { children: React.ReactNode }) {
   const { hydrated } = useAuthEmployee();

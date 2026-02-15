@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 
 import "./Cobox.css";
-import { useDashboard } from "./Context/DashboardContext";
-import { supabase } from "@/src/lib/supabase/supabaseClient";
+import { useDashboard } from "@/components/providers/dashboard/DashboardContext";
+import { supabase } from "@/lib/supabase/client";
 
 type Task = {
   employee_id: string;
