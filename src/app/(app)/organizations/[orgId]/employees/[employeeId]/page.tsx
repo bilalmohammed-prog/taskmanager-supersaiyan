@@ -3,11 +3,14 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { updateTask } from "@/actions/task/update";
+import type { TablesUpdate } from "@/lib/supabase/types";
+
 
 type TaskRow = {
   id: string;
   title: string;
-  status: string | null;
+  status: TaskStatus | null;
   due_date?: string | null;
   allocated_hours?: number | null;
   start_time?: string | null;
@@ -15,11 +18,15 @@ type TaskRow = {
 };
 
 
+
 type Profile = {
   id: string;
   full_name: string | null;
   avatar_url: string | null;
 };
+
+type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
+
 
 function formatDate(date?: string | null) {
   if (!date) return "—";
@@ -40,14 +47,83 @@ function statusColor(status?: string | null) {
 }
 
 
+
+
 export default function EmployeeDetailPage() {
   const { employeeId } = useParams<{ employeeId: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [loading, setLoading] = useState(true);
+const [orgId, setOrgId] = useState<string | null>(null);
+
+
+  function updateTitle(id: string, value: string) {
+  setTasks(prev =>
+    prev.map(t => (t.id === id ? { ...t, title: value } : t))
+  );
+}
+
+function updateStatus(id: string, value: TaskStatus) // ✔
+ {
+  setTasks(prev =>
+    prev.map(t => (t.id === id ? { ...t, status: value } : t))
+  );
+}
+async function saveTask(
+  id: string,
+  updates: TablesUpdate<"tasks">
+) {
+  if (!orgId) {
+    alert("No organization selected");
+    return;
+  }
+
+  try {
+    await updateTask(id, updates, orgId);
+  } catch (e) {
+    console.error(e);
+    alert("Save failed");
+  }
+}
+
+
+
+async function deleteTask(id: string) {
+  const res = await fetch("/api/tasks/delete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id })
+  });
+
+  if (res.ok) {
+    setTasks(prev => prev.filter(t => t.id !== id));
+  }
+}
+async function openCreateModal() {
+  const title = prompt("Task title?");
+  if (!title) return;
+
+  const res = await fetch("/api/tasks/create", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title })
+  });
+
+  const newTask = await res.json();
+  setTasks(prev => [...prev, newTask]);
+}
+
 
   useEffect(() => {
+    
     async function loadTasks() {
+      const { data: org } = await supabase
+  .from("organizations")
+  .select("id")
+  .single();
+
+setOrgId(org?.id ?? null);
+
       setLoading(true);
 const { data: p } = await supabase
   .from("profiles")
@@ -100,61 +176,74 @@ setTasks(taskRows);
   }, [employeeId]);
 
   return (
-    <div className="p-6 text-white">
-      <h1 className="text-xl mb-2">
-  {profile?.full_name ?? "Employee"}
-</h1>
+    <div className="mt-6">
+  <button
+    onClick={openCreateModal}
+    className="mb-4 px-4 py-2 bg-blue-600 rounded"
+  >
+    + Add Task
+  </button>
 
-      <h1 className="text-xl mb-4">Employee Tasks</h1>
+  <table className="w-full border-collapse text-sm">
+    <thead className="text-gray-400 border-b border-white/10">
+      <tr>
+        <th className="p-2 text-left">Title</th>
+        <th>Status</th>
+        <th>Due</th>
+        <th>Hours</th>
+        <th></th>
+      </tr>
+    </thead>
 
-      {loading && <p>Loading...</p>}
 
-      {!loading && tasks.length === 0 && (
-        <p>No tasks assigned</p>
-      )}
 
-      {!loading &&
-  tasks.map(task => (
-    <div
-      key={task.id}
-      className="p-4 bg-[#1e1e1e] rounded-xl mb-3 border border-white/5 hover:border-white/10 transition"
-    >
-      <div className="flex justify-between items-center mb-2">
-        <h2 className="font-semibold text-lg">
-          {task.title}
-        </h2>
+    <tbody>
+  {tasks.map(task => (
+    <tr key={task.id} className="border-b border-white/5">
+      <td className="p-2">
+        <input
+          value={task.title}
+          onChange={e => updateTitle(task.id, e.target.value)}
+          onBlur={e =>
+            saveTask(task.id, { title: e.target.value })
+          }
+          onKeyDown={e => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+          className="bg-transparent border-b border-white/20"
+        />
+      </td>
 
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor(task.status)}`}
-        >
-          {task.status ?? "unknown"}
-        </span>
-      </div>
+      <td>
+        <select
+  value={task.status ?? ""}
+  onChange={async e => {
+    const value = e.target.value as TaskStatus;
 
-      <div className="grid grid-cols-2 gap-3 text-sm text-gray-400">
-        <div>
-          <p className="text-gray-500">Due</p>
-          <p>{formatDate(task.due_date)}</p>
-        </div>
+    updateStatus(task.id, value);
+    await saveTask(task.id, { status: value });
+  }}
+>
+  <option value="todo">Todo</option>
+  <option value="in_progress">In Progress</option>
+  <option value="blocked">Blocked</option>
+  <option value="done">Done</option>
+</select>
 
-        <div>
-          <p className="text-gray-500">Allocated</p>
-          <p>{task.allocated_hours ?? 0} hrs</p>
-        </div>
+      </td>
 
-        <div>
-          <p className="text-gray-500">Start</p>
-          <p>{formatDate(task.start_time)}</p>
-        </div>
+      <td>{formatDate(task.due_date)}</td>
+      <td>{task.allocated_hours ?? 0}</td>
 
-        <div>
-          <p className="text-gray-500">End</p>
-          <p>{formatDate(task.end_time)}</p>
-        </div>
-      </div>
-    </div>
+      <td className="flex gap-2">
+        <button onClick={() => deleteTask(task.id)}>🗑</button>
+      </td>
+    </tr>
   ))}
+</tbody>
 
-    </div>
+  </table>
+</div>
+
   );
 }

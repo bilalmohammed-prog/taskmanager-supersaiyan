@@ -6,12 +6,14 @@ import { cookies } from "next/headers";
 
 export async function updateTask(
   taskId: string,
-  updates: TablesUpdate<"tasks">
+  updates: TablesUpdate<"tasks">,
+  orgId: string
 ) {
+
   const supabase = await getSupabaseServer();
   const cookieStore = await cookies();
 
-  const orgId = cookieStore.get("activeOrg")?.value;
+  
   if (!orgId) throw new Error("No active organization");
 
   const { data, error } = await supabase
