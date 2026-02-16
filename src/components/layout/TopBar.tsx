@@ -41,7 +41,7 @@ export default function TopBar() {
   
 const isEmployeesList = pathname.includes("/employees") && !pathname.match(/\/employees\/[^/]+$/);
 const isEmployeeDetail = pathname.match(/\/employees\/[^/]+$/);
-const isResources = pathname.includes("/resources");
+const isProjects = pathname.includes("/projects") && !pathname.match(/\/projects\/[^/]+$/);
 const isAnalytics = pathname.includes("/analytics");
 const isInbox = pathname.includes("/inbox");
 
@@ -102,7 +102,7 @@ if(isEmployeeDetail)
     </div>
   );
 
-if (isResources) {
+if (isProjects) {
   return (
     <div className={topbarCls}>
       <Button variant="topbar">

@@ -49,11 +49,11 @@ export default function LeftSideBar() {
 
       <Button
         variant="sidebar"
-        onClick={() => go("resources")}
-        className={isActive("resources") ? "bg-white/15" : ""}
+        onClick={() => go("projects")}
+        className={isActive("projects") ? "bg-white/15" : ""}
       >
         <Image src="/icons/createEmp.svg" alt="" width={22} height={22} />
-        <span className="text-[10px] text-white/90">Resources</span>
+        <span className="text-[10px] text-white/90">Projects</span>
       </Button>
 
       {/* <Button
