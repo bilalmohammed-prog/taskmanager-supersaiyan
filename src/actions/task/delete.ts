@@ -1,13 +1,10 @@
 "use server";
 
 import { getSupabaseServer } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
 
-export async function deleteTask(taskId: string) {
+export async function deleteTask(taskId: string, orgId: string) {
   const supabase = await getSupabaseServer();
-  const cookieStore = await cookies();
 
-  const orgId = cookieStore.get("activeOrg")?.value;
   if (!orgId) throw new Error("No active organization");
 
   const { error } = await supabase

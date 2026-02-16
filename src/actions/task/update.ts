@@ -2,7 +2,7 @@
 
 import { getSupabaseServer } from "@/lib/supabase/server";
 import type { TablesUpdate } from "@/lib/supabase/types";
-import { cookies } from "next/headers";
+
 
 export async function updateTask(
   taskId: string,
@@ -11,7 +11,6 @@ export async function updateTask(
 ) {
 
   const supabase = await getSupabaseServer();
-  const cookieStore = await cookies();
 
   
   if (!orgId) throw new Error("No active organization");

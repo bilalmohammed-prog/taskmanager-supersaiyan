@@ -1,24 +1,27 @@
 "use server";
 
 import { getSupabaseServer } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
 
-export async function listTasks() {
+export async function listTasks(employeeId: string) {
   const supabase = await getSupabaseServer();
-  const cookieStore = await cookies();
-
-  const orgId = cookieStore.get("activeOrg")?.value;
-  if (!orgId) return [];
 
   const { data, error } = await supabase
-    .from("tasks")
-    .select("*")
-    .eq("organization_id", orgId)
-    .order("created_at", { ascending: false })
-    .is("deleted_at", null);
-
+    .from("resource_assignments")
+    .select(`
+      allocated_hours,
+      start_time,
+      end_time,
+      tasks!inner (
+        id,
+        title,
+        status,
+        due_date,
+        deleted_at
+      )
+    `)
+    .eq("resource_id", employeeId)
+    .is("tasks.deleted_at", null);
 
   if (error) throw new Error(error.message);
-
   return data;
 }

@@ -6,6 +6,11 @@ import { supabase } from "@/lib/supabase/client";
 import { updateTask } from "@/actions/task/update";
 import type { TablesUpdate } from "@/lib/supabase/types";
 
+import { createTask } from "@/actions/task/create";
+import { deleteTask as deleteTaskAction } from "@/actions/task/delete";
+
+import { listTasks } from "@/actions/task/list";
+
 type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
 
 type TaskRow = {
@@ -30,6 +35,9 @@ function formatDate(date?: string | null) {
 }
 
 export default function EmployeeDetailPage() {
+const [newDueDate, setNewDueDate] = useState<string>("");
+
+
   const { employeeId } = useParams<{ employeeId: string }>();
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -38,7 +46,83 @@ export default function EmployeeDetailPage() {
   const [orgId, setOrgId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
 
+  const [showCreate, setShowCreate] = useState(false);
+const [newTitle, setNewTitle] = useState("");
+const [newStatus, setNewStatus] = useState<TaskStatus>("todo");
+const [creating, setCreating] = useState(false);
+const [deletingId, setDeletingId] = useState<string | null>(null);
+
+
+
+
   // ---------- STATE HELPERS ----------
+
+async function handleCreate() {
+  const trimmed = newTitle.trim();
+  if (!trimmed) return;
+
+  try {
+    setCreating(true);
+
+    if (!orgId) {
+  alert("No organization selected");
+  return;
+}
+
+const created = await createTask(
+  trimmed,
+  undefined,
+  newDueDate || null,
+  orgId
+);
+
+
+    setTasks(prev => [
+      ...prev,
+      {
+        ...created,
+        status: created.status as TaskStatus,
+      }
+    ]);
+
+    setShowCreate(false);
+    setNewTitle("");
+    setNewStatus("todo");
+    setNewDueDate("");
+  } catch (e) {
+    console.error(e);
+    alert("Create failed");
+  } finally {
+    setCreating(false);
+  }
+}
+
+async function handleDelete(id: string) {
+  const data = await listTasks(employeeId);
+  if (!orgId) {
+    alert("No organization selected");
+    return;
+  }
+
+  const confirmDelete = confirm("Delete this task?");
+  if (!confirmDelete) return;
+
+  const backup = tasks;
+  setDeletingId(id);
+  setTasks(prev => prev.filter(t => t.id !== id));
+
+  try {
+    await deleteTaskAction(id, orgId);
+  } catch (e) {
+    console.error(e);
+    alert("Delete failed");
+    setTasks(backup);
+  } finally {
+    setDeletingId(null);
+  }
+}
+
+
 
   function updateTitleLocal(id: string, value: string) {
     setTasks(prev =>
@@ -151,14 +235,18 @@ export default function EmployeeDetailPage() {
           allocated_hours,
           start_time,
           end_time,
-          tasks (
-            id,
-            title,
-            status,
-            due_date
-          )
+          tasks!inner (
+  id,
+  title,
+  status,
+  due_date,
+  deleted_at
+)
+
         `)
-        .eq("resource_id", employeeId);
+        .eq("resource_id", employeeId)
+.is("tasks.deleted_at", null);
+
 
       if (error) {
         console.error(error);
@@ -186,11 +274,12 @@ export default function EmployeeDetailPage() {
   return (
     <div className="mt-6">
       <button
-        onClick={openCreateModal}
-        className="mb-4 px-4 py-2 bg-blue-600 rounded"
-      >
-        + Add Task
-      </button>
+  onClick={() => setShowCreate(true)}
+  className="mb-4 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+>
+  + Add Task
+</button>
+
 
       <table className="w-full border-collapse text-sm">
         <thead className="text-gray-400 border-b border-white/10">
@@ -254,14 +343,67 @@ export default function EmployeeDetailPage() {
                     Saving…
                   </span>
                 )}
-                <button onClick={() => deleteTask(task.id)}>
-                  🗑
-                </button>
+                <button onClick={() => handleDelete(task.id)}>
+  {deletingId === task.id ? "…" : "🗑"}
+</button>
+
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+
+          {showCreate && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+    <div className="bg-gray-900 p-6 rounded w-96 space-y-4">
+      <h2 className="text-lg font-semibold">Create Task</h2>
+
+      <input
+        autoFocus
+        placeholder="Task title"
+        value={newTitle}
+        onChange={e => setNewTitle(e.target.value)}
+        className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+      />
+      <input
+  type="date"
+  value={newDueDate}
+  onChange={e => setNewDueDate(e.target.value)}
+  className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+/>
+
+      <select
+        value={newStatus}
+        onChange={e => setNewStatus(e.target.value as TaskStatus)}
+        className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+      >
+        <option value="todo">Todo</option>
+        <option value="in_progress">In Progress</option>
+        <option value="blocked">Blocked</option>
+        <option value="done">Done</option>
+      </select>
+
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => setShowCreate(false)}
+          className="px-3 py-1 bg-gray-700 rounded"
+        >
+          Cancel
+        </button>
+
+        <button
+          disabled={!newTitle.trim() || creating}
+          onClick={handleCreate}
+          className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50"
+        >
+          {creating ? "Creating…" : "Create"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
     </div>
   );
 }
