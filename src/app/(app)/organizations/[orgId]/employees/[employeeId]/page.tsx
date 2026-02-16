@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { updateTask } from "@/actions/task/update";
 import type { TablesUpdate } from "@/lib/supabase/types";
+import { assignTaskToResource } from "@/actions/task/assign";
 
 import { createTask } from "@/actions/task/create";
 import { deleteTask as deleteTaskAction } from "@/actions/task/delete";
@@ -18,10 +19,11 @@ type TaskRow = {
   title: string;
   status: TaskStatus | null;
   due_date?: string | null;
-  allocated_hours?: number | null;
+  description?: string | null;
   start_time?: string | null;
   end_time?: string | null;
 };
+
 
 type Profile = {
   id: string;
@@ -52,30 +54,82 @@ const [newStatus, setNewStatus] = useState<TaskStatus>("todo");
 const [creating, setCreating] = useState(false);
 const [deletingId, setDeletingId] = useState<string | null>(null);
 
+const [editingTask, setEditingTask] = useState<TaskRow | null>(null);
+const [editTitle, setEditTitle] = useState("");
+const [editStatus, setEditStatus] = useState<TaskStatus>("todo");
+const [editDueDate, setEditDueDate] = useState("");
+const [editDescription, setEditDescription] = useState("");
+const [updating, setUpdating] = useState(false);
 
+const [newDescription, setNewDescription] = useState("");
 
 
   // ---------- STATE HELPERS ----------
 
+function openEdit(task: TaskRow) {
+  setEditingTask(task);
+  setEditTitle(task.title);
+  setEditStatus(task.status ?? "todo");
+  setEditDueDate(task.due_date ?? "");
+  setEditDescription(task.description ?? "");
+}
+async function handleUpdate() {
+  if (!editingTask || !orgId) return;
+
+  try {
+    setUpdating(true);
+
+    await updateTask(editingTask.id, {
+      title: editTitle,
+      status: editStatus,
+      due_date: editDueDate || null,
+      description: editDescription || null
+    }, orgId);
+
+    // update local UI
+    setTasks(prev =>
+      prev.map(t =>
+        t.id === editingTask.id
+          ? {
+              ...t,
+              title: editTitle,
+              status: editStatus,
+              due_date: editDueDate || null,
+              description: editDescription || null
+            }
+          : t
+      )
+    );
+
+    setEditingTask(null);
+  } catch (e) {
+    alert("Update failed");
+  } finally {
+    setUpdating(false);
+  }
+}
+
 async function handleCreate() {
   const trimmed = newTitle.trim();
-  if (!trimmed) return;
+
+  if (!trimmed || !newDueDate) return;
 
   try {
     setCreating(true);
 
     if (!orgId) {
-  alert("No organization selected");
-  return;
-}
+      alert("No organization selected");
+      return;
+    }
 
-const created = await createTask(
-  trimmed,
-  undefined,
-  newDueDate || null,
-  orgId
-);
+    const created = await createTask(
+      trimmed,
+      newDescription || "",
+      newDueDate,
+      orgId
+    );
 
+await assignTaskToResource(created.id, employeeId);
 
     setTasks(prev => [
       ...prev,
@@ -89,6 +143,8 @@ const created = await createTask(
     setNewTitle("");
     setNewStatus("todo");
     setNewDueDate("");
+    setNewDescription("");
+
   } catch (e) {
     console.error(e);
     alert("Create failed");
@@ -96,6 +152,7 @@ const created = await createTask(
     setCreating(false);
   }
 }
+
 
 async function handleDelete(id: string) {
   const data = await listTasks(employeeId);
@@ -135,6 +192,26 @@ async function handleDelete(id: string) {
       prev.map(t => (t.id === id ? { ...t, status: value } : t))
     );
   }
+function updateDueDateLocal(id: string, value: string | null) {
+  const normalized = value === "" ? null : value;
+
+  setTasks(prev =>
+    prev.map(t => (t.id === id ? { ...t, due_date: normalized } : t))
+  );
+}
+
+
+async function commitDueDate(id: string, value: string) {
+  const normalized = value === "" ? null : value;
+
+  const old = tasks.find(t => t.id === id)?.due_date ?? null;
+
+  updateDueDateLocal(id, normalized);
+
+  const ok = await saveTask(id, { due_date: normalized });
+  if (!ok) updateDueDateLocal(id, old);
+}
+
 
   // ---------- SERVER SAVE ----------
 
@@ -194,19 +271,7 @@ async function handleDelete(id: string) {
     }
   }
 
-  async function openCreateModal() {
-    const title = prompt("Task title?");
-    if (!title) return;
 
-    const res = await fetch("/api/tasks/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title })
-    });
-
-    const newTask = await res.json();
-    setTasks(prev => [...prev, newTask]);
-  }
 
   // ---------- LOAD DATA ----------
 
@@ -232,7 +297,6 @@ async function handleDelete(id: string) {
       const { data, error } = await supabase
         .from("resource_assignments")
         .select(`
-          allocated_hours,
           start_time,
           end_time,
           tasks!inner (
@@ -240,6 +304,7 @@ async function handleDelete(id: string) {
   title,
   status,
   due_date,
+  description,
   deleted_at
 )
 
@@ -257,7 +322,7 @@ async function handleDelete(id: string) {
       const taskRows =
         data?.map(row => ({
           ...row.tasks,
-          allocated_hours: row.allocated_hours,
+
           start_time: row.start_time,
           end_time: row.end_time
         })).filter(Boolean) ?? [];
@@ -287,7 +352,7 @@ async function handleDelete(id: string) {
             <th className="p-2 text-left">Title</th>
             <th>Status</th>
             <th>Due</th>
-            <th>Hours</th>
+
             <th></th>
           </tr>
         </thead>
@@ -334,8 +399,22 @@ async function handleDelete(id: string) {
                 </select>
               </td>
 
-              <td>{formatDate(task.due_date)}</td>
-              <td>{task.allocated_hours ?? 0}</td>
+              <td>
+  <input
+    type="date"
+    disabled={!orgId}
+    value={task.due_date ?? ""}
+    onChange={e =>
+      updateDueDateLocal(task.id, e.target.value)
+    }
+    onBlur={e =>
+      commitDueDate(task.id, e.target.value)
+    }
+    className="bg-transparent border-b border-white/20 hover:border-white/40 focus:border-blue-500 outline-none"
+  />
+</td>
+
+
 
               <td className="flex gap-2 items-center">
                 {savingId === task.id && (
@@ -343,6 +422,8 @@ async function handleDelete(id: string) {
                     Saving…
                   </span>
                 )}
+                <button onClick={() => openEdit(task)}>✏️</button>
+
                 <button onClick={() => handleDelete(task.id)}>
   {deletingId === task.id ? "…" : "🗑"}
 </button>
@@ -355,23 +436,35 @@ async function handleDelete(id: string) {
 
           {showCreate && (
   <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-    <div className="bg-gray-900 p-6 rounded w-96 space-y-4">
+    <div className="bg-gray-900 p-6 rounded w-[420px] space-y-4">
       <h2 className="text-lg font-semibold">Create Task</h2>
 
+      {/* TITLE (REQUIRED) */}
       <input
         autoFocus
-        placeholder="Task title"
+        placeholder="Task title *"
         value={newTitle}
         onChange={e => setNewTitle(e.target.value)}
         className="w-full bg-gray-800 p-2 rounded border border-gray-700"
       />
-      <input
-  type="date"
-  value={newDueDate}
-  onChange={e => setNewDueDate(e.target.value)}
-  className="w-full bg-gray-800 p-2 rounded border border-gray-700"
-/>
 
+      {/* DUE DATE (REQUIRED) */}
+      <input
+        type="date"
+        value={newDueDate}
+        onChange={e => setNewDueDate(e.target.value)}
+        className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+      />
+
+      {/* DESCRIPTION */}
+      <textarea
+        placeholder="Description (optional)"
+        value={newDescription}
+        onChange={e => setNewDescription(e.target.value)}
+        className="w-full bg-gray-800 p-2 rounded border border-gray-700 h-24 resize-none"
+      />
+
+      {/* STATUS */}
       <select
         value={newStatus}
         onChange={e => setNewStatus(e.target.value as TaskStatus)}
@@ -392,11 +485,67 @@ async function handleDelete(id: string) {
         </button>
 
         <button
-          disabled={!newTitle.trim() || creating}
+          disabled={!newTitle.trim() || !newDueDate || creating}
           onClick={handleCreate}
-          className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50"
+          className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-40"
         >
           {creating ? "Creating…" : "Create"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{editingTask && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+    <div className="bg-gray-900 p-6 rounded w-[420px] space-y-4">
+      <h2 className="text-lg font-semibold">Edit Task</h2>
+
+      <input
+        value={editTitle}
+        onChange={e => setEditTitle(e.target.value)}
+        className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+      />
+
+      <select
+        value={editStatus}
+        onChange={e => setEditStatus(e.target.value as TaskStatus)}
+        className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+      >
+        <option value="todo">Todo</option>
+        <option value="in_progress">In Progress</option>
+        <option value="blocked">Blocked</option>
+        <option value="done">Done</option>
+      </select>
+
+      <input
+        type="date"
+        value={editDueDate}
+        onChange={e => setEditDueDate(e.target.value)}
+        className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+      />
+
+      <textarea
+        placeholder="Description..."
+        value={editDescription}
+        onChange={e => setEditDescription(e.target.value)}
+        className="w-full bg-gray-800 p-2 rounded border border-gray-700 h-24 resize-none"
+      />
+
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => setEditingTask(null)}
+          className="px-3 py-1 bg-gray-700 rounded"
+        >
+          Cancel
+        </button>
+
+        <button
+          disabled={updating}
+          onClick={handleUpdate}
+          className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700"
+        >
+          {updating ? "Saving…" : "Save"}
         </button>
       </div>
     </div>
