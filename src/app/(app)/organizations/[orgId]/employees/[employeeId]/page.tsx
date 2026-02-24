@@ -126,7 +126,9 @@ async function handleCreate() {
       trimmed,
       newDescription || "",
       newDueDate,
-      orgId
+      orgId,
+      null
+      
     );
 
 await assignTaskToResource(created.id, employeeId);

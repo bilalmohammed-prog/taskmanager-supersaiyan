@@ -8,7 +8,8 @@ export async function createTask(
   title: string,
   description: string | undefined,
   dueDate: string | null,
-  orgId: string
+  orgId: string,
+  project_id: string | null
 )
 
 {
@@ -23,6 +24,7 @@ export async function createTask(
   organization_id: orgId,
   status: "todo",
   due_date: dueDate,
+  project_id: project_id ?? null
 };
 
 

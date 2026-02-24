@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 type ProjectStatus = "active" | "paused" | "archived";
 
@@ -35,7 +36,7 @@ function formatDate(date?: string | null) {
 
 export default function ProjectsPage() {
   const { orgId } = useParams<{ orgId: string }>();
-
+console.log("ORG", orgId);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +49,7 @@ export default function ProjectsPage() {
   const [endDate, setEndDate] = useState("");
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
+const router = useRouter();
   // ---------- LOAD ----------
   useEffect(() => {
     async function load() {
@@ -162,9 +163,22 @@ export default function ProjectsPage() {
         <div className="grid grid-cols-3 gap-4">
           {projects.map(p => (
             <div
-              key={p.id}
-              className="bg-gray-900 border border-white/10 p-4 rounded space-y-2"
-            >
+  key={p.id}
+  onClick={() =>
+    router.push(
+      `/organizations/${orgId}/projects/${p.id}`
+    )
+  }
+  className="
+    bg-gray-900 border border-white/10
+    p-4 rounded-xl space-y-2
+    cursor-pointer
+    hover:border-blue-500/50
+    hover:bg-gray-800/80
+    transition-all duration-200
+    hover:-translate-y-1
+  "
+>
               <h3 className="font-semibold text-lg">{p.name}</h3>
 
               <p className="text-xs text-gray-400">
@@ -180,9 +194,12 @@ export default function ProjectsPage() {
               </p>
 
               <button
-                onClick={() => handleDelete(p.id)}
-                className="text-red-400 text-sm"
-              >
+  onClick={(e) => {
+    e.stopPropagation();
+    handleDelete(p.id);
+  }}
+  className="text-red-400 text-sm"
+>
                 {deletingId === p.id ? "…" : "Delete"}
               </button>
             </div>
