@@ -22,6 +22,8 @@ type HumanResource = {
 };
 
 export default function ProjectWorkspacePage() {
+    const [savingId, setSavingId] =
+  useState<string | null>(null);
     const [employees, setEmployees] =
       useState<HumanResource[]>([]);
     
@@ -78,9 +80,13 @@ async function commitUpdate(
   updates: TablesUpdate<"tasks">
 ) {
   try {
+    setSavingId(id);
+
     await updateTask(id, updates, orgId);
   } catch (e) {
     console.error("Save failed", e);
+  } finally {
+    setSavingId(null);
   }
 }
   // ---------- CREATE ----------
@@ -173,19 +179,24 @@ setTasks(prev => [newTask, ...prev]);;
 </td>
                 <td>
                   <input
-                    value={task.title}
-                    onChange={e =>
-  updateLocal(task.id, {
-    title: e.target.value
-  })
-}
-onBlur={e =>
-  commitUpdate(task.id, {
-    title: e.target.value
-  })
-}
-                    className="bg-transparent"
-                  />
+  value={task.title}
+  onChange={e =>
+    updateLocal(task.id, {
+      title: e.target.value
+    })
+  }
+  onBlur={e =>
+    commitUpdate(task.id, {
+      title: e.target.value
+    })
+  }
+  onKeyDown={e => {
+    if (e.key === "Enter") {
+      e.currentTarget.blur(); // triggers onBlur save
+    }
+  }}
+  className="bg-transparent"
+/>
                 </td>
 
                 <td>
@@ -224,23 +235,27 @@ onBlur={e =>
     due_date: e.target.value
   })
 }
+onKeyDown={e => {
+  if (e.key === "Enter") {
+    e.currentTarget.blur();
+  }
+
+  if (e.key === "Escape") {
+    e.currentTarget.blur();
+  }
+}}
                   />
                 </td>
 
-                <td className="space-x-2">
-  <button
-    onClick={() =>
-      setAssigningTaskId(task.id)
-    }
-    className="text-blue-400"
-  >
-    Assign
-  </button>
+                <td className="flex items-center gap-2">
+  {savingId === task.id && (
+    <span className="text-xs text-gray-400">
+      Saving…
+    </span>
+  )}
 
   <button
-    onClick={() =>
-      handleDelete(task.id)
-    }
+    onClick={() => handleDelete(task.id)}
   >
     🗑
   </button>
