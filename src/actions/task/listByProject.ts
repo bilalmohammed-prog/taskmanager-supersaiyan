@@ -13,10 +13,11 @@ export async function listTasksByProject(
   .select(`
     *,
     resource_assignments (
-      resources (
-        name
-      )
-    )
+  resource_id,
+  resources (
+    name
+  )
+)
   `)
   .eq("project_id", projectId)
   .eq("organization_id", orgId)
@@ -25,11 +26,15 @@ export async function listTasksByProject(
 
   if (error) throw new Error(error.message);
 const mapped =
-  data?.map(task => ({
-    ...task,
-    assignee_name:
-      task.resource_assignments?.[0]
-        ?.resources?.name ?? null
-  })) ?? [];
+  data?.map(task => {
+    const assignment = task.resource_assignments?.[0];
+
+    return {
+      ...task,
+      assignee_id: assignment?.resource_id ?? null,
+      assignee_name:
+        assignment?.resources?.name ?? null
+    };
+  }) ?? [];
 return mapped;
 }

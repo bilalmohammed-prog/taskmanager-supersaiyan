@@ -10,18 +10,26 @@ import type { Tables, Enums } from "@/lib/supabase/types";
 import type { TablesUpdate } from "@/lib/supabase/types";
 import { listHumanResources } from "@/actions/resource/listHumans";
 import { assignTaskToResource } from "@/actions/task/assign";
+import { listProjectMembers } from "@/actions/project/listProjectMembers";
+import { assignProjectMember } from "@/actions/project/assignProjectMember";
 
 type TaskWithAssignee = Tables<"tasks"> & {
+  assignee_id: string | null;
   assignee_name: string | null;
 };
 type Task = Tables<"tasks">;
 type TaskStatus = Enums<"task_status">;
 type HumanResource = {
-  id: string;
+  resource_id: string;
   name: string;
 };
 
 export default function ProjectWorkspacePage() {
+    const [projectMembers, setProjectMembers] =
+  useState<HumanResource[]>([]);
+
+const [showProjectAssign, setShowProjectAssign] =
+  useState(false);
     const [savingId, setSavingId] =
   useState<string | null>(null);
     const [employees, setEmployees] =
@@ -49,7 +57,18 @@ const [assigningTaskId, setAssigningTaskId] =
   useEffect(() => {
     async function load() {
         const humans = await listHumanResources(orgId);
-setEmployees(humans);
+
+setEmployees(
+  humans.map(h => ({
+    resource_id: h.id,
+    name: h.name
+  }))
+);
+        const members =
+  await listProjectMembers(projectId);
+
+setProjectMembers(members);
+
       setLoading(true);
       const data = await listTasksByProject(
         projectId,
@@ -116,7 +135,7 @@ if (selectedEmployee) {
 
   newTask.assignee_name =
     employees.find(
-      e => e.id === selectedEmployee
+      e => e.resource_id === selectedEmployee
     )?.name ?? null;
 }
 setTasks(prev => [newTask, ...prev]);;
@@ -147,7 +166,12 @@ setTasks(prev => [newTask, ...prev]);;
   // ---------- UI ----------
   return (
     <div className="mt-6 space-y-4">
-
+<button
+  onClick={() => setShowProjectAssign(true)}
+  className="px-4 py-2 bg-gray-700 rounded"
+>
+  + Assign Member to Project
+</button>
       <button
         onClick={() => setShowCreate(true)}
         className="px-4 py-2 bg-blue-600 rounded"
@@ -160,7 +184,7 @@ setTasks(prev => [newTask, ...prev]);;
       ) : (
         <table className="w-full text-sm">
           <thead>
-            <tr>
+            <tr><th>Assign</th>
                 <th>Assigned</th>
               <th className="text-left p-2">Title</th>
               <th>Status</th>
@@ -174,8 +198,43 @@ setTasks(prev => [newTask, ...prev]);;
             
             {tasks.map(task => (
               <tr key={task.id}>
-                <td className="text-sm text-gray-400">
-  {task.assignee_name ?? "—"}
+                <td>
+  <select
+    value={task.assignee_id ?? ""}
+    onChange={async e => {
+  const resourceId = e.target.value;
+
+  // unassign case
+  
+
+  await assignTaskToResource(task.id, resourceId);
+
+  const emp = projectMembers.find(
+    m => m.resource_id === resourceId
+  );
+
+  setTasks(prev =>
+    prev.map(t =>
+      t.id === task.id
+        ? {
+            ...t,
+            assignee_id: resourceId,
+            assignee_name: emp?.name ?? null
+          }
+        : t
+    )
+  );
+}}
+    className="bg-gray-800 p-1 rounded"
+  >
+    <option value="">Unassigned</option>
+
+    {projectMembers.map(emp => (
+      <option key={emp.resource_id} value={emp.resource_id}>
+        {emp.name}
+      </option>
+    ))}
+  </select>
 </td>
                 <td>
                   <input
@@ -316,7 +375,7 @@ onKeyDown={e => {
   <option value="">Unassigned</option>
 
   {employees.map(emp => (
-    <option key={emp.id} value={emp.id}>
+    <option key={emp.resource_id} value={emp.resource_id}>
       {emp.name}
     </option>
   ))}
@@ -344,7 +403,7 @@ onKeyDown={e => {
         <option value="">Select employee</option>
 
         {employees.map(emp => (
-          <option key={emp.id} value={emp.id}>
+          <option key={emp.resource_id} value={emp.resource_id}>
             {emp.name}
           </option>
         ))}
@@ -376,7 +435,7 @@ onKeyDown={e => {
                       assignee_name:
                         employees.find(
                           e =>
-                            e.id ===
+                            e.resource_id ===
                             selectedEmployee
                         )?.name ?? null
                     }
@@ -392,6 +451,77 @@ onKeyDown={e => {
         </button>
       </div>
 
+    </div>
+  </div>
+)}
+{showProjectAssign && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+    <div className="bg-gray-900 p-6 rounded w-[400px] space-y-4">
+
+      <h2 className="text-lg font-semibold">
+        Assign Project Member
+      </h2>
+
+      <select
+        value={selectedEmployee}
+        onChange={e =>
+          setSelectedEmployee(e.target.value)
+        }
+        className="w-full bg-gray-800 p-2 rounded"
+      >
+        <option value="">Select employee</option>
+
+        {employees
+  .filter(
+    e =>
+      !projectMembers.some(
+        m => m.resource_id === e.resource_id
+      )
+  )
+  .map(emp => (
+    <option
+      key={emp.resource_id}
+      value={emp.resource_id}   // ⭐ THIS MUST BE UUID
+    >
+      {emp.name}
+    </option>
+  ))}
+      </select>
+
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={() => setShowProjectAssign(false)}
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={async () => {
+            if (!selectedEmployee) return;
+
+            await assignProjectMember(
+              projectId,
+              selectedEmployee
+            );
+
+            const emp = employees.find(
+              e => e.resource_id === selectedEmployee
+            );
+
+            if (emp) {
+              setProjectMembers(prev => [
+                ...prev,
+                emp
+              ]);
+            }
+
+            setSelectedEmployee("");
+            setShowProjectAssign(false);
+          }}
+        >
+          Assign
+        </button>
+      </div>
     </div>
   </div>
 )}
