@@ -35,6 +35,7 @@ function formatDate(date?: string | null) {
 }
 
 export default function ProjectsPage() {
+    
   const { orgId } = useParams<{ orgId: string }>();
 console.log("ORG", orgId);
   const [projects, setProjects] = useState<Project[]>([]);
