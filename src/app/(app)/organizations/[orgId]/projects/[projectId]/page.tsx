@@ -205,17 +205,7 @@ setTasks(prev => [newTask, ...prev]);;
 
   <button
     onClick={async () => {
-      setTasks(prev =>
-  prev.map(t =>
-    t.assignee_id === selectedProjectMember
-      ? {
-          ...t,
-          assignee_id: null,
-          assignee_name: null
-        }
-      : t
-  )
-);
+      
       if (!selectedProjectMember) return;
 
       await removeProjectMember(

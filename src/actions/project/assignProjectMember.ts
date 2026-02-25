@@ -20,21 +20,44 @@ export async function assignProjectMember(
 
   let resourceId = resource?.id;
 
+// ⭐ if resource exists, sync name just in case
+if (resourceId) {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", userId)
+    .single();
+
+  await supabase
+    .from("resources")
+    .update({
+      name: profile?.full_name ?? "Unknown"
+    })
+    .eq("id", resourceId);
+}
+
   // -------------------------------------------------
   // 2️⃣ create resource if missing
   // -------------------------------------------------
   if (!resourceId) {
-    const { data: created, error: createError } =
-      await supabase
-        .from("resources")
-        .insert({
-          id: userId,
-          organization_id: orgId,
-          name: "New Member",
-          type: "human"
-        })
-        .select("id")
-        .single();
+    // get real user name from profiles
+const { data: profile } = await supabase
+  .from("profiles")
+  .select("full_name")
+  .eq("id", userId)
+  .single();
+
+const { data: created, error: createError } =
+  await supabase
+    .from("resources")
+    .insert({
+      id: userId,
+      organization_id: orgId,
+      name: profile?.full_name ?? "Unknown",
+      type: "human"
+    })
+    .select("id")
+    .single();
 
     if (createError) throw new Error(createError.message);
 
