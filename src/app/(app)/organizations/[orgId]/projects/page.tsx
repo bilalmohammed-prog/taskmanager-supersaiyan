@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
+import { deleteProject } from "@/actions/project/deleteProject";
 
 type ProjectStatus = "active" | "paused" | "archived";
 
@@ -37,7 +38,7 @@ function formatDate(date?: string | null) {
 export default function ProjectsPage() {
     
   const { orgId } = useParams<{ orgId: string }>();
-console.log("ORG", orgId);
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,35 +53,33 @@ console.log("ORG", orgId);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 const router = useRouter();
   // ---------- LOAD ----------
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
+ 
+const loadProjects = useCallback(async () => {
+  if (!orgId) return;
 
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("organization_id", orgId)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false });
+  setLoading(true);
 
-      if (!error && data) {
-        const mapped: Project[] = (data as ProjectRow[]).map(p => ({
-          id: p.id,
-          name: p.name,
-          status: p.status ?? "active",
-          startDate: p.start_date,
-          endDate: p.end_date
-        }));
+  const { data, error } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("organization_id", orgId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false });
 
-        setProjects(mapped);
-      }
+  if (!error && data) {
+    setProjects(
+      (data as ProjectRow[]).map(p => ({
+        id: p.id,
+        name: p.name,
+        status: p.status ?? "active",
+        startDate: p.start_date,
+        endDate: p.end_date
+      }))
+    );
+  }
 
-      setLoading(false);
-    }
-
-    if (orgId) load();
-  }, [orgId]);
-
+  setLoading(false);
+}, [orgId]);
   // ---------- CREATE ----------
   async function handleCreate() {
     if (!name.trim()) return;
@@ -102,17 +101,10 @@ const router = useRouter();
 
       if (error) throw error;
 
-      const row = data as ProjectRow;
 
-      const newProject: Project = {
-        id: row.id,
-        name: row.name,
-        status: row.status ?? "active",
-        startDate: row.start_date,
-        endDate: row.end_date
-      };
+     
 
-      setProjects(prev => [newProject, ...prev]);
+      await loadProjects();
 
       setShowCreate(false);
       setName("");
@@ -134,19 +126,19 @@ const router = useRouter();
     setDeletingId(id);
     setProjects(prev => prev.filter(p => p.id !== id));
 
-    const { error } = await supabase
-      .from("projects")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", id);
-
-    if (error) {
+    try {
+      await deleteProject(id);
+      await loadProjects();
+    } catch (error) {
       alert("Delete failed");
       setProjects(backup);
     }
 
     setDeletingId(null);
   }
-
+useEffect(() => {
+  loadProjects();
+}, [loadProjects]);
   // ---------- UI ----------
   return (
     <div className="mt-6 space-y-6">
