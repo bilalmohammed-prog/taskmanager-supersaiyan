@@ -8,6 +8,9 @@ export async function removeProjectMember(
 ) {
   const supabase = await getSupabaseServer();
 
+  // -------------------------------------------------
+  // 1️⃣ remove from project
+  // -------------------------------------------------
   const { error } = await supabase
     .from("project_members")
     .update({
@@ -17,4 +20,15 @@ export async function removeProjectMember(
     .eq("resource_id", resourceId);
 
   if (error) throw new Error(error.message);
+
+  // -------------------------------------------------
+  // 2️⃣ remove ALL task assignments for this resource
+  // -------------------------------------------------
+  const { error: assignmentError } = await supabase
+    .from("resource_assignments")
+    .delete()
+    .eq("resource_id", resourceId);
+
+  if (assignmentError)
+    throw new Error(assignmentError.message);
 }

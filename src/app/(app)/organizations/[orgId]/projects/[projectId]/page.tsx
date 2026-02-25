@@ -12,6 +12,7 @@ import { listOrgMembers } from "@/actions/organization/listOrgMembers";
 import { assignTaskToResource } from "@/actions/task/assign";
 import { listProjectMembers } from "@/actions/project/listProjectMembers";
 import { assignProjectMember } from "@/actions/project/assignProjectMember";
+import { removeProjectMember } from "@/actions/project/removeProjectMember";
 
 
 type TaskWithAssignee = Tables<"tasks"> & {
@@ -53,7 +54,8 @@ const [assigningTaskId, setAssigningTaskId] =
 
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
-
+  const [selectedProjectMember, setSelectedProjectMember] =
+  useState<string>("");
   // ---------- LOAD ----------
   useEffect(() => {
     async function load() {
@@ -180,6 +182,64 @@ setTasks(prev => [newTask, ...prev]);;
       >
         + Add Task
       </button>
+      <div className="flex gap-2 items-center">
+
+  <select
+    value={selectedProjectMember}
+    onChange={e =>
+      setSelectedProjectMember(e.target.value)
+    }
+    className="bg-gray-800 p-2 rounded"
+  >
+    <option value="">Select project member</option>
+
+    {projectMembers.map(emp => (
+      <option
+        key={emp.resource_id}
+        value={emp.resource_id}
+      >
+        {emp.name}
+      </option>
+    ))}
+  </select>
+
+  <button
+    onClick={async () => {
+      setTasks(prev =>
+  prev.map(t =>
+    t.assignee_id === selectedProjectMember
+      ? {
+          ...t,
+          assignee_id: null,
+          assignee_name: null
+        }
+      : t
+  )
+);
+      if (!selectedProjectMember) return;
+
+      await removeProjectMember(
+        projectId,
+        selectedProjectMember
+      );
+
+      // instant UI update
+      setProjectMembers(prev =>
+        prev.filter(
+          m =>
+            m.resource_id !== selectedProjectMember
+        )
+      );
+
+      setSelectedProjectMember("");
+    }}
+    
+    className="px-3 py-2 bg-red-600 rounded"
+  >
+    Remove Member
+  </button>
+
+</div>
 
       {loading ? (
         <p>Loading...</p>
