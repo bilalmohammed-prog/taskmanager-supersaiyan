@@ -8,24 +8,29 @@ export async function assignTaskToResource(
 ) {
   const supabase = await getSupabaseServer();
 
-  // remove existing assignment first
-  const { error: deleteError } = await supabase
-    .from("resource_assignments")
-    .delete()
-    .eq("task_id", taskId);
+  // UNASSIGN
+  if (!resourceId) {
+    const { error } = await supabase
+      .from("resource_assignments")
+      .delete()
+      .eq("task_id", taskId);
 
-  if (deleteError) throw new Error(deleteError.message);
+    if (error) throw new Error(error.message);
+    return;
+  }
 
-  // unassign case
-  if (!resourceId) return;
-
-  // insert new assignment
+  // ASSIGN / REASSIGN (single query)
   const { error } = await supabase
     .from("resource_assignments")
-    .insert({
-      task_id: taskId,
-      resource_id: resourceId
-    });
+    .upsert(
+      {
+        task_id: taskId,
+        resource_id: resourceId,
+      },
+      {
+        onConflict: "task_id",
+      }
+    );
 
   if (error) throw new Error(error.message);
 }

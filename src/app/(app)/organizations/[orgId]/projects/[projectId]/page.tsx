@@ -74,7 +74,7 @@ setProjectMembers(members);
         projectId,
         orgId
       );
-      setTasks(data as TaskWithAssignee[]);
+     setTasks(data);
       setLoading(false);
     }
 
@@ -125,6 +125,7 @@ async function commitUpdate(
 
       const newTask: TaskWithAssignee = {
   ...created,
+  assignee_id: null,
   assignee_name: null
 };
 if (selectedEmployee) {
@@ -200,14 +201,17 @@ setTasks(prev => [newTask, ...prev]);;
               <tr key={task.id}>
                 <td>
   <select
-    value={task.assignee_id ?? ""}
+    value={task.assignee_id || ""}
     onChange={async e => {
   const resourceId = e.target.value;
 
   // unassign case
   
 
-  await assignTaskToResource(task.id, resourceId);
+  await assignTaskToResource(
+  task.id,
+  resourceId || null
+);
 
   const emp = projectMembers.find(
     m => m.resource_id === resourceId
@@ -428,20 +432,19 @@ onKeyDown={e => {
             );
 
             setTasks(prev =>
-              prev.map(t =>
-                t.id === assigningTaskId
-                  ? {
-                      ...t,
-                      assignee_name:
-                        employees.find(
-                          e =>
-                            e.resource_id ===
-                            selectedEmployee
-                        )?.name ?? null
-                    }
-                  : t
-              )
-            );
+  prev.map(t =>
+    t.id === assigningTaskId
+      ? {
+          ...t,
+          assignee_id: selectedEmployee,   // ⭐ ADD THIS
+          assignee_name:
+            employees.find(
+              e => e.resource_id === selectedEmployee
+            )?.name ?? null
+        }
+      : t
+  )
+);
 
             setAssigningTaskId(null);
             setSelectedEmployee("");
