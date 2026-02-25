@@ -8,10 +8,11 @@ import { createTask } from "@/actions/task/create";
 import { deleteTask as deleteTaskAction } from "@/actions/task/delete";
 import type { Tables, Enums } from "@/lib/supabase/types";
 import type { TablesUpdate } from "@/lib/supabase/types";
-import { listHumanResources } from "@/actions/resource/listHumans";
+import { listOrgMembers } from "@/actions/organization/listOrgMembers";
 import { assignTaskToResource } from "@/actions/task/assign";
 import { listProjectMembers } from "@/actions/project/listProjectMembers";
 import { assignProjectMember } from "@/actions/project/assignProjectMember";
+
 
 type TaskWithAssignee = Tables<"tasks"> & {
   assignee_id: string | null;
@@ -56,11 +57,11 @@ const [assigningTaskId, setAssigningTaskId] =
   // ---------- LOAD ----------
   useEffect(() => {
     async function load() {
-        const humans = await listHumanResources(orgId);
+        const humans = await listOrgMembers(orgId);
 
 setEmployees(
   humans.map(h => ({
-    resource_id: h.id,
+    resource_id: h.resource_id,
     name: h.name
   }))
 );
@@ -378,11 +379,11 @@ onKeyDown={e => {
 >
   <option value="">Unassigned</option>
 
-  {employees.map(emp => (
-    <option key={emp.resource_id} value={emp.resource_id}>
-      {emp.name}
-    </option>
-  ))}
+  {projectMembers.map(emp => (
+  <option key={emp.resource_id} value={emp.resource_id}>
+    {emp.name}
+  </option>
+))}
 </select>
             </div>
 
@@ -484,11 +485,11 @@ onKeyDown={e => {
   .map(emp => (
     <option
       key={emp.resource_id}
-      value={emp.resource_id}   // ⭐ THIS MUST BE UUID
+      value={emp.resource_id}
     >
       {emp.name}
     </option>
-  ))}
+))}
       </select>
 
       <div className="flex justify-end gap-2">
@@ -504,7 +505,8 @@ onKeyDown={e => {
 
             await assignProjectMember(
               projectId,
-              selectedEmployee
+              selectedEmployee,
+              orgId
             );
 
             const emp = employees.find(
