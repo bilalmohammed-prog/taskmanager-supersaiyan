@@ -1,11 +1,7 @@
 import { getAnalyticsSummary } from "@/actions/analytics/summary";
 
-export default async function AnalyticsPage({
-  params,
-}: {
-  params: { orgId: string };
-}) {
-  const stats = await getAnalyticsSummary(params.orgId);
+export default async function AnalyticsPage() {
+  const stats = await getAnalyticsSummary();
 
   const completionRate =
     stats.totalTasks === 0

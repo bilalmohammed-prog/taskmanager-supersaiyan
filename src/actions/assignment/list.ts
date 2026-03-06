@@ -1,19 +1,13 @@
 "use server";
 
 import { getSupabaseServer } from "@/lib/supabase/server";
+import { requireTenantContext } from "@/services/tenant";
+import { listAssignments as listAssignmentsSvc } from "@/services/resource/assignmentService";
 
 export async function listAssignments() {
   const supabase = await getSupabaseServer();
-
-  const { data, error } = await supabase
-    .from("resource_assignments")
-    .select(`
-      *,
-      resource:resources (id, name, type),
-      task:tasks (id, title, status)
-    `);
-
-  if (error) throw new Error(error.message);
-
-  return data;
+  const ctx = await requireTenantContext(supabase);
+  return await listAssignmentsSvc(supabase, {
+    organizationId: ctx.organizationId,
+  });
 }

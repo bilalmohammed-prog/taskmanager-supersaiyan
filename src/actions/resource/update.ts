@@ -1,7 +1,7 @@
 "use server";
 
 import { getSupabaseServer } from "@/lib/supabase/server";
-import type { TablesUpdate } from "@/lib/supabase/types";
+import type { TablesUpdate } from "@/lib/types/database";
 import { cookies } from "next/headers";
 
 export async function updateResource(

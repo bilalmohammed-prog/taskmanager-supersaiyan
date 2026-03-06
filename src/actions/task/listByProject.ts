@@ -1,7 +1,7 @@
 "use server";
 
 import { getSupabaseServer } from "@/lib/supabase/server";
-import { Tables } from "@/lib/supabase/types";
+import { Tables } from "@/lib/types/database";
 
 type Assignment = {
   resource_id: string;
@@ -11,7 +11,7 @@ type Assignment = {
 };
 
 type TaskRow = Tables<"tasks"> & {
-  resource_assignments: Assignment | null;
+  resource_assignments: Assignment[] | null;
 };
 type TaskWithAssignee = Tables<"tasks"> & {
   assignee_id: string | null;
@@ -38,20 +38,18 @@ export async function listTasksByProject(
     .eq("organization_id", orgId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
-console.log(data);
+
   if (error) throw new Error(error.message);
 
-  const mapped: TaskWithAssignee[] =
-  (data as TaskRow[]).map(task => {
-    const assignment = task.resource_assignments;
+  const mapped: TaskWithAssignee[] = ((data ?? []) as TaskRow[]).map((task) => {
+    const assignment = task.resource_assignments?.[0] ?? null;
 
     return {
       ...task,
       assignee_id: assignment?.resource_id ?? null,
-      assignee_name: assignment?.resources?.name ?? null
+      assignee_name: assignment?.resources?.name ?? null,
     };
   });
 
-return mapped;
   return mapped;
 }

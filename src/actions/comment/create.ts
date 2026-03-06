@@ -1,7 +1,7 @@
 "use server";
 
 import { getSupabaseServer } from "@/lib/supabase/server";
-import type { TablesInsert } from "@/lib/supabase/types";
+import type { TablesInsert } from "@/lib/types/database";
 
 export async function createComment(taskId: string, content: string) {
   const supabase = await getSupabaseServer();

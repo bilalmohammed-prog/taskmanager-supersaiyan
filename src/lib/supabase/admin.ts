@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Database } from "./types";
+import type { Database } from "@/lib/types/database";
 
 export const supabaseAdmin = createClient<Database>(
   process.env.SUPABASE_URL!,
