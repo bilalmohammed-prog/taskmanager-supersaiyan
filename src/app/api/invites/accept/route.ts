@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+type AcceptInviteRequest = {
+  manager_id?: string;
+  managerId?: string;
+  organization_id?: string;
+  orgId?: string;
+};
+
 export async function POST(req: Request) {
   try {
     const cookieStore = await cookies();
@@ -23,78 +30,74 @@ export async function POST(req: Request) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { messageId } = await req.json();
+    const body: AcceptInviteRequest = await req.json().catch(() => ({}));
+    const managerId = body.manager_id ?? body.managerId;
 
-    if (!messageId) {
+    if (!managerId) {
       return NextResponse.json(
-        { error: "Message ID required" },
+        { error: "manager_id is required" },
         { status: 400 }
       );
     }
 
-    /* ===================== 1️⃣ GET MESSAGE ===================== */
-    const { data: message, error: msgError } = await supabase
-      .from("messages")
-      .select("*")
-      .eq("id", messageId)
-      .single();
+    const { data: employeeProfile, error: employeeProfileError } = await supabase
+      .from("profiles")
+      .select("active_organization_id")
+      .eq("id", user.id)
+      .maybeSingle();
 
-    if (msgError || !message) {
+    if (employeeProfileError || !employeeProfile) {
       return NextResponse.json(
-        { error: "Message not found" },
-        { status: 404 }
-      );
-    }
-
-    if (message.type !== "invite") {
-      return NextResponse.json({ error: "Not an invite" }, { status: 400 });
-    }
-
-    if (message.status !== "pending") {
-      return NextResponse.json(
-        { error: "Invite already processed" },
+        { error: "Employee profile not found" },
         { status: 400 }
       );
     }
 
-    /* 🔒 EXTRA CHECK */
-    if (message.receiver_id !== user.id) {
+    const organizationId =
+      body.organization_id ?? body.orgId ?? employeeProfile.active_organization_id;
+
+    if (!organizationId) {
       return NextResponse.json(
-        { error: "You are not the invite receiver" },
-        { status: 403 }
+        { error: "organization_id is required" },
+        { status: 400 }
       );
     }
 
-    /* ===================== 2️⃣ LINK EMPLOYEE ===================== */
-    const { error: empError } = await supabase
-      .from("empid")
-      .update({ manager_id: message.sender_id })
-      .eq("user_id", message.receiver_id);
+    const { data: membershipRows, error: membershipError } = await supabase
+      .from("org_members")
+      .select("user_id")
+      .eq("organization_id", organizationId)
+      .in("user_id", [user.id, managerId]);
 
-    if (empError) {
+    if (membershipError) {
+      return NextResponse.json({ error: membershipError.message }, { status: 500 });
+    }
+
+    const memberSet = new Set((membershipRows ?? []).map((m) => m.user_id));
+
+    if (!memberSet.has(user.id) || !memberSet.has(managerId)) {
       return NextResponse.json(
-        { error: empError.message },
-        { status: 500 }
+        { error: "Manager and employee must belong to the same organization" },
+        { status: 400 }
       );
     }
 
-    /* ===================== 3️⃣ MARK MESSAGE ACCEPTED ===================== */
-    const { error: statusError } = await supabase
-      .from("messages")
-      .update({ status: "accepted" })
-      .eq("id", messageId);
-
-    if (statusError) {
-      return NextResponse.json(
-        { error: statusError.message },
-        { status: 500 }
+    const { error: upsertError } = await supabase
+      .from("manager_employees")
+      .upsert(
+        {
+          manager_id: managerId,
+          employee_id: user.id,
+          organization_id: organizationId,
+        },
+        { onConflict: "organization_id,employee_id" }
       );
+
+    if (upsertError) {
+      return NextResponse.json({ error: upsertError.message }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -103,9 +106,6 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("Accept Invite Error:", err);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

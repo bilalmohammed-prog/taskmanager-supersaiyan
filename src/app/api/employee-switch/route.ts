@@ -18,7 +18,6 @@ export async function GET() {
       }
     );
 
-    /* 1️⃣ AUTH */
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -27,28 +26,61 @@ export async function GET() {
       return NextResponse.json({ employees: [] });
     }
 
-    /* 2️⃣ QUERY EMPLOYEES */
+    const { data: me, error: meError } = await supabase
+      .from("profiles")
+      .select("active_organization_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (meError || !me?.active_organization_id) {
+      return NextResponse.json({ employees: [] });
+    }
+
+    const organizationId = me.active_organization_id;
+
+    const { data: links, error: linksError } = await supabase
+      .from("manager_employees")
+      .select("employee_id")
+      .eq("manager_id", user.id)
+      .eq("organization_id", organizationId);
+
+    if (linksError || !links || links.length === 0) {
+      return NextResponse.json({ employees: [] });
+    }
+
+    const employeeIds = links.map((l) => l.employee_id);
+
     const { data, error } = await supabase
-      .from("employees")
-      .select("id, name, user_id, emp_id")
-      .eq("manager_id", user.id);
+      .from("org_members")
+      .select(
+        `
+          user_id,
+          profiles!org_members_user_id_fkey (
+            id,
+            full_name
+          )
+        `
+      )
+      .eq("organization_id", organizationId)
+      .in("user_id", employeeIds);
 
     if (error) {
       console.error(error);
       return NextResponse.json({ employees: [] });
     }
 
-    /* 3️⃣ FORMAT */
     const employees =
-      data?.map((e) => ({
-        id: e.id,
-        name: e.name,
-        user_id: e.user_id,
-        emp_id: e.emp_id,
-      })) ?? [];
+      data?.map((e) => {
+        const profile = Array.isArray(e.profiles) ? e.profiles[0] : e.profiles;
+        return {
+          id: e.user_id,
+          name: profile?.full_name ?? "Unnamed",
+          user_id: e.user_id,
+          emp_id: e.user_id,
+        };
+      }) ?? [];
 
     return NextResponse.json({ employees });
-
   } catch (err) {
     console.error("Error fetching employees:", err);
     return NextResponse.json({ employees: [] });

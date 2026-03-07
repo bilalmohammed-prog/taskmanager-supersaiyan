@@ -3,13 +3,11 @@ import { createClient } from "@supabase/supabase-js";
 
 type TaskRow = {
   id: string;
-  task: string | null;
+  title: string;
   description: string | null;
-  start_time: string | null;
-  end_time: string | null;
   status: string | null;
-  proof: string | null;
-  employee_id: string | null;
+  due_date: string | null;
+  deleted_at: string | null;
 };
 
 export async function GET(req: Request): Promise<NextResponse> {
@@ -58,10 +56,11 @@ export async function GET(req: Request): Promise<NextResponse> {
 
     /* ================= PARAMS ================= */
     const { searchParams } = new URL(req.url);
-    const employee_id = searchParams.get("employee_id");
+    const userId =
+      searchParams.get("user_id") ?? searchParams.get("employee_id");
 
 
-    if (!employee_id) {
+    if (!userId) {
       return NextResponse.json({ tasks: [] });
     }
 
@@ -69,11 +68,23 @@ export async function GET(req: Request): Promise<NextResponse> {
 
     /* ================= QUERY ================= */
     const { data, error } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("employee_id", employee_id)
-
-      .order("end_time", { ascending: true });
+      .from("assignments")
+      .select(
+        `
+          user_id,
+          tasks!inner (
+            id,
+            title,
+            description,
+            status,
+            due_date,
+            deleted_at
+          )
+        `
+      )
+      .eq("user_id", userId)
+      .is("tasks.deleted_at", null)
+      .order("due_date", { ascending: true, foreignTable: "tasks" });
 
     if (error) {
       console.error("DB ERROR:", error);
@@ -85,17 +96,36 @@ export async function GET(req: Request): Promise<NextResponse> {
 
     /* ================= MAP ================= */
     const formattedTasks =
-      (data as TaskRow[] | null)?.map((t) => ({
-        id: t.id,
-        employee_id: t.employee_id,
+      (data as
+        | Array<{ user_id: string; tasks: TaskRow | TaskRow[] | null }>
+        | null
+      )?.flatMap((row) => {
+        const rawTask = row.tasks;
+        const task = Array.isArray(rawTask) ? rawTask[0] : rawTask;
+        if (!task) return [];
 
-        task: t.task ?? "",
-        description: t.description ?? "",
-        startTime: t.start_time,
-        endTime: t.end_time,
-        status: t.status ?? "pending",
-        proof: t.proof ?? "",
-      })) ?? [];
+        const legacyStatus =
+          task.status === "todo"
+            ? "pending"
+            : task.status === "in_progress"
+              ? "in-progress"
+              : task.status === "done"
+                ? "completed"
+                : task.status ?? "pending";
+
+        return [
+          {
+            id: task.id,
+            employee_id: row.user_id,
+            task: task.title ?? "",
+            description: task.description ?? "",
+            startTime: null,
+            endTime: task.due_date,
+            status: legacyStatus,
+            proof: "",
+          },
+        ];
+      }) ?? [];
 
 
     return NextResponse.json({ tasks: formattedTasks });

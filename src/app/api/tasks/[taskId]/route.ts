@@ -3,24 +3,47 @@ import { createClient, User } from "@supabase/supabase-js";
 
 /* ---------- TYPES ---------- */
 interface UpdateTaskRequest {
-  task?: string;
+  title?: string;
   description?: string;
-  startTime?: string;
-  endTime?: string;
-  status?: "pending" | "in-progress" | "completed";
+  dueDate?: string;
+  status?: "todo" | "in_progress" | "blocked" | "done" | "pending" | "in-progress" | "completed";
 }
 
 interface TaskTableUpdate {
-  task?: string;
+  title?: string;
   description?: string;
-  start_time?: string;
-  end_time?: string;
-  status?: "pending" | "in-progress" | "completed";
+  due_date?: string;
+  status?: "todo" | "in_progress" | "blocked" | "done";
 }
 
 interface AuthResult {
   user: User;
   token: string;
+}
+
+function normalizeStatusInput(
+  status?: UpdateTaskRequest["status"]
+): "todo" | "in_progress" | "blocked" | "done" | undefined {
+  if (!status) return undefined;
+  if (status === "pending") return "todo";
+  if (status === "in-progress") return "in_progress";
+  if (status === "completed") return "done";
+  if (
+    status === "todo" ||
+    status === "in_progress" ||
+    status === "blocked" ||
+    status === "done"
+  ) {
+    return status;
+  }
+  return undefined;
+}
+
+function toLegacyStatus(status: string | null): string {
+  if (status === "todo") return "pending";
+  if (status === "in_progress") return "in-progress";
+  if (status === "done") return "completed";
+  return status ?? "pending";
 }
 
 /* ---------- USER SCOPED CLIENT ---------- */
@@ -75,12 +98,12 @@ export async function PATCH(
 
     const updatePayload: TaskTableUpdate = {};
 
-    if (body.task) updatePayload.task = body.task;
+    if (body.title) updatePayload.title = body.title;
     if (body.description !== undefined)
       updatePayload.description = body.description;
-    if (body.startTime) updatePayload.start_time = body.startTime;
-    if (body.endTime) updatePayload.end_time = body.endTime;
-    if (body.status) updatePayload.status = body.status;
+    if (body.dueDate !== undefined) updatePayload.due_date = body.dueDate;
+    const normalizedStatus = normalizeStatusInput(body.status);
+    if (normalizedStatus) updatePayload.status = normalizedStatus;
 
     if (Object.keys(updatePayload).length === 0) {
       return NextResponse.json(
@@ -93,6 +116,7 @@ export async function PATCH(
       .from("tasks")
       .update(updatePayload)
       .eq("id", taskId)
+      .is("deleted_at", null)
       .select()
       .maybeSingle();
 
@@ -100,7 +124,29 @@ export async function PATCH(
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ task: data }, { status: 200 });
+    const { data: assignment } = await supabase
+      .from("assignments")
+      .select("user_id")
+      .eq("task_id", taskId)
+      .maybeSingle();
+
+    return NextResponse.json(
+      {
+        task: data
+          ? {
+              employee_id: assignment?.user_id ?? "",
+              id: data.id,
+              task: data.title,
+              description: data.description ?? "",
+              startTime: null,
+              endTime: data.due_date,
+              status: toLegacyStatus(data.status),
+              proof: "",
+            }
+          : null,
+      },
+      { status: 200 }
+    );
   } catch (err) {
     console.error("[PATCH_TASK_EXCEPTION]:", err);
     return NextResponse.json(
@@ -128,8 +174,9 @@ export async function DELETE(
 
     const { error } = await supabase
       .from("tasks")
-      .delete()
-      .eq("id", taskId);
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", taskId)
+      .is("deleted_at", null);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

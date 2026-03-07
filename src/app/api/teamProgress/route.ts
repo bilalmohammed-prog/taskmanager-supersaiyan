@@ -12,19 +12,26 @@ function getUserClient(token: string) {
     }
   );
 }
-type EmpRow = {
+
+type ProgressRow = {
   user_id: string;
-  name: string;
-  email: string | null;
-  manager_id: string;
+  allocated_hours: number | null;
+  tasks:
+    | {
+        id: string;
+        status: string | null;
+        deleted_at: string | null;
+      }
+    | {
+        id: string;
+        status: string | null;
+        deleted_at: string | null;
+      }[]
+    | null;
 };
 
-
-
 export async function GET(req: Request) {
-    
   try {
-    /* ---------- AUTH HEADER ---------- */
     const authHeader = req.headers.get("authorization");
     if (!authHeader) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -33,7 +40,6 @@ export async function GET(req: Request) {
     const token = authHeader.replace("Bearer ", "");
     const supabase = getUserClient(token);
 
-    /* ---------- GET LOGGED USER ---------- */
     const {
       data: { user },
       error: userErr,
@@ -43,74 +49,76 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    const managerId = user.id;
-console.log("Manager UID:", user.id);
-
-    /* ---------- JOIN TASKS WITH EMPID ---------- */
-   const { data, error } = await supabase
-  .from("tasks")
-  .select(`
-    user_id,
-    status,
-    empid:fk_tasks_emp!inner (
-      user_id,
-      name,
-      email,
-      manager_id
-    )
-  `)
-  .eq("empid.manager_id", managerId);
-
-
-      console.log("RAW DATA:", data);
+    const { data, error } = await supabase
+      .from("assignments")
+      .select(
+        `
+          user_id,
+          allocated_hours,
+          tasks!inner (
+            id,
+            status,
+            deleted_at
+          )
+        `
+      )
+      .is("tasks.deleted_at", null);
 
     if (error) throw error;
 
-    if (!data || data.length === 0) {
-      return NextResponse.json([]);
-    }
+    const userIds = Array.from(
+      new Set(((data as ProgressRow[] | null) ?? []).map((row) => row.user_id).filter(Boolean))
+    );
 
-    /* ---------- AGGREGATE ---------- */
-    type Stat = {
-  total: number;
-  completed: number;
-  name: string;
-  email: string;
-};
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", userIds);
 
-const statsMap: Record<string, Stat> = {};
+    if (profilesError) throw profilesError;
 
-data.forEach((row) => {
-  const empRaw = row.empid as unknown;
+    const profileMap = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
 
-  const emp =
-    Array.isArray(empRaw) ? empRaw[0] : empRaw;
+    const statsMap: Record<
+      string,
+      {
+        user_id: string;
+        full_name: string;
+        total_tasks: number;
+        completed_tasks: number;
+        total_hours: number;
+      }
+    > = {};
 
-  if (!emp || !emp.user_id) return;
+    (data as ProgressRow[] | null)?.forEach((row) => {
+      const taskRaw = row.tasks;
+      const task = Array.isArray(taskRaw) ? taskRaw[0] : taskRaw;
 
-  if (!statsMap[emp.user_id]) {
-    statsMap[emp.user_id] = {
-      total: 0,
-      completed: 0,
-      name: emp.name,
-      email: emp.email ?? "N/A",
-    };
-  }
+      if (!row.user_id || !task) return;
 
-  statsMap[emp.user_id].total += 1;
+      if (!statsMap[row.user_id]) {
+        statsMap[row.user_id] = {
+          user_id: row.user_id,
+          full_name: profileMap.get(row.user_id) ?? "Unnamed",
+          total_tasks: 0,
+          completed_tasks: 0,
+          total_hours: 0,
+        };
+      }
 
-  if (row.status === "completed") {
-    statsMap[emp.user_id].completed += 1;
-  }
-});
+      statsMap[row.user_id].total_tasks += 1;
 
+      if (task.status === "done") {
+        statsMap[row.user_id].completed_tasks += 1;
+      }
 
-const result = Object.values(statsMap);
+      statsMap[row.user_id].total_hours +=
+        typeof row.allocated_hours === "number" && Number.isFinite(row.allocated_hours)
+          ? row.allocated_hours
+          : 0;
+    });
 
-console.log("FINAL RESULT:", result);
-
-return NextResponse.json(result);   // <---- THIS is what frontend needs
-
+    return NextResponse.json({ employees: Object.values(statsMap) });
   } catch (err) {
     console.error("[MANAGER_PROGRESS_ERROR]", err);
     return NextResponse.json(
