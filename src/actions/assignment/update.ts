@@ -5,12 +5,12 @@ import type { TablesUpdate } from "@/lib/types/database";
 
 export async function updateAssignment(
   assignmentId: string,
-  updates: TablesUpdate<"resource_assignments">
+  updates: TablesUpdate<"assignments">
 ) {
   const supabase = await getSupabaseServer();
 
   const { data, error } = await supabase
-    .from("resource_assignments")
+    .from("assignments")
     .update(updates)
     .eq("id", assignmentId)
     .select()

@@ -6,7 +6,7 @@ export async function listTasks(employeeId: string) {
   const supabase = await getSupabaseServer();
 
   const { data, error } = await supabase
-    .from("resource_assignments")
+    .from("assignments")
     .select(`
       allocated_hours,
       start_time,
@@ -19,7 +19,7 @@ export async function listTasks(employeeId: string) {
         deleted_at
       )
     `)
-    .eq("resource_id", employeeId)
+    .eq("user_id", employeeId)
     .is("tasks.deleted_at", null);
 
   if (error) throw new Error(error.message);

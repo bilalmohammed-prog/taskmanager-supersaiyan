@@ -31,11 +31,26 @@ export async function createCommentForTask(
   supabase: SupabaseClient<Database>,
   params: { organizationId: string; userId: string; taskId: string; content: string }
 ): Promise<Tables<"comments">> {
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("active_organization_id")
+    .eq("id", params.userId)
+    .maybeSingle();
+
+  if (profileError) throw new Error(profileError.message);
+  if (!profile?.active_organization_id) throw new Error("Active organization not found");
+
+  if (params.organizationId && params.organizationId !== profile.active_organization_id) {
+    throw new Error("Organization mismatch");
+  }
+
+  const organizationId = profile.active_organization_id;
+
   const { data: task, error: taskError } = await supabase
     .from("tasks")
     .select("id")
     .eq("id", params.taskId)
-    .eq("organization_id", params.organizationId)
+    .eq("organization_id", organizationId)
     .is("deleted_at", null)
     .maybeSingle();
 
@@ -45,6 +60,7 @@ export async function createCommentForTask(
   const insert: TablesInsert<"comments"> = {
     task_id: params.taskId,
     content: params.content,
+    organization_id: organizationId,
     user_id: params.userId,
   };
 
@@ -57,4 +73,3 @@ export async function createCommentForTask(
   if (error || !data) throw new Error(error?.message ?? "Failed to create comment");
   return data;
 }
-

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/types/database";
 
 function getUserClient(token: string) {
-  return createClient(
+  return createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -30,6 +31,30 @@ type ProgressRow = {
     | null;
 };
 
+async function resolveOrganizationId(
+  supabase: SupabaseClient<Database>,
+  userId: string
+): Promise<string | null> {
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("active_organization_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!profileError && profile?.active_organization_id) {
+    return profile.active_organization_id;
+  }
+
+  const { data: member, error: memberError } = await supabase
+    .from("org_members")
+    .select("organization_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (memberError || !member?.organization_id) return null;
+  return member.organization_id;
+}
+
 export async function GET(req: Request) {
   try {
     const authHeader = req.headers.get("authorization");
@@ -49,6 +74,11 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
+    const organizationId = await resolveOrganizationId(supabase, user.id);
+    if (!organizationId) {
+      return NextResponse.json({ employees: [] });
+    }
+
     const { data, error } = await supabase
       .from("assignments")
       .select(
@@ -62,6 +92,8 @@ export async function GET(req: Request) {
           )
         `
       )
+      .eq("organization_id", organizationId)
+      .eq("tasks.organization_id", organizationId)
       .is("tasks.deleted_at", null);
 
     if (error) throw error;

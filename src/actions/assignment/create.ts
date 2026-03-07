@@ -4,20 +4,29 @@ import { getSupabaseServer } from "@/lib/supabase/server";
 import type { TablesInsert } from "@/lib/types/database";
 
 export async function createAssignment(
-  resourceId: string,
+  userId: string,
   taskId: string,
   allocatedHours?: number
 ) {
   const supabase = await getSupabaseServer();
 
-  const assignment: TablesInsert<"resource_assignments"> = {
-    resource_id: resourceId,
+  const { data: task, error: taskError } = await supabase
+    .from("tasks")
+    .select("organization_id")
+    .eq("id", taskId)
+    .single();
+
+  if (taskError || !task) throw new Error(taskError?.message ?? "Task not found");
+
+  const assignment: TablesInsert<"assignments"> = {
+    user_id: userId,
     task_id: taskId,
+    organization_id: task.organization_id,
     allocated_hours: allocatedHours ?? null,
   };
 
   const { data, error } = await supabase
-    .from("resource_assignments")
+    .from("assignments")
     .insert(assignment)
     .select()
     .single();

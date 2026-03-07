@@ -10,7 +10,6 @@ import { assignTaskToResource } from "@/actions/task/assign";
 import { createTask } from "@/actions/task/create";
 import { deleteTask as deleteTaskAction } from "@/actions/task/delete";
 
-import { listTasks } from "@/actions/task/list";
 import { deleteTask as deleteTaskApi } from "@/lib/api";
 import { getEmployeeOverview } from "@/lib/api";
 import EmployeeOverviewModal from "@/components/EmployeeOverviewModal";
@@ -23,8 +22,6 @@ type TaskRow = {
   status: TaskStatus | null;
   due_date?: string | null;
   description?: string | null;
-  start_time?: string | null;
-  end_time?: string | null;
 };
 
 
@@ -167,7 +164,6 @@ await assignTaskToResource(created.id, employeeId);
 
 
 async function handleDelete(id: string) {
-  const data = await listTasks(employeeId);
   if (!orgId) {
     alert("No organization selected");
     return;
@@ -309,10 +305,9 @@ async function commitDueDate(id: string, value: string) {
       setEmployeeEmail(user?.email || "");
 
       const { data, error } = await supabase
-        .from("resource_assignments")
+        .from("assignments")
         .select(`
-          start_time,
-          end_time,
+          task_id,
           tasks!inner (
   id,
   title,
@@ -323,7 +318,7 @@ async function commitDueDate(id: string, value: string) {
 )
 
         `)
-        .eq("resource_id", employeeId)
+        .eq("user_id", employeeId)
 .is("tasks.deleted_at", null);
 
 
@@ -335,10 +330,7 @@ async function commitDueDate(id: string, value: string) {
 
       const taskRows =
         data?.map(row => ({
-          ...row.tasks,
-
-          start_time: row.start_time,
-          end_time: row.end_time
+          ...row.tasks
         })).filter(Boolean) ?? [];
 
       setTasks(taskRows);

@@ -12,9 +12,19 @@ export async function createComment(taskId: string, content: string) {
 
   if (!user) throw new Error("Not authenticated");
 
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("active_organization_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) throw new Error(profileError.message);
+  if (!profile?.active_organization_id) throw new Error("Active organization not found");
+
   const comment: TablesInsert<"comments"> = {
     task_id: taskId,
     content,
+    organization_id: profile.active_organization_id,
     user_id: user.id,
   };
 

@@ -30,6 +30,7 @@ export default function EmployeesPage() {
   const { orgId } = useParams<{ orgId: string }>();
 
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
@@ -38,6 +39,11 @@ export default function EmployeesPage() {
 
   useEffect(() => {
     async function loadEmployees() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  setCurrentUserId(user?.id ?? null);
+
   setLoading(true);
 
   const { data, error } = await supabase
@@ -126,11 +132,18 @@ const managerMap = new Map(
   }
 
   async function handleDropInvite(employee: Employee) {
-    if (!employee.empId) return;
+    if (!employee.hasManager) return;
+    if (!currentUserId) {
+      addToast("Session expired. Please login again.", "error");
+      return;
+    }
 
     try {
       setActionLoading(employee.id);
-      await dropInvite({ emp_id: employee.empId });
+      await dropInvite({
+        employee_id: employee.id,
+        manager_id: currentUserId,
+      });
 
       // Update local state
       setEmployees(prev =>

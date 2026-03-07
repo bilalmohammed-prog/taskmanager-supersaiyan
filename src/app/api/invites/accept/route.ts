@@ -1,19 +1,18 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import type { Database } from "@/lib/types/database";
 
 type AcceptInviteRequest = {
   manager_id?: string;
   managerId?: string;
-  organization_id?: string;
-  orgId?: string;
 };
 
 export async function POST(req: Request) {
   try {
     const cookieStore = await cookies();
 
-    const supabase = createServerClient(
+    const supabase = createServerClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -56,12 +55,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const organizationId =
-      body.organization_id ?? body.orgId ?? employeeProfile.active_organization_id;
+    const organizationId = employeeProfile.active_organization_id;
 
     if (!organizationId) {
       return NextResponse.json(
-        { error: "organization_id is required" },
+        { error: "Active organization not found" },
         { status: 400 }
       );
     }

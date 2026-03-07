@@ -1,13 +1,13 @@
 "use server";
 
+import { softDeleteProjectInDb } from "@/lib/api";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { requireTenantContext } from "@/services/tenant";
-import { softDeleteProject } from "@/services/project/projectService";
 
 export async function deleteProject(projectId: string) {
   const supabase = await getSupabaseServer();
   const ctx = await requireTenantContext(supabase);
-  await softDeleteProject(supabase, {
+  await softDeleteProjectInDb(supabase, {
     organizationId: ctx.organizationId,
     projectId,
   });

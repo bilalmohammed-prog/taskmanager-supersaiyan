@@ -22,7 +22,7 @@ type TaskWithAssignee = Tables<"tasks"> & {
 type Task = Tables<"tasks">;
 type TaskStatus = Enums<"task_status">;
 type HumanResource = {
-  resource_id: string;
+  user_id: string;
   name: string;
 };
 
@@ -63,7 +63,7 @@ const [assigningTaskId, setAssigningTaskId] =
 
 setEmployees(
   humans.map(h => ({
-    resource_id: h.resource_id,
+    user_id: h.user_id,
     name: h.name
   }))
 );
@@ -139,7 +139,7 @@ if (selectedEmployee) {
 
   newTask.assignee_name =
     employees.find(
-      e => e.resource_id === selectedEmployee
+      e => e.user_id === selectedEmployee
     )?.name ?? null;
 }
 setTasks(prev => [newTask, ...prev]);;
@@ -195,8 +195,8 @@ setTasks(prev => [newTask, ...prev]);;
 
     {projectMembers.map(emp => (
       <option
-        key={emp.resource_id}
-        value={emp.resource_id}
+        key={emp.user_id}
+        value={emp.user_id}
       >
         {emp.name}
       </option>
@@ -217,7 +217,7 @@ setTasks(prev => [newTask, ...prev]);;
       setProjectMembers(prev =>
         prev.filter(
           m =>
-            m.resource_id !== selectedProjectMember
+            m.user_id !== selectedProjectMember
         )
       );
 
@@ -265,7 +265,7 @@ setTasks(prev => [newTask, ...prev]);;
 );
 
   const emp = projectMembers.find(
-    m => m.resource_id === resourceId
+    m => m.user_id === resourceId
   );
 
   setTasks(prev =>
@@ -285,7 +285,7 @@ setTasks(prev => [newTask, ...prev]);;
     <option value="">Unassigned</option>
 
     {projectMembers.map(emp => (
-      <option key={emp.resource_id} value={emp.resource_id}>
+      <option key={emp.user_id} value={emp.user_id}>
         {emp.name}
       </option>
     ))}
@@ -430,7 +430,7 @@ onKeyDown={e => {
   <option value="">Unassigned</option>
 
   {projectMembers.map(emp => (
-  <option key={emp.resource_id} value={emp.resource_id}>
+  <option key={emp.user_id} value={emp.user_id}>
     {emp.name}
   </option>
 ))}
@@ -458,7 +458,7 @@ onKeyDown={e => {
         <option value="">Select employee</option>
 
         {employees.map(emp => (
-          <option key={emp.resource_id} value={emp.resource_id}>
+          <option key={emp.user_id} value={emp.user_id}>
             {emp.name}
           </option>
         ))}
@@ -490,7 +490,7 @@ onKeyDown={e => {
           assignee_id: selectedEmployee,   // ⭐ ADD THIS
           assignee_name:
             employees.find(
-              e => e.resource_id === selectedEmployee
+              e => e.user_id === selectedEmployee
             )?.name ?? null
         }
       : t
@@ -529,13 +529,13 @@ onKeyDown={e => {
   .filter(
     e =>
       !projectMembers.some(
-        m => m.resource_id === e.resource_id
+        m => m.user_id === e.user_id
       )
   )
   .map(emp => (
     <option
-      key={emp.resource_id}
-      value={emp.resource_id}
+      key={emp.user_id}
+      value={emp.user_id}
     >
       {emp.name}
     </option>
@@ -560,7 +560,7 @@ onKeyDown={e => {
             );
 
             const emp = employees.find(
-              e => e.resource_id === selectedEmployee
+              e => e.user_id === selectedEmployee
             );
 
             if (emp) {

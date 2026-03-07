@@ -16,7 +16,7 @@ export default async function AnalyticsPage() {
         <StatCard label="Total Tasks" value={stats.totalTasks} />
         <StatCard label="Completed Tasks" value={stats.completedTasks} />
         <StatCard label="Employees" value={stats.totalEmployees} />
-        <StatCard label="Resources" value={stats.totalResources} />
+        <StatCard label="Assignments" value={stats.totalResources} />
         <StatCard label="Completion Rate" value={`${completionRate}%`} />
       </div>
     </div>

@@ -6,7 +6,7 @@ export async function deleteAssignment(assignmentId: string) {
   const supabase = await getSupabaseServer();
 
   const { error } = await supabase
-    .from("resource_assignments")
+    .from("assignments")
     .delete()
     .eq("id", assignmentId);
 

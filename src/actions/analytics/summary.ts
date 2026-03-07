@@ -1,13 +1,11 @@
 "use server";
 
 import { getSupabaseServer } from "@/lib/supabase/server";
+import { getAnalyticsSummaryFromDb } from "@/lib/api";
 import { requireTenantContext } from "@/services/tenant";
-import { getOrganizationAnalyticsSummary } from "@/services/task/analyticsService";
 
 export async function getAnalyticsSummary() {
   const supabase = await getSupabaseServer();
   const ctx = await requireTenantContext(supabase);
-  return await getOrganizationAnalyticsSummary(supabase, {
-    organizationId: ctx.organizationId,
-  });
+  return await getAnalyticsSummaryFromDb(supabase, ctx.organizationId);
 }

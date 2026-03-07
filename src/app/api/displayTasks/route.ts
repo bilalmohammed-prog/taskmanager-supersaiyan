@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/types/database";
 
 type TaskRow = {
   id: string;
@@ -9,6 +10,30 @@ type TaskRow = {
   due_date: string | null;
   deleted_at: string | null;
 };
+
+async function resolveOrganizationId(
+  supabase: SupabaseClient<Database>,
+  userId: string
+): Promise<string | null> {
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("active_organization_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!profileError && profile?.active_organization_id) {
+    return profile.active_organization_id;
+  }
+
+  const { data: member, error: memberError } = await supabase
+    .from("org_members")
+    .select("organization_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (memberError || !member?.organization_id) return null;
+  return member.organization_id;
+}
 
 export async function GET(req: Request): Promise<NextResponse> {
   try {
@@ -25,7 +50,7 @@ export async function GET(req: Request): Promise<NextResponse> {
     const token = authHeader.split(" ")[1];
 
     /* ================= SUPABASE CLIENT ================= */
-    const supabase = createClient(
+    const supabase = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -54,6 +79,11 @@ export async function GET(req: Request): Promise<NextResponse> {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const organizationId = await resolveOrganizationId(supabase, user.id);
+    if (!organizationId) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+    }
+
     /* ================= PARAMS ================= */
     const { searchParams } = new URL(req.url);
     const userId =
@@ -61,6 +91,17 @@ export async function GET(req: Request): Promise<NextResponse> {
 
 
     if (!userId) {
+      return NextResponse.json({ tasks: [] });
+    }
+
+    const { data: member } = await supabase
+      .from("org_members")
+      .select("user_id")
+      .eq("organization_id", organizationId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!member) {
       return NextResponse.json({ tasks: [] });
     }
 
@@ -83,6 +124,8 @@ export async function GET(req: Request): Promise<NextResponse> {
         `
       )
       .eq("user_id", userId)
+      .eq("organization_id", organizationId)
+      .eq("tasks.organization_id", organizationId)
       .is("tasks.deleted_at", null)
       .order("due_date", { ascending: true, foreignTable: "tasks" });
 

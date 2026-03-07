@@ -1,16 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase/client";
-import { getTeamProgress, getEmployeeOverview } from "@/lib/api";
+import { getTeamProgress } from "@/lib/api";
 import "./Cobox.css";
 
 type EmployeeProgress = {
-  name: string;
-  email: string;
-  total: number;
-  completed: number;
-  empID?: string | null;
+  user_id: string;
+  full_name: string;
+  total_tasks: number;
+  completed_tasks: number;
+  total_hours: number;
 };
 
 export default function ProgressView() {
@@ -22,30 +21,8 @@ export default function ProgressView() {
       try {
         setLoading(true);
 
-        const report = await getTeamProgress();
-
-        console.log("REPORT:", report);
-
-        // Get employee overview for each employee
-        const enhancedReport = await Promise.all(
-          report.map(async (emp) => {
-            try {
-              const overview = await getEmployeeOverview(emp.email);
-              return {
-                ...emp,
-                empID: overview.empID,
-              };
-            } catch (err) {
-              console.error(`Failed to get overview for ${emp.email}`, err);
-              return {
-                ...emp,
-                empID: null,
-              };
-            }
-          })
-        );
-
-        setData(enhancedReport);
+        const { employees } = await getTeamProgress();
+        setData(employees);
       } catch (err) {
         console.error("Error loading progress", err);
         setData([]);
@@ -59,8 +36,8 @@ export default function ProgressView() {
 
   const overall = data.reduce(
     (acc, curr) => ({
-      total: acc.total + curr.total,
-      completed: acc.completed + curr.completed,
+      total: acc.total + curr.total_tasks,
+      completed: acc.completed + curr.completed_tasks,
     }),
     { total: 0, completed: 0 }
   );
@@ -111,20 +88,17 @@ export default function ProgressView() {
 
           {/* EMPLOYEE CARDS */}
           {data.map((emp, index) => {
-            const pct = getPercentage(emp.completed, emp.total);
+            const pct = getPercentage(emp.completed_tasks, emp.total_tasks);
 
             return (
               <div className="progress-card" key={index}>
-                <h3 className="emp-name">{emp.name}</h3>
-                <p className="emp-id">{emp.email}</p>
-                {emp.empID && (
-                  <p className="emp-id-small">ID: {emp.empID}</p>
-                )}
+                <h3 className="emp-name">{emp.full_name}</h3>
+                <p className="emp-id">{emp.user_id}</p>
 
                 <div className="progress-stat">
                   <span className="stat-label">Completion</span>
                   <span className="stat-number">
-                    {emp.completed} / {emp.total}
+                    {emp.completed_tasks} / {emp.total_tasks}
                   </span>
                 </div>
 

@@ -1,8 +1,8 @@
 "use server";
 
+import { updateProjectInDb } from "@/lib/api";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { requireTenantContext } from "@/services/tenant";
-import { updateProject } from "@/services/project/projectService";
 
 export async function updateProjectAction(
   projectId: string,
@@ -15,7 +15,7 @@ export async function updateProjectAction(
 ) {
   const supabase = await getSupabaseServer();
   const ctx = await requireTenantContext(supabase);
-  return await updateProject(supabase, {
+  return await updateProjectInDb(supabase, {
     organizationId: ctx.organizationId,
     projectId,
     ...params,

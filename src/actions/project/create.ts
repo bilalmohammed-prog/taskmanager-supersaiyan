@@ -1,8 +1,8 @@
 "use server";
 
+import { createProjectInDb } from "@/lib/api";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { requireTenantContext } from "@/services/tenant";
-import { createProject } from "@/services/project/projectService";
 
 export async function createProjectAction(params: {
   name: string;
@@ -12,7 +12,7 @@ export async function createProjectAction(params: {
 }) {
   const supabase = await getSupabaseServer();
   const ctx = await requireTenantContext(supabase);
-  return await createProject(supabase, {
+  return await createProjectInDb(supabase, {
     organizationId: ctx.organizationId,
     ...params,
   });

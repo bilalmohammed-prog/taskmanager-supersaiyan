@@ -2,33 +2,35 @@
 
 import { getSupabaseServer } from "@/lib/supabase/server";
 
-export async function removeProjectMember(
-  projectId: string,
-  resourceId: string
-) {
+export async function removeProjectMember(projectId: string, userId: string) {
   const supabase = await getSupabaseServer();
 
-  // -------------------------------------------------
-  // 1️⃣ remove from project
-  // -------------------------------------------------
   const { error } = await supabase
     .from("project_members")
     .update({
-      left_at: new Date().toISOString()
+      left_at: new Date().toISOString(),
     })
     .eq("project_id", projectId)
-    .eq("resource_id", resourceId);
+    .eq("user_id", userId);
 
   if (error) throw new Error(error.message);
 
-  // -------------------------------------------------
-  // 2️⃣ remove ALL task assignments for this resource
-  // -------------------------------------------------
-  const { error: assignmentError } = await supabase
-    .from("resource_assignments")
-    .delete()
-    .eq("resource_id", resourceId);
+  const { data: tasks, error: taskError } = await supabase
+    .from("tasks")
+    .select("id")
+    .eq("project_id", projectId)
+    .is("deleted_at", null);
 
-  if (assignmentError)
-    throw new Error(assignmentError.message);
+  if (taskError) throw new Error(taskError.message);
+
+  const taskIds = (tasks ?? []).map((t) => t.id);
+  if (taskIds.length === 0) return;
+
+  const { error: assignmentError } = await supabase
+    .from("assignments")
+    .delete()
+    .eq("user_id", userId)
+    .in("task_id", taskIds);
+
+  if (assignmentError) throw new Error(assignmentError.message);
 }

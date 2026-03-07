@@ -11,5 +11,5 @@ export async function listOrgMembers(orgId: string) {
   const members = await listOrganizationMembers(supabase, {
     organizationId: ctx.organizationId,
   });
-  return members.map((m) => ({ resource_id: m.userId, name: m.fullName }));
+  return members.map((m) => ({ user_id: m.userId, name: m.fullName }));
 }

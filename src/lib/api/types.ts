@@ -3,13 +3,11 @@ import { z } from 'zod';
 // Task types
 export const TaskSchema = z.object({
   id: z.string(),
-  employee_id: z.string(),
-  task: z.string(),
-  description: z.string(),
-  startTime: z.string().nullable(),
-  endTime: z.string().nullable(),
+  user_id: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
   status: z.string(),
-  proof: z.string(),
+  due_date: z.string().nullable(),
 });
 
 export type Task = z.infer<typeof TaskSchema>;
@@ -45,14 +43,15 @@ export const EmployeeSwitchResponseSchema = z.object({
 export type EmployeeSwitchResponse = z.infer<typeof EmployeeSwitchResponseSchema>;
 
 // Invites
-export const InviteActionRequestSchema = z.object({
-  messageId: z.string(),
+export const AcceptInviteRequestSchema = z.object({
+  manager_id: z.string(),
 });
 
-export type InviteActionRequest = z.infer<typeof InviteActionRequestSchema>;
+export type AcceptInviteRequest = z.infer<typeof AcceptInviteRequestSchema>;
 
 export const DropInviteRequestSchema = z.object({
-  emp_id: z.string(),
+  employee_id: z.string(),
+  manager_id: z.string(),
 });
 
 export type DropInviteRequest = z.infer<typeof DropInviteRequestSchema>;
@@ -107,14 +106,12 @@ export type SendMessageResponse = z.infer<typeof SendMessageResponseSchema>;
 
 // Tasks
 export const CreateTaskRequestSchema = z.object({
-  employee_id: z.string(),
-  id: z.string(),
-  task: z.string(),
+  user_id: z.string(),
+  organization_id: z.string(),
+  title: z.string(),
   description: z.string().optional(),
-  startTime: z.string(),
-  endTime: z.string(),
+  dueDate: z.string().optional(),
   status: z.string().optional(),
-  proof: z.string().optional(),
 });
 
 export type CreateTaskRequest = z.infer<typeof CreateTaskRequestSchema>;
@@ -127,11 +124,12 @@ export const CreateTaskResponseSchema = z.object({
 export type CreateTaskResponse = z.infer<typeof CreateTaskResponseSchema>;
 
 export const UpdateTaskRequestSchema = z.object({
-  task: z.string().optional(),
+  title: z.string().optional(),
   description: z.string().optional(),
-  startTime: z.string().optional(),
-  endTime: z.string().optional(),
-  status: z.enum(['pending', 'in-progress', 'completed']).optional(),
+  dueDate: z.string().optional(),
+  status: z
+    .enum(['todo', 'in_progress', 'blocked', 'done', 'pending', 'in-progress', 'completed'])
+    .optional(),
 });
 
 export type UpdateTaskRequest = z.infer<typeof UpdateTaskRequestSchema>;
@@ -150,15 +148,18 @@ export type DeleteTaskResponse = z.infer<typeof DeleteTaskResponseSchema>;
 
 // Team progress
 export const TeamProgressItemSchema = z.object({
-  total: z.number(),
-  completed: z.number(),
-  name: z.string(),
-  email: z.string(),
+  user_id: z.string(),
+  full_name: z.string(),
+  total_tasks: z.number(),
+  completed_tasks: z.number(),
+  total_hours: z.number(),
 });
 
 export type TeamProgressItem = z.infer<typeof TeamProgressItemSchema>;
 
-export const TeamProgressResponseSchema = z.array(TeamProgressItemSchema);
+export const TeamProgressResponseSchema = z.object({
+  employees: z.array(TeamProgressItemSchema),
+});
 
 export type TeamProgressResponse = z.infer<typeof TeamProgressResponseSchema>;
 

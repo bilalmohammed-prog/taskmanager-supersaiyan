@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient, User } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
+import type { Database } from "@/lib/types/database";
 
 /* ---------- TYPES ---------- */
 interface UpdateTaskRequest {
@@ -46,9 +47,33 @@ function toLegacyStatus(status: string | null): string {
   return status ?? "pending";
 }
 
+async function resolveOrganizationId(
+  supabase: SupabaseClient<Database>,
+  userId: string
+): Promise<string | null> {
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("active_organization_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!profileError && profile?.active_organization_id) {
+    return profile.active_organization_id;
+  }
+
+  const { data: member, error: memberError } = await supabase
+    .from("org_members")
+    .select("organization_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (memberError || !member?.organization_id) return null;
+  return member.organization_id;
+}
+
 /* ---------- USER SCOPED CLIENT ---------- */
 function getUserClient(token: string) {
-  return createClient(
+  return createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -90,8 +115,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { token } = auth;
+    const { token, user } = auth;
     const supabase = getUserClient(token);
+    const organizationId = await resolveOrganizationId(supabase, user.id);
+    if (!organizationId) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+    }
 
     const { taskId } = await params;
     const body: UpdateTaskRequest = await req.json();
@@ -116,6 +145,7 @@ export async function PATCH(
       .from("tasks")
       .update(updatePayload)
       .eq("id", taskId)
+      .eq("organization_id", organizationId)
       .is("deleted_at", null)
       .select()
       .maybeSingle();
@@ -128,6 +158,7 @@ export async function PATCH(
       .from("assignments")
       .select("user_id")
       .eq("task_id", taskId)
+      .eq("organization_id", organizationId)
       .maybeSingle();
 
     return NextResponse.json(
@@ -167,8 +198,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { token } = auth;
+    const { token, user } = auth;
     const supabase = getUserClient(token);
+    const organizationId = await resolveOrganizationId(supabase, user.id);
+    if (!organizationId) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+    }
 
     const { taskId } = await params;
 
@@ -176,6 +211,7 @@ export async function DELETE(
       .from("tasks")
       .update({ deleted_at: new Date().toISOString() })
       .eq("id", taskId)
+      .eq("organization_id", organizationId)
       .is("deleted_at", null);
 
     if (error) {

@@ -4,14 +4,22 @@ import { getSupabaseServer } from "@/lib/supabase/server";
 
 export async function assignTaskToResource(
   taskId: string,
-  resourceId: string | null
+  userId: string | null
 ) {
   const supabase = await getSupabaseServer();
 
+  const { data: task, error: taskError } = await supabase
+    .from("tasks")
+    .select("organization_id")
+    .eq("id", taskId)
+    .single();
+
+  if (taskError || !task) throw new Error(taskError?.message ?? "Task not found");
+
   // UNASSIGN
-  if (!resourceId) {
+  if (!userId) {
     const { error } = await supabase
-      .from("resource_assignments")
+      .from("assignments")
       .delete()
       .eq("task_id", taskId);
 
@@ -20,17 +28,13 @@ export async function assignTaskToResource(
   }
 
   // ASSIGN / REASSIGN (single query)
-  const { error } = await supabase
-    .from("resource_assignments")
-    .upsert(
-      {
-        task_id: taskId,
-        resource_id: resourceId,
-      },
-      {
-        onConflict: "task_id",
-      }
-    );
+  await supabase.from("assignments").delete().eq("task_id", taskId);
+
+  const { error } = await supabase.from("assignments").insert({
+    task_id: taskId,
+    user_id: userId,
+    organization_id: task.organization_id,
+  });
 
   if (error) throw new Error(error.message);
 }

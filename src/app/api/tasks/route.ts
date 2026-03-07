@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/types/database";
 
 function normalizeStatusInput(
   status?: string
@@ -26,6 +27,30 @@ function toLegacyStatus(status: string | null): string {
   return status ?? "pending";
 }
 
+async function resolveOrganizationId(
+  supabase: SupabaseClient<Database>,
+  userId: string
+): Promise<string | null> {
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("active_organization_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!profileError && profile?.active_organization_id) {
+    return profile.active_organization_id;
+  }
+
+  const { data: member, error: memberError } = await supabase
+    .from("org_members")
+    .select("organization_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (memberError || !member?.organization_id) return null;
+  return member.organization_id;
+}
+
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get("authorization");
@@ -36,7 +61,7 @@ export async function POST(req: Request) {
     const token = authHeader.replace("Bearer ", "");
 
     // USER-SCOPED CLIENT
-    const supabase = createClient(
+    const supabase = createClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -62,7 +87,6 @@ export async function POST(req: Request) {
       id,
       user_id,
       project_id,
-      organization_id,
       title,
       description,
       due_date,
@@ -70,8 +94,48 @@ export async function POST(req: Request) {
       status,
     } = body;
 
-    if (!user_id || !organization_id || !title) {
+    if (!user_id || !title) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const organizationId = await resolveOrganizationId(supabase, user.id);
+    if (!organizationId) {
+      return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+    }
+
+    const { data: assigneeMember } = await supabase
+      .from("org_members")
+      .select("user_id")
+      .eq("organization_id", organizationId)
+      .eq("user_id", user_id)
+      .maybeSingle();
+
+    if (!assigneeMember) {
+      return NextResponse.json({ error: "Assignee is not in your organization" }, { status: 400 });
+    }
+
+    let validatedProjectId: string | null = null;
+    if (project_id) {
+      const { data: project, error: projectError } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("id", project_id)
+        .eq("organization_id", organizationId)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (projectError) {
+        return NextResponse.json({ error: projectError.message }, { status: 400 });
+      }
+
+      if (!project) {
+        return NextResponse.json(
+          { error: "Project does not belong to your organization" },
+          { status: 403 }
+        );
+      }
+
+      validatedProjectId = project.id;
     }
 
     const { data, error } = await supabase
@@ -79,8 +143,8 @@ export async function POST(req: Request) {
       .insert([
         {
           id: id ?? undefined,
-          project_id: project_id ?? null,
-          organization_id,
+          project_id: validatedProjectId,
+          organization_id: organizationId,
           title,
           description: description ?? "",
           due_date: dueDate ?? due_date ?? null,
@@ -102,7 +166,7 @@ export async function POST(req: Request) {
       .insert({
         task_id: data.id,
         user_id,
-        organization_id,
+        organization_id: organizationId,
       });
 
     if (assignmentError) {
