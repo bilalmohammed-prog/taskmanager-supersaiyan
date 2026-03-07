@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { getEmployeeSwitch } from "@/lib/api";
 
 type Employee = {
   id: string;
@@ -27,24 +28,9 @@ export default function SwitchEmpPopup({
     try {
       setLoading(true);
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { employees } = await getEmployeeSwitch();
 
-      if (!session) {
-        setEmployees([]);
-        return;
-      }
-
-      const res = await fetch("/api/switchEmp", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      const data = await res.json(); // 🔴 YOU WERE MISSING THIS
-
-      setEmployees(Array.isArray(data.employees) ? data.employees : []);
+      setEmployees(employees);
     } catch (err) {
       console.error("Failed to load employees", err);
       setEmployees([]);

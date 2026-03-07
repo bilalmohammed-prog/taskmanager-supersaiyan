@@ -1,503 +1,553 @@
-// Supabase recommended typing pattern.
-// Keep this file aligned with your Postgres schema.
-
-// Supabase/TypeScript convention: UUID columns are represented as `string`.
-export type UUID = string;
-
 export type Json =
   | string
   | number
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
-
-type RoleType = "owner" | "admin" | "manager" | "employee" | "viewer";
-type ProjectStatus = "active" | "paused" | "archived";
-type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
-type ResourceType = "human" | "equipment" | "room" | "vehicle" | "software";
-
-type AssignmentsTable = {
-  Row: {
-    id: UUID;
-    resource_id: UUID;
-    task_id: UUID;
-    allocated_hours: number | null;
-    start_time: string | null;
-    end_time: string | null;
-    created_at: string | null;
-  };
-  Insert: {
-    id?: UUID;
-    resource_id: UUID;
-    task_id: UUID;
-    allocated_hours?: number | null;
-    start_time?: string | null;
-    end_time?: string | null;
-    created_at?: string | null;
-  };
-  Update: {
-    id?: UUID;
-    resource_id?: UUID;
-    task_id?: UUID;
-    allocated_hours?: number | null;
-    start_time?: string | null;
-    end_time?: string | null;
-    created_at?: string | null;
-  };
-  Relationships: [
-    {
-      foreignKeyName: "assignments_task_id_fkey";
-      columns: ["task_id"];
-      isOneToOne: false;
-      referencedRelation: "tasks";
-      referencedColumns: ["id"];
-    },
-    {
-      foreignKeyName: "assignments_resource_id_fkey";
-      columns: ["resource_id"];
-      isOneToOne: false;
-      referencedRelation: "resources";
-      referencedColumns: ["id"];
-    },
-  ];
-};
+  | Json[]
 
 export type Database = {
-  // Used by Supabase client types.
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1";
-  };
+    PostgrestVersion: "14.1"
+  }
   public: {
     Tables: {
-      organizations: {
+      assignments: {
         Row: {
-          id: UUID;
-          name: string;
-          slug: string;
-          created_at: string | null;
-          deleted_at: string | null;
-        };
+          allocated_hours: number | null
+          created_at: string | null
+          end_time: string | null
+          id: string
+          organization_id: string
+          start_time: string | null
+          task_id: string
+          user_id: string
+        }
         Insert: {
-          id?: UUID;
-          name: string;
-          slug: string;
-          created_at?: string | null;
-          deleted_at?: string | null;
-        };
+          allocated_hours?: number | null
+          created_at?: string | null
+          end_time?: string | null
+          id?: string
+          organization_id: string
+          start_time?: string | null
+          task_id: string
+          user_id: string
+        }
         Update: {
-          id?: UUID;
-          name?: string;
-          slug?: string;
-          created_at?: string | null;
-          deleted_at?: string | null;
-        };
-        Relationships: [];
-      };
-
-      profiles: {
-        Row: {
-          id: UUID;
-          full_name: string | null;
-          avatar_url: string | null;
-          active_organization_id: UUID | null;
-          created_at: string | null;
-        };
-        Insert: {
-          id: UUID;
-          full_name?: string | null;
-          avatar_url?: string | null;
-          active_organization_id?: UUID | null;
-          created_at?: string | null;
-        };
-        Update: {
-          id?: UUID;
-          full_name?: string | null;
-          avatar_url?: string | null;
-          active_organization_id?: UUID | null;
-          created_at?: string | null;
-        };
+          allocated_hours?: number | null
+          created_at?: string | null
+          end_time?: string | null
+          id?: string
+          organization_id?: string
+          start_time?: string | null
+          task_id?: string
+          user_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "profiles_active_organization_id_fkey";
-            columns: ["active_organization_id"];
-            isOneToOne: false;
-            referencedRelation: "organizations";
-            referencedColumns: ["id"];
+            foreignKeyName: "resource_assignments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: true
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
           },
-        ];
-      };
-
-      resources: {
-        Row: {
-          id: UUID;
-          organization_id: UUID;
-          name: string;
-          type: ResourceType;
-          capacity: number | null;
-          metadata: Json | null;
-          created_at: string | null;
-          deleted_at: string | null;
-        };
-        Insert: {
-          id?: UUID;
-          organization_id: UUID;
-          name: string;
-          type: ResourceType;
-          capacity?: number | null;
-          metadata?: Json | null;
-          created_at?: string | null;
-          deleted_at?: string | null;
-        };
-        Update: {
-          id?: UUID;
-          organization_id?: UUID;
-          name?: string;
-          type?: ResourceType;
-          capacity?: number | null;
-          metadata?: Json | null;
-          created_at?: string | null;
-          deleted_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "resources_organization_id_fkey";
-            columns: ["organization_id"];
-            isOneToOne: false;
-            referencedRelation: "organizations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-
-      org_members: {
-        Row: {
-          id: UUID;
-          organization_id: UUID;
-          user_id: UUID;
-          role: RoleType;
-          created_at: string | null;
-        };
-        Insert: {
-          id?: UUID;
-          organization_id: UUID;
-          user_id: UUID;
-          role?: RoleType;
-          created_at?: string | null;
-        };
-        Update: {
-          id?: UUID;
-          organization_id?: UUID;
-          user_id?: UUID;
-          role?: RoleType;
-          created_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "org_members_organization_id_fkey";
-            columns: ["organization_id"];
-            isOneToOne: false;
-            referencedRelation: "organizations";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "org_members_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-
-      projects: {
-        Row: {
-          id: UUID;
-          organization_id: UUID;
-          name: string;
-          status: ProjectStatus | null;
-          start_date: string | null;
-          end_date: string | null;
-          created_at: string | null;
-          deleted_at: string | null;
-        };
-        Insert: {
-          id?: UUID;
-          organization_id: UUID;
-          name: string;
-          status?: ProjectStatus | null;
-          start_date?: string | null;
-          end_date?: string | null;
-          created_at?: string | null;
-          deleted_at?: string | null;
-        };
-        Update: {
-          id?: UUID;
-          organization_id?: UUID;
-          name?: string;
-          status?: ProjectStatus | null;
-          start_date?: string | null;
-          end_date?: string | null;
-          created_at?: string | null;
-          deleted_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "projects_organization_id_fkey";
-            columns: ["organization_id"];
-            isOneToOne: false;
-            referencedRelation: "organizations";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-
-      tasks: {
-        Row: {
-          id: UUID;
-          organization_id: UUID;
-          project_id: UUID | null;
-          title: string;
-          description: string | null;
-          status: TaskStatus | null;
-          due_date: string | null;
-          created_at: string | null;
-          deleted_at: string | null;
-        };
-        Insert: {
-          id?: UUID;
-          organization_id: UUID;
-          project_id?: UUID | null;
-          title: string;
-          description?: string | null;
-          status?: TaskStatus | null;
-          due_date?: string | null;
-          created_at?: string | null;
-          deleted_at?: string | null;
-        };
-        Update: {
-          id?: UUID;
-          organization_id?: UUID;
-          project_id?: UUID | null;
-          title?: string;
-          description?: string | null;
-          status?: TaskStatus | null;
-          due_date?: string | null;
-          created_at?: string | null;
-          deleted_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "tasks_organization_id_fkey";
-            columns: ["organization_id"];
-            isOneToOne: false;
-            referencedRelation: "organizations";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "tasks_project_id_fkey";
-            columns: ["project_id"];
-            isOneToOne: false;
-            referencedRelation: "projects";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-
-      // The schema in this repo currently uses `resource_assignments`.
-      // We model `assignments` as the canonical type and also expose `resource_assignments` as an alias table key.
-      assignments: AssignmentsTable;
-
-      // Backward-compatible alias for existing queries in the codebase.
-      resource_assignments: AssignmentsTable;
-
+        ]
+      }
       comments: {
         Row: {
-          id: UUID;
-          task_id: UUID;
-          content: string;
-          user_id: UUID | null;
-          created_at: string | null;
-        };
+          content: string
+          created_at: string | null
+          id: string
+          organization_id: string
+          project_id: string | null
+          task_id: string
+          user_id: string | null
+        }
         Insert: {
-          id?: UUID;
-          task_id: UUID;
-          content: string;
-          user_id?: UUID | null;
-          created_at?: string | null;
-        };
+          content: string
+          created_at?: string | null
+          id?: string
+          organization_id: string
+          project_id?: string | null
+          task_id: string
+          user_id?: string | null
+        }
         Update: {
-          id?: UUID;
-          task_id?: UUID;
-          content?: string;
-          user_id?: UUID | null;
-          created_at?: string | null;
-        };
+          content?: string
+          created_at?: string | null
+          id?: string
+          organization_id?: string
+          project_id?: string | null
+          task_id?: string
+          user_id?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: "comments_task_id_fkey";
-            columns: ["task_id"];
-            isOneToOne: false;
-            referencedRelation: "tasks";
-            referencedColumns: ["id"];
+            foreignKeyName: "comments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "comments_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
+            foreignKeyName: "comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
           },
-        ];
-      };
-
+        ]
+      }
+      manager_employees: {
+        Row: {
+          created_at: string | null
+          employee_id: string
+          manager_id: string
+          organization_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          employee_id: string
+          manager_id: string
+          organization_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          employee_id?: string
+          manager_id?: string
+          organization_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_employees_organization_id_employee_id_fkey"
+            columns: ["organization_id", "employee_id"]
+            isOneToOne: false
+            referencedRelation: "org_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+          {
+            foreignKeyName: "manager_employees_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_employees_organization_id_manager_id_fkey"
+            columns: ["organization_id", "manager_id"]
+            isOneToOne: false
+            referencedRelation: "org_members"
+            referencedColumns: ["organization_id", "user_id"]
+          },
+        ]
+      }
+      org_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          organization_id: string
+          role: Database["public"]["Enums"]["role_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          organization_id: string
+          role?: Database["public"]["Enums"]["role_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["role_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_org_members_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_profiles"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          active_organization_id: string | null
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          username: string | null
+        }
+        Insert: {
+          active_organization_id?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          username?: string | null
+        }
+        Update: {
+          active_organization_id?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_active_organization_id_fkey"
+            columns: ["active_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
-          project_id: UUID;
-          resource_id: UUID;
-          left_at: string | null;
-          created_at: string | null;
-        };
+          created_at: string | null
+          id: string
+          joined_at: string | null
+          left_at: string | null
+          organization_id: string
+          project_id: string
+          role: string | null
+          updated_at: string | null
+          user_id: string
+        }
         Insert: {
-          project_id: UUID;
-          resource_id: UUID;
-          left_at?: string | null;
-          created_at?: string | null;
-        };
+          created_at?: string | null
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          organization_id: string
+          project_id: string
+          role?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
         Update: {
-          project_id?: UUID;
-          resource_id?: UUID;
-          left_at?: string | null;
-          created_at?: string | null;
-        };
+          created_at?: string | null
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          organization_id?: string
+          project_id?: string
+          role?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "project_members_project_id_fkey";
-            columns: ["project_id"];
-            isOneToOne: false;
-            referencedRelation: "projects";
-            referencedColumns: ["id"];
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          end_date: string | null
+          id: string
+          name: string
+          organization_id: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["project_status"] | null
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          end_date?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["project_status"] | null
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["project_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          organization_id: string
+          project_id: string | null
+          status: Database["public"]["Enums"]["task_status"] | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          organization_id: string
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          organization_id?: string
+          project_id?: string | null
+          status?: Database["public"]["Enums"]["task_status"] | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "project_members_resource_id_fkey";
-            columns: ["resource_id"];
-            isOneToOne: false;
-            referencedRelation: "resources";
-            referencedColumns: ["id"];
+            foreignKeyName: "tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
           },
-        ];
-      };
-    };
-
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
-      [_ in never]: never;
-    };
+      is_manager: { Args: { org: string }; Returns: boolean }
+      is_org_member: { Args: { org: string }; Returns: boolean }
+    }
     Enums: {
-      role_type: RoleType;
-      project_status: ProjectStatus;
-      task_status: TaskStatus;
-      resource_type: ResourceType;
-    };
+      project_status: "active" | "paused" | "archived"
+      resource_type: "human" | "equipment" | "room" | "vehicle" | "software"
+      role_type: "owner" | "admin" | "manager" | "employee" | "viewer"
+      task_status: "todo" | "in_progress" | "blocked" | "done"
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
+      [_ in never]: never
+    }
+  }
+}
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
-type PublicSchema = DatabaseWithoutInternals[Extract<
-  keyof DatabaseWithoutInternals,
-  "public"
->];
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends PublicTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[PublicTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[PublicTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
-  ? (DatabaseWithoutInternals[PublicTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R;
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
-        Row: infer R;
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
       }
       ? R
       : never
-    : never;
+    : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends PublicTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
-  ? DatabaseWithoutInternals[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I;
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
-        Insert: infer I;
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
       }
       ? I
       : never
-    : never;
+    : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends PublicTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
-  ? DatabaseWithoutInternals[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U;
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
-        Update: infer U;
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
       }
       ? U
       : never
-    : never;
+    : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends PublicEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof DatabaseWithoutInternals }
-  ? DatabaseWithoutInternals[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
-    : never;
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
 
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]    
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      project_status: ["active", "paused", "archived"],
+      resource_type: ["human", "equipment", "room", "vehicle", "software"],
+      role_type: ["owner", "admin", "manager", "employee", "viewer"],
+      task_status: ["todo", "in_progress", "blocked", "done"],
+    },
+  },
+} as const

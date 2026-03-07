@@ -11,6 +11,9 @@ import { createTask } from "@/actions/task/create";
 import { deleteTask as deleteTaskAction } from "@/actions/task/delete";
 
 import { listTasks } from "@/actions/task/list";
+import { deleteTask as deleteTaskApi } from "@/lib/api";
+import { getEmployeeOverview } from "@/lib/api";
+import EmployeeOverviewModal from "@/components/EmployeeOverviewModal";
 
 type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
 
@@ -31,6 +34,11 @@ type Profile = {
   avatar_url: string | null;
 };
 
+type EmployeeOverview = {
+  empID: string | null;
+  name: string | null;
+};
+
 function formatDate(date?: string | null) {
   if (!date) return "—";
   return new Date(date).toLocaleDateString();
@@ -47,6 +55,8 @@ const [newDueDate, setNewDueDate] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [employeeEmail, setEmployeeEmail] = useState<string>("");
+  const [showOverviewModal, setShowOverviewModal] = useState(false);
 
   const [showCreate, setShowCreate] = useState(false);
 const [newTitle, setNewTitle] = useState("");
@@ -262,14 +272,12 @@ async function commitDueDate(id: string, value: string) {
   // ---------- CRUD ----------
 
   async function deleteTask(id: string) {
-    const res = await fetch("/api/tasks/delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id })
-    });
-
-    if (res.ok) {
+    try {
+      await deleteTaskApi(id);
       setTasks(prev => prev.filter(t => t.id !== id));
+    } catch (err) {
+      console.error("Failed to delete task", err);
+      // Could add error handling UI here
     }
   }
 
@@ -295,6 +303,10 @@ async function commitDueDate(id: string, value: string) {
         .single();
 
       setProfile(p);
+
+      // Get current user's email for employee overview
+      const { data: { user } } = await supabase.auth.getUser();
+      setEmployeeEmail(user?.email || "");
 
       const { data, error } = await supabase
         .from("resource_assignments")
@@ -340,12 +352,20 @@ async function commitDueDate(id: string, value: string) {
 
   return (
     <div className="mt-6">
-      <button
-  onClick={() => setShowCreate(true)}
-  className="mb-4 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
->
-  + Add Task
-</button>
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setShowCreate(true)}
+          className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+        >
+          + Add Task
+        </button>
+        <button
+          onClick={() => setShowOverviewModal(true)}
+          className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+        >
+          Employee Overview
+        </button>
+      </div>
 
 
       <table className="w-full border-collapse text-sm">
@@ -554,7 +574,12 @@ async function commitDueDate(id: string, value: string) {
   </div>
 )}
 
-
+      <EmployeeOverviewModal
+        employeeId={employeeId}
+        employeeEmail={employeeEmail}
+        isOpen={showOverviewModal}
+        onClose={() => setShowOverviewModal(false)}
+      />
     </div>
   );
 }

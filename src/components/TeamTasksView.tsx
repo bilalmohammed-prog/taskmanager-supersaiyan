@@ -6,37 +6,40 @@ import Image from "next/image";
 import "./Cobox.css";
 import { useDashboard } from "@/components/providers/dashboard/DashboardContext";
 import { supabase } from "@/lib/supabase/client";
+import { getDisplayTasks, createTask as createTaskApi, updateTask, deleteTask as deleteTaskApi } from "@/lib/api";
 
 type Task = {
   employee_id: string;
   id: string;
   task: string;
   description: string;
-  startTime: string;
-  endTime: string;
+  startTime: string | null;
+  endTime: string | null;
   status: string;
   proof: string;
-  
+
   isEditing?: boolean;
 };
 
 
 
-  function prettyDateTime(dt: string | Date | number) {
-  const d = new Date(dt);
-  if (isNaN(d.getTime())) return String(dt);
+  function prettyDateTime(dt: string | Date | number | null) {
+    if (!dt) return "Not set";
+    const d = new Date(dt);
+    if (isNaN(d.getTime())) return String(dt);
 
-  return d.toLocaleString(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+    return d.toLocaleString(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     hour12: true
   });
 }
 
-function safeISO(dt: string | Date) {
+function safeISO(dt: string | Date | null) {
+  if (!dt) return "";
   const d = new Date(dt);
   if (isNaN(d.getTime())) return "";
 
@@ -88,219 +91,121 @@ export default function TeamTasksView() {
       return;
     }
     async function loadTasks() {
-
-  setLoading(true);
-  try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      console.log("No session");
-      setTasks([]);
-      return;
+      setLoading(true);
+      try {
+        const { tasks } = await getDisplayTasks(employee_id!);
+        setTasks(tasks);
+      } catch (err) {
+        console.error("Task load error", err);
+        setTasks([]);
+      } finally {
+        setLoading(false);
+      }
     }
-
-      
-    const res = await fetch(`/api/displayTasks?employee_id=${employee_id}`, {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-
-    const data = await res.json();
-    setTasks(
-  Array.isArray(data.tasks)
-    ? data.tasks.map((t: Task) => ({
-
-        employee_id: t.employee_id,
-        id: t.id,
-        task: t.task,
-        description: t.description,
-        startTime: t.startTime,
-        endTime: t.endTime,
-        status: t.status,
-        proof: t.proof
-      }))
-    : []
-);
-
-  } catch (err) {
-    console.error("Task load error", err);
-  } finally {
-    setLoading(false);
-  }
-}
 
     loadTasks();
   }, [employee_id]);
 
 
   async function createTask() {
-  if (!employee_id) return alert("No employee selected");
-  
-  // 1. Extract description from state
-  const { task, description, startTime, endTime } = newTask;
-    
+    if (!employee_id) return alert("No employee selected");
 
-  // 2. Added description.trim() to validation
-  if (!task.trim() || !description.trim() || !startTime || !endTime) {
-    return alert("Please enter title, description, start time and end time");
+    // 1. Extract description from state
+    const { task, description, startTime, endTime } = newTask;
+
+    // 2. Added description.trim() to validation
+    if (!task.trim() || !description.trim() || !startTime || !endTime) {
+      return alert("Please enter title, description, start time and end time");
+    }
+
+    const id = crypto.randomUUID();
+
+    try {
+      const { task: createdTask } = await createTaskApi({
+        id,
+        task,
+        employee_id: employee_id,
+        description,
+        startTime,
+        endTime,
+        status: "pending",
+        proof: ""
+      });
+
+      const normalizedTask: Task = {
+        employee_id: createdTask.employee_id,
+        id: createdTask.id,
+        task: createdTask.task,
+        description: createdTask.description,
+        startTime: createdTask.startTime,
+        endTime: createdTask.endTime,
+        status: createdTask.status,
+        proof: createdTask.proof
+      };
+
+      setTasks(prev => [...prev, normalizedTask]);
+      setOpenAssignModal(false);
+
+      // 4. Reset the state including description
+      setNewTask({ task: "", description: "", startTime: "", endTime: "" });
+    } catch (err) {
+      console.error("Failed to create task", err);
+      alert("Failed to create task");
+    }
   }
-
-  const id = crypto.randomUUID();
-  
-  // 3. Ensure description is in the JSON body
-  const { data: { user } } = await supabase.auth.getUser();
-
-if (!user) {
-  console.log("No user yet");
-  return;
-}
-
-const { data: { session } } = await supabase.auth.getSession();
-
-
-if (!session) {
-  alert("Not logged in");
-  return;
-}
-
-const res = await fetch(`/api/tasks`, {
-  
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${session.access_token}`,
-  },
-
-    body: JSON.stringify({
-
-      id, 
-      task,
-      employee_id: employee_id,
-      description, // <--- This sends it to your database
-      startTime, 
-      endTime,
-      status: "pending", 
-      proof: ""
-    })
-    
-  });
-console.log("EMPLOYEE ID SENT:", employee_id);
-
-  const data = await res.json();
-  if (!res.ok) return alert(data.error || "Failed to create task");
-
-  const normalizedTask: Task = {
-
-  employee_id: data.task.employee_id,
-  id: data.task.id,
-  task: data.task.task,
-  description: data.task.description,
-  startTime: data.task.start_time,
-  endTime: data.task.end_time,
-  status: data.task.status,
-  proof: data.task.proof
-};
-
-setTasks(prev => [...prev, normalizedTask]);
-
-  setOpenAssignModal(false);
-  
-  // 4. Reset the state including description
-  setNewTask({ task: "", description: "", startTime: "", endTime: "" });
-}
 
   async function saveTask(taskId: string) {
-  const t = tasks.find(x => x.id === taskId);
-  if (!t) return;
+    const t = tasks.find(x => x.id === taskId);
+    if (!t) return;
 
-  // FIX: Fallback to empty string so .trim() doesn't crash on old tasks
-  const currentTask = t.task || "";
-  const currentDesc = t.description || ""; 
+    // FIX: Fallback to empty string so .trim() doesn't crash on old tasks
+    const currentTask = t.task || "";
+    const currentDesc = t.description || "";
 
-  // --- VALIDATION ---
-  if (!currentTask.trim() || !currentDesc.trim() || !t.startTime || !t.endTime) {
-    alert("All fields (Title, Description, Start, and End time) are required.");
-    return;
-  }
+    // --- VALIDATION ---
+    if (!currentTask.trim() || !currentDesc.trim() || !t.startTime || !t.endTime) {
+      alert("All fields (Title, Description, Start, and End time) are required.");
+      return;
+    }
 
-  try {
-    const {
-  data: { session },
-} = await supabase.auth.getSession();
-
-if (!session) {
-  alert("Not logged in");
-  return;
-}
-
-const res = await fetch(`/api/tasks/${taskId}`, {
-  method: "PATCH",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${session.access_token}`,
-  },
-
-      body: JSON.stringify({
-
-        id: taskId,
+    try {
+      await updateTask(taskId, {
         task: currentTask.trim(),
         description: currentDesc.trim(),
         startTime: t.startTime,
         endTime: t.endTime,
-        proof: "not provided"
-      })
-    });
+      });
 
-    // IMPROVEMENT: See the actual error from the server if it fails
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.error || "Failed to save");
+      updateTaskInState(taskId, { isEditing: false });
+
+      // Update the selected view to show the new description immediately
+      if (selectedTask?.id === taskId) {
+        setSelectedTask({ ...t, description: currentDesc, isEditing: false });
+      }
+    } catch (err: unknown) {
+      // 1. Determine the error message safely
+      const errorMessage = err instanceof Error
+        ? err.message
+        : "An unexpected error occurred. Please try again.";
+
+      // 2. Alert the user using the safe string
+      alert(errorMessage);
+
+      // 3. Log the full error for debugging
+      console.error("Save error:", err);
     }
-
-    updateTaskInState(taskId, { isEditing: false });
-    
-    // Update the selected view to show the new description immediately
-    if (selectedTask?.id === taskId) {
-      setSelectedTask({ ...t, description: currentDesc, isEditing: false });
-    }
-
-  } catch (err: unknown) {
-    // 1. Determine the error message safely
-    const errorMessage = err instanceof Error 
-      ? err.message 
-      : "An unexpected error occurred. Please try again.";
-
-    // 2. Alert the user using the safe string
-    alert(errorMessage);
-    
-    // 3. Log the full error for debugging
-    console.error("Save error:", err);
   }
-}
 
   async function deleteTask(taskId: string) {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
-    alert("Not logged in");
-    return;
+    try {
+      await deleteTaskApi(taskId);
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+      if (selectedTask?.id === taskId) setSelectedTask(null);
+    } catch (err) {
+      console.error("Failed to delete task", err);
+      alert("Failed to delete task");
+    }
   }
-
-  setTasks(prev => prev.filter(t => t.id !== taskId));
-  if (selectedTask?.id === taskId) setSelectedTask(null);
-
-  await fetch(`/api/tasks/${taskId}`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
-  });
-}
 
 
   if(selectedEmp){

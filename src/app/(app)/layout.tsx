@@ -5,6 +5,7 @@ import { DashboardProvider, useDashboard } from "@/components/providers/dashboar
 import LeftSideBar from "@/components/layout/LeftSideBar";
 import TopBar from "@/components/layout/TopBar";
 import { supabase } from "@/lib/supabase/client";
+import { ToastProvider, ToastContainer } from "@/components/providers/toast";
 
 interface DashboardShellProps {
   children: React.ReactNode;
@@ -43,14 +44,17 @@ function DashboardShell({ children }: DashboardShellProps) {
         <TopBar />
         <main className="p-4">{children}</main>
       </div>
+      <ToastContainer />
     </div>
   );
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <DashboardProvider>
-      <DashboardShell>{children}</DashboardShell>
-    </DashboardProvider>
+    <ToastProvider>
+      <DashboardProvider>
+        <DashboardShell>{children}</DashboardShell>
+      </DashboardProvider>
+    </ToastProvider>
   );
 }

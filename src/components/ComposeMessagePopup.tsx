@@ -2,6 +2,7 @@
 
 import { useState, ChangeEvent } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { sendMessage } from "@/lib/api";
 
 import { Button } from "@/components/ui/button";
 
@@ -58,38 +59,12 @@ export default function ComposeMessagePopup({
   setIsSending(true);
 
   try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      alert("Session expired");
-      return;
-    }
-
-    const senderId = session.user.id; // 🔥 THIS IS THE MANAGER
-
-    const res = await fetch("/api/messages/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
-        receiverEmail: form.receiverEmail,
-        subject: form.subject,
-        body: form.body,
-        type: form.type,
-        manager_id: form.type === "invite" ? senderId : null, // 🔥 KEY LINE
-      }),
+    await sendMessage({
+      receiverEmail: form.receiverEmail,
+      subject: form.subject,
+      body: form.body,
+      type: form.type,
     });
-
-    const result = await res.json();
-
-    if (!res.ok) {
-      alert(result.error || "Failed to send");
-      return;
-    }
 
     alert(
       form.type === "invite"
@@ -98,7 +73,8 @@ export default function ComposeMessagePopup({
     );
 
     onClose();
-  } catch {
+  } catch (err) {
+    console.error("Failed to send message", err);
     alert("Network error. Please try again.");
   } finally {
     setIsSending(false);

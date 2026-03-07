@@ -56,6 +56,15 @@ export default function LeftSideBar() {
         <span className="text-[10px] text-white/90">Projects</span>
       </Button>
 
+      <Button
+        variant="sidebar"
+        onClick={() => go("inbox")}
+        className={isActive("inbox") ? "bg-white/15" : ""}
+      >
+        <Image src="/icons/tasks.svg" alt="" width={22} height={22} />
+        <span className="text-[10px] text-white/90">Inbox</span>
+      </Button>
+
       {/* <Button
         variant="sidebar"
         onClick={() => go("assignments")}

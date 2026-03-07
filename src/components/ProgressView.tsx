@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { getTeamProgress, getEmployeeOverview } from "@/lib/api";
 import "./Cobox.css";
 
 type EmployeeProgress = {
@@ -9,6 +10,7 @@ type EmployeeProgress = {
   email: string;
   total: number;
   completed: number;
+  empID?: string | null;
 };
 
 export default function ProgressView() {
@@ -20,26 +22,30 @@ export default function ProgressView() {
       try {
         setLoading(true);
 
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session) {
-          setData([]);
-          return;
-        }
-
-        const res = await fetch(`/api/teamProgress`, {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-
-        const report = await res.json();
+        const report = await getTeamProgress();
 
         console.log("REPORT:", report);
 
-        setData(Array.isArray(report) ? report : []);
+        // Get employee overview for each employee
+        const enhancedReport = await Promise.all(
+          report.map(async (emp) => {
+            try {
+              const overview = await getEmployeeOverview(emp.email);
+              return {
+                ...emp,
+                empID: overview.empID,
+              };
+            } catch (err) {
+              console.error(`Failed to get overview for ${emp.email}`, err);
+              return {
+                ...emp,
+                empID: null,
+              };
+            }
+          })
+        );
+
+        setData(enhancedReport);
       } catch (err) {
         console.error("Error loading progress", err);
         setData([]);
@@ -111,6 +117,9 @@ export default function ProgressView() {
               <div className="progress-card" key={index}>
                 <h3 className="emp-name">{emp.name}</h3>
                 <p className="emp-id">{emp.email}</p>
+                {emp.empID && (
+                  <p className="emp-id-small">ID: {emp.empID}</p>
+                )}
 
                 <div className="progress-stat">
                   <span className="stat-label">Completion</span>
