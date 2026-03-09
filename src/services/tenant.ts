@@ -1,14 +1,16 @@
-import { cookies } from "next/headers";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types/database";
+import { getActiveOrganizationIdFromCookie as getActiveOrgIdFromAuthLib } from "@/lib/auth/tenant-context";
+import { normalizeRole, type AppRole, type DatabaseRole } from "@/lib/auth/permissions";
 
-export type TenantRole = Database["public"]["Enums"]["role_type"];
+export type TenantRole = AppRole;
 
 export type TenantContext = {
   user: User;
   userId: string;
   organizationId: string;
   role: TenantRole;
+  databaseRole: DatabaseRole;
 };
 
 export class AuthRequiredError extends Error {
@@ -41,8 +43,7 @@ export async function requireUser(
 export async function getActiveOrganizationIdFromCookie(): Promise<
   string | undefined
 > {
-  const cookieStore = await cookies();
-  return cookieStore.get("activeOrg")?.value;
+  return getActiveOrgIdFromAuthLib();
 }
 
 export async function requireTenantContext(
@@ -75,7 +76,7 @@ export async function requireTenantContext(
     user,
     userId: user.id,
     organizationId: resolvedOrgId,
-    role: membership.role,
+    role: normalizeRole(membership.role),
+    databaseRole: membership.role,
   };
 }
-

@@ -1,107 +1,20 @@
-import { NextResponse } from "next/server";
-import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import type { Database } from "@/lib/types/database";
+import { ValidationError } from "@/lib/api/errors";
+import { fail, ok } from "@/lib/api/response";
+import { requireTenantContext } from "@/lib/auth/tenant-context";
+import { authorize } from "@/lib/auth/authorization";
+import { toLegacyTaskStatus } from "@/lib/validation/common";
+import {
+  normalizeTaskUpdateStatus,
+  taskIdParamsSchema,
+  taskUpdateSchema,
+} from "@/lib/validation/task";
 
 /* ---------- TYPES ---------- */
-interface UpdateTaskRequest {
-  title?: string;
-  description?: string;
-  dueDate?: string;
-  status?: "todo" | "in_progress" | "blocked" | "done" | "pending" | "in-progress" | "completed";
-}
-
 interface TaskTableUpdate {
   title?: string;
   description?: string;
   due_date?: string;
   status?: "todo" | "in_progress" | "blocked" | "done";
-}
-
-interface AuthResult {
-  user: User;
-  token: string;
-}
-
-function normalizeStatusInput(
-  status?: UpdateTaskRequest["status"]
-): "todo" | "in_progress" | "blocked" | "done" | undefined {
-  if (!status) return undefined;
-  if (status === "pending") return "todo";
-  if (status === "in-progress") return "in_progress";
-  if (status === "completed") return "done";
-  if (
-    status === "todo" ||
-    status === "in_progress" ||
-    status === "blocked" ||
-    status === "done"
-  ) {
-    return status;
-  }
-  return undefined;
-}
-
-function toLegacyStatus(status: string | null): string {
-  if (status === "todo") return "pending";
-  if (status === "in_progress") return "in-progress";
-  if (status === "done") return "completed";
-  return status ?? "pending";
-}
-
-async function resolveOrganizationId(
-  supabase: SupabaseClient<Database>,
-  userId: string
-): Promise<string | null> {
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("active_organization_id")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (!profileError && profile?.active_organization_id) {
-    return profile.active_organization_id;
-  }
-
-  const { data: member, error: memberError } = await supabase
-    .from("org_members")
-    .select("organization_id")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (memberError || !member?.organization_id) return null;
-  return member.organization_id;
-}
-
-/* ---------- USER SCOPED CLIENT ---------- */
-function getUserClient(token: string) {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    }
-  );
-}
-
-/* ---------- AUTH ---------- */
-async function authenticate(req: Request): Promise<AuthResult | null> {
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader) return null;
-
-  const token = authHeader.replace("Bearer ", "");
-  const supabase = getUserClient(token);
-
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) return null;
-
-  return { user, token };
 }
 
 /* ================= PATCH ================= */
@@ -110,36 +23,80 @@ export async function PATCH(
   { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
-    const auth = await authenticate(req);
-    if (!auth) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const tenant = await requireTenantContext(req);
+    const { supabase, organizationId } = tenant;
+    authorize("update", "task", tenant);
+
+    const { taskId } = taskIdParamsSchema.parse(await params);
+    const body = taskUpdateSchema.parse(await req.json());
+
+    const { data: organization, error: organizationError } = await supabase
+      .from("organizations")
+      .select("id")
+      .eq("id", organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (organizationError) {
+      throw new ValidationError({
+        message: organizationError.message,
+        details: organizationError,
+      });
     }
 
-    const { token, user } = auth;
-    const supabase = getUserClient(token);
-    const organizationId = await resolveOrganizationId(supabase, user.id);
-    if (!organizationId) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 400 });
+    if (!organization) {
+      throw new ValidationError({
+        message: "Organization does not exist or is inactive",
+      });
     }
 
-    const { taskId } = await params;
-    const body: UpdateTaskRequest = await req.json();
+    const { data: task, error: taskError } = await supabase
+      .from("tasks")
+      .select("id, project_id")
+      .eq("id", taskId)
+      .eq("organization_id", organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (taskError) {
+      throw new ValidationError({ message: taskError.message, details: taskError });
+    }
+
+    if (!task) {
+      throw new ValidationError({ message: "Task not found in your organization" });
+    }
+
+    if (task.project_id) {
+      const { data: project, error: projectError } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("id", task.project_id)
+        .eq("organization_id", organizationId)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (projectError) {
+        throw new ValidationError({
+          message: projectError.message,
+          details: projectError,
+        });
+      }
+
+      if (!project) {
+        throw new ValidationError({
+          message: "Task has an invalid project for this organization",
+        });
+      }
+    }
 
     const updatePayload: TaskTableUpdate = {};
 
-    if (body.title) updatePayload.title = body.title;
+    if (body.title !== undefined) updatePayload.title = body.title;
     if (body.description !== undefined)
       updatePayload.description = body.description;
     if (body.dueDate !== undefined) updatePayload.due_date = body.dueDate;
-    const normalizedStatus = normalizeStatusInput(body.status);
-    if (normalizedStatus) updatePayload.status = normalizedStatus;
-
-    if (Object.keys(updatePayload).length === 0) {
-      return NextResponse.json(
-        { error: "No changes detected" },
-        { status: 400 }
-      );
-    }
+    const normalizedStatus = normalizeTaskUpdateStatus(body.status);
+    if (normalizedStatus !== undefined) updatePayload.status = normalizedStatus;
 
     const { data, error } = await supabase
       .from("tasks")
@@ -151,7 +108,10 @@ export async function PATCH(
       .maybeSingle();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      throw new ValidationError({ message: error.message, details: error });
+    }
+    if (!data) {
+      throw new ValidationError({ message: "Task not found in your organization" });
     }
 
     const { data: assignment } = await supabase
@@ -161,7 +121,7 @@ export async function PATCH(
       .eq("organization_id", organizationId)
       .maybeSingle();
 
-    return NextResponse.json(
+    return ok(
       {
         task: data
           ? {
@@ -171,7 +131,7 @@ export async function PATCH(
               description: data.description ?? "",
               startTime: null,
               endTime: data.due_date,
-              status: toLegacyStatus(data.status),
+              status: toLegacyTaskStatus(data.status),
               proof: "",
             }
           : null,
@@ -180,10 +140,7 @@ export async function PATCH(
     );
   } catch (err) {
     console.error("[PATCH_TASK_EXCEPTION]:", err);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return fail(err);
   }
 }
 
@@ -193,19 +150,11 @@ export async function DELETE(
   { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
-    const auth = await authenticate(req);
-    if (!auth) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const tenant = await requireTenantContext(req);
+    const { supabase, organizationId } = tenant;
+    authorize("delete", "task", tenant);
 
-    const { token, user } = auth;
-    const supabase = getUserClient(token);
-    const organizationId = await resolveOrganizationId(supabase, user.id);
-    if (!organizationId) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 400 });
-    }
-
-    const { taskId } = await params;
+    const { taskId } = taskIdParamsSchema.parse(await params);
 
     const { error } = await supabase
       .from("tasks")
@@ -215,18 +164,12 @@ export async function DELETE(
       .is("deleted_at", null);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      throw new ValidationError({ message: error.message, details: error });
     }
 
-    return NextResponse.json(
-      { message: "Task deleted successfully" },
-      { status: 200 }
-    );
+    return ok({ message: "Task deleted successfully" }, { status: 200 });
   } catch (err) {
     console.error("[DELETE_TASK_EXCEPTION]:", err);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return fail(err);
   }
 }

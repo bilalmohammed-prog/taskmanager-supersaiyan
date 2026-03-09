@@ -19,7 +19,12 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new ApiException(errorData.error || `HTTP ${response.status}`, response.status);
+    const message =
+      errorData?.error?.message ??
+      errorData?.error ??
+      errorData?.message ??
+      `HTTP ${response.status}`;
+    throw new ApiException(message, response.status);
   }
 
   return response;

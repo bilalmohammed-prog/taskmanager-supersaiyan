@@ -163,6 +163,27 @@ export const TeamProgressResponseSchema = z.object({
 
 export type TeamProgressResponse = z.infer<typeof TeamProgressResponseSchema>;
 
+// API response contract
+export const ApiErrorResponseSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  details: z.unknown().optional(),
+});
+
+export type ApiErrorResponse = z.infer<typeof ApiErrorResponseSchema>;
+
+export type ApiSuccessResponse<T> = {
+  ok: true;
+  data: T;
+};
+
+export type ApiFailureResponse = {
+  ok: false;
+  error: ApiErrorResponse;
+};
+
+export type ApiResponse<T> = ApiSuccessResponse<T> | ApiFailureResponse;
+
 // Error
 export const ApiErrorSchema = z.object({
   error: z.string(),

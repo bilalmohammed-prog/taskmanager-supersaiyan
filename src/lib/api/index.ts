@@ -144,7 +144,8 @@ export async function createTask(request: CreateTaskRequest): Promise<CreateTask
     method: 'POST',
     body: JSON.stringify(payload),
   });
-  const data = await response.json();
+  const responseBody = await response.json();
+  const data = responseBody?.ok ? responseBody.data : responseBody;
   const normalized = {
     message: data?.message ?? 'Task created',
     task: toCanonicalTask(data?.task),
@@ -160,7 +161,8 @@ export async function updateTask(taskId: string, request: UpdateTaskRequest): Pr
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
-  const data = await response.json();
+  const responseBody = await response.json();
+  const data = responseBody?.ok ? responseBody.data : responseBody;
   const normalized = {
     task: toCanonicalTask(data?.task),
   };
@@ -172,7 +174,8 @@ export async function deleteTask(taskId: string): Promise<DeleteTaskResponse> {
   const response = await apiFetch(`/api/tasks/${taskId}`, {
     method: 'DELETE',
   });
-  const data = await response.json();
+  const responseBody = await response.json();
+  const data = responseBody?.ok ? responseBody.data : responseBody;
   return DeleteTaskResponseSchema.parse(data);
 }
 
