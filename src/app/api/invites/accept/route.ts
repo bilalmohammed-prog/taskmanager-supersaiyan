@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fail } from "@/lib/api/response";
 import { authorize } from "@/lib/auth/authorization";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
 import { listOrganizationMembers } from "@/services/organization/organization.service";
@@ -55,6 +56,6 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("Accept Invite Error:", err);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return fail(err);
   }
 }

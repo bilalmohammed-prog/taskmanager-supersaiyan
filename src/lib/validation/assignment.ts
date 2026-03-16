@@ -2,8 +2,15 @@ import { z } from "zod";
 import { isoDateStringSchema, uuidSchema } from "./common";
 
 const nullableIsoDateStringSchema = isoDateStringSchema.nullable();
+const hasValidAssignmentTimeRange = (payload: {
+  start_time?: string | null;
+  end_time?: string | null;
+}) => {
+  if (!payload.start_time || !payload.end_time) return true;
+  return new Date(payload.start_time) <= new Date(payload.end_time);
+};
 
-export const assignmentCreateSchema = z
+const assignmentCreateBaseSchema = z
   .object({
     task_id: uuidSchema,
     user_id: uuidSchema,
@@ -12,21 +19,20 @@ export const assignmentCreateSchema = z
     start_time: nullableIsoDateStringSchema.optional(),
     end_time: nullableIsoDateStringSchema.optional(),
   })
-  .strict()
-  .refine(
-    (payload) => {
-      if (!payload.start_time || !payload.end_time) return true;
-      return new Date(payload.start_time) <= new Date(payload.end_time);
-    },
-    {
-      message: "start_time must be before or equal to end_time",
-      path: ["end_time"],
-    }
-  );
-
-export const assignmentCreateBodySchema = assignmentCreateSchema
-  .omit({ organization_id: true })
   .strict();
+
+export const assignmentCreateSchema = assignmentCreateBaseSchema.refine(hasValidAssignmentTimeRange, {
+  message: "start_time must be before or equal to end_time",
+  path: ["end_time"],
+});
+
+export const assignmentCreateBodySchema = assignmentCreateBaseSchema
+  .omit({ organization_id: true })
+  .strict()
+  .refine(hasValidAssignmentTimeRange, {
+    message: "start_time must be before or equal to end_time",
+    path: ["end_time"],
+  });
 
 export const assignmentUpdateSchema = z
   .object({

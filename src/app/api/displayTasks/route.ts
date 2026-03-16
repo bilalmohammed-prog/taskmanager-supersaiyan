@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { fail } from "@/lib/api/response";
+import { authorize } from "@/lib/auth/authorization";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
 import { listOrganizationMembers } from "@/services/organization/organization.service";
 import { listAssignments } from "@/services/resource/assignment.service";
@@ -15,7 +17,9 @@ type TaskRow = {
 
 export async function GET(req: Request): Promise<NextResponse> {
   try {
-    const { supabase, organizationId } = await requireTenantContext(req);
+    const tenant = await requireTenantContext(req);
+    authorize("read", "task", tenant);
+    const { supabase, organizationId } = tenant;
 
     /* ================= PARAMS ================= */
     const { searchParams } = new URL(req.url);
@@ -86,9 +90,6 @@ export async function GET(req: Request): Promise<NextResponse> {
     return NextResponse.json({ success: true, data: { tasks: formattedTasks } });
   } catch (err) {
     console.error("[TASK_ROUTE_EXCEPTION]", err);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return fail(err);
   }
 }

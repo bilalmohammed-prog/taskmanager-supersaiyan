@@ -1,7 +1,14 @@
+import * as dotenv from "dotenv";
+import * as path from "path";
+
+dotenv.config({ path: path.resolve(process.cwd(), ".env.test.local") });
+
+
+
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import type { Database, Tables } from "@/lib/types/database";
+import type { Database, Tables } from "../../lib/types/database";
 
 export type TenantIsolationFixture = {
   admin: SupabaseClient<Database>;
@@ -18,6 +25,7 @@ export type TenantIsolationFixture = {
   taskB: Tables<"tasks">;
   assignmentA: Tables<"assignments">;
   assignmentB: Tables<"assignments">;
+  messageB: Tables<"messages">;
 };
 
 type CreatedIdentity = {
@@ -118,6 +126,7 @@ export async function createTenantIsolationFixture(): Promise<TenantIsolationFix
   const membershipRows: Database["public"]["Tables"]["org_members"]["Insert"][] = [
     { organization_id: orgA.id, user_id: userAOwner.user.id, role: "owner" },
     { organization_id: orgA.id, user_id: userAMember.user.id, role: "employee" },
+    { organization_id: orgB.id, user_id: userAOwner.user.id, role: "employee" },
     { organization_id: orgB.id, user_id: userBOwner.user.id, role: "owner" },
   ];
   const { error: memberError } = await admin.from("org_members").insert(membershipRows);
@@ -154,7 +163,7 @@ export async function createTenantIsolationFixture(): Promise<TenantIsolationFix
       organization_id: orgA.id,
       project_id: projectAVisible.id,
       user_id: userAMember.user.id,
-      role: "contributor",
+      role: "member",
     },
   ]);
   assert.ifError(projectMemberError);
@@ -226,6 +235,19 @@ export async function createTenantIsolationFixture(): Promise<TenantIsolationFix
   assert.ifError(assignmentBRes.error);
   assert.ok(assignmentARes.data && assignmentBRes.data);
 
+  const messageBRes = await admin
+    .from("messages")
+    .insert({
+      organization_id: orgB.id,
+      sender_id: userBOwner.user.id,
+      recipient_id: userAOwner.user.id,
+      content: "Org B private message",
+    })
+    .select("*")
+    .single();
+  assert.ifError(messageBRes.error);
+  assert.ok(messageBRes.data);
+
   return {
     admin,
     userAOwner: { user: userAOwner.user, client: userAOwner.client },
@@ -241,6 +263,7 @@ export async function createTenantIsolationFixture(): Promise<TenantIsolationFix
     taskB,
     assignmentA: assignmentARes.data,
     assignmentB: assignmentBRes.data,
+    messageB: messageBRes.data,
   };
 }
 

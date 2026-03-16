@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fail } from "@/lib/api/response";
 import { authorize } from "@/lib/auth/authorization";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
 
@@ -37,6 +38,6 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ success: true, data: { deleted: true } });
   } catch (err) {
     console.error("Drop Manager Error:", err);
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
+    return fail(err);
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fail } from "@/lib/api/response";
 import { authorize } from "@/lib/auth/authorization";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
 
@@ -12,6 +13,6 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("Decline Invite Error:", err);
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return fail(err);
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authorize } from "@/lib/auth/authorization";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
 import { listWorkforceProfiles } from "@/services/resource/resource.service";
 
@@ -10,7 +11,9 @@ export async function GET(req: Request) {
   }
 
   try {
-    const { supabase, organizationId } = await requireTenantContext(req);
+    const tenant = await requireTenantContext(req);
+    authorize("read", "organization", tenant);
+    const { supabase, organizationId } = tenant;
     const profiles = await listWorkforceProfiles(supabase, { organizationId });
     const matched = profiles.find((profile) => profile.username === email);
 

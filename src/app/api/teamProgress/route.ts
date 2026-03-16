@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { fail } from "@/lib/api/response";
+import { authorize } from "@/lib/auth/authorization";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
 import { listAssignments } from "@/services/resource/assignment.service";
 
 export async function GET(req: Request) {
   try {
-    const { supabase, organizationId } = await requireTenantContext(req);
+    const tenant = await requireTenantContext(req);
+    authorize("read", "assignment", tenant);
+    const { supabase, organizationId } = tenant;
 
     const assignments = await listAssignments(supabase, { organizationId });
 
@@ -49,9 +53,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: true, data: { employees: Object.values(statsMap) } });
   } catch (err) {
     console.error("[MANAGER_PROGRESS_ERROR]", err);
-    return NextResponse.json(
-      { error: "Failed to fetch progress" },
-      { status: 500 }
-    );
+    return fail(err);
   }
 }

@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { authorize } from "@/lib/auth/authorization";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
 import { listOrganizationMembers } from "@/services/organization/organization.service";
 
 export async function GET(req: Request) {
   try {
-    const { supabase, userId, organizationId } = await requireTenantContext(req);
+    const tenant = await requireTenantContext(req);
+    authorize("read", "organization", tenant);
+    const { supabase, userId, organizationId } = tenant;
 
     const { data: links, error: linksError } = await supabase
       .from("manager_employees")
