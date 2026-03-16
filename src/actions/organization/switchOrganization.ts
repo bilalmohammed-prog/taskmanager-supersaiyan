@@ -2,11 +2,10 @@
 
 import { cookies } from "next/headers";
 import { getSupabaseServer } from "@/lib/supabase/server";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 import type { UUID, Tables } from "@/lib/types/database";
 import { switchActiveOrganization } from "@/services/organization/organization.service";
-
-type ActionError = { message: string };
-export type ActionResult<T> = { data: T; error: null } | { data: null; error: ActionError };
+import { safeErrorMessage, type ActionResult } from "./_shared";
 
 function isUUID(value: unknown): value is UUID {
   return (
@@ -15,10 +14,6 @@ function isUUID(value: unknown): value is UUID {
       value
     )
   );
-}
-
-function safeErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : "Unexpected error";
 }
 
 export async function switchOrganization(
@@ -30,16 +25,9 @@ export async function switchOrganization(
     }
 
     const supabase = await getSupabaseServer();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const ctx = await requireOrgContext({ supabase, organizationId: orgId });
 
-    if (userError || !user) {
-      return { data: null, error: { message: "Not authenticated." } };
-    }
-
-    const profile = await switchActiveOrganization(supabase, user.id as UUID, orgId);
+    const profile = await switchActiveOrganization(supabase, ctx.userId as UUID, orgId);
 
     // Keep server session aligned with selection.
     const cookieStore = await cookies();

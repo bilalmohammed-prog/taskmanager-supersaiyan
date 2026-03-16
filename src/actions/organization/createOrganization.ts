@@ -2,13 +2,12 @@
 
 import { getSupabaseServer } from "@/lib/supabase/server";
 import type { UUID } from "@/lib/types/database";
+import { requireActionUser } from "@/actions/_helpers/requireOrgContext";
 import {
   createOrganization as createOrganizationSvc,
   type CreateOrganizationResult,
 } from "@/services/organization/organization.service";
-
-type ActionError = { message: string };
-export type ActionResult<T> = { data: T; error: null } | { data: null; error: ActionError };
+import { safeErrorMessage, type ActionResult } from "./_shared";
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -17,10 +16,6 @@ function isNonEmptyString(value: unknown): value is string {
 function isValidSlug(slug: string): boolean {
   // simple, production-safe slug rule
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
-}
-
-function safeErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : "Unexpected error";
 }
 
 export async function createOrganization(
@@ -39,14 +34,7 @@ export async function createOrganization(
     }
 
     const supabase = await getSupabaseServer();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return { data: null, error: { message: "Not authenticated." } };
-    }
+    const { user } = await requireActionUser(supabase);
 
     const result = await createOrganizationSvc(
       supabase,

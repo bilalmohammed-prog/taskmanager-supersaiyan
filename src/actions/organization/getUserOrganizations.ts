@@ -1,15 +1,10 @@
 "use server";
 
 import { getSupabaseServer } from "@/lib/supabase/server";
+import { requireActionUser } from "@/actions/_helpers/requireOrgContext";
 import type { UUID, Tables } from "@/lib/types/database";
 import { getUserOrganizations } from "@/services/organization/organization.service";
-
-type ActionError = { message: string };
-export type ActionResult<T> = { data: T; error: null } | { data: null; error: ActionError };
-
-function safeErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : "Unexpected error";
-}
+import { safeErrorMessage, type ActionResult } from "./_shared";
 
 export type UserOrganization = Pick<Tables<"organizations">, "id" | "name" | "slug">;
 
@@ -18,14 +13,7 @@ export async function getUserOrganizationsAction(): Promise<
 > {
   try {
     const supabase = await getSupabaseServer();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return { data: null, error: { message: "Not authenticated." } };
-    }
+    const { user } = await requireActionUser(supabase);
 
     const orgs = await getUserOrganizations(supabase, user.id as UUID);
     return { data: orgs, error: null };

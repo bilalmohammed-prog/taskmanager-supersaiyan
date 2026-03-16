@@ -59,14 +59,17 @@ const [assigningTaskId, setAssigningTaskId] =
   // ---------- LOAD ----------
   useEffect(() => {
     async function load() {
-        const humans = await listOrgMembers(orgId);
-
+        const humansResult = await listOrgMembers(orgId);
+        if (!humansResult.error && humansResult.data) {
 setEmployees(
-  humans.map(h => ({
+  humansResult.data.map(h => ({
     user_id: h.user_id,
     name: h.name
   }))
 );
+        } else {
+          setEmployees([]);
+        }
         const members =
   await listProjectMembers(projectId);
 

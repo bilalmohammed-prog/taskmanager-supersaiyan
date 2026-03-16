@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authorize } from "@/lib/auth/authorization";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
 
 export async function DELETE(req: Request) {
@@ -12,7 +13,9 @@ export async function DELETE(req: Request) {
       );
     }
 
-    const { supabase, userId, organizationId } = await requireTenantContext(req);
+    const tenant = await requireTenantContext(req);
+    authorize("read", "organization", tenant);
+    const { supabase, userId, organizationId } = tenant;
     if (userId !== manager_id) {
       return NextResponse.json(
         { error: "Forbidden: manager_id must match authenticated user" },
