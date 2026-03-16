@@ -1,103 +1,133 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import type { Tables, TablesInsert, UUID } from "@/lib/types/database";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { NotFoundError, ValidationError } from "@/lib/api/errors";
+import type { Database, Tables, TablesInsert } from "@/lib/types/database";
 
 export async function createProject(
-  orgId: UUID,
-  name: string,
-  startDate?: string,
-  endDate?: string
+  supabase: SupabaseClient<Database>,
+  params: {
+    organizationId: string;
+    name: string;
+    startDate?: string;
+    endDate?: string;
+  }
 ): Promise<Tables<"projects">> {
   const insert: TablesInsert<"projects"> = {
-    organization_id: orgId,
-    name,
+    organization_id: params.organizationId,
+    name: params.name,
     status: "active",
-    start_date: startDate ?? null,
-    end_date: endDate ?? null,
+    start_date: params.startDate ?? null,
+    end_date: params.endDate ?? null,
   };
 
-  const { data, error } = await supabaseAdmin
-    .from("projects")
-    .insert(insert)
-    .select("*")
-    .single();
+  const { data, error } = await supabase.from("projects").insert(insert).select("*").maybeSingle();
 
-  if (error || !data) {
-    throw new Error(error?.message ?? "Failed to create project");
+  if (error) {
+    throw new ValidationError({ message: error.message, details: error });
+  }
+
+  if (!data) {
+    throw new ValidationError({ message: "Failed to create project" });
   }
 
   return data;
 }
 
 export async function getProjectsByOrganization(
-  orgId: UUID
+  supabase: SupabaseClient<Database>,
+  params: { organizationId: string }
 ): Promise<Tables<"projects">[]> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from("projects")
     .select("*")
-    .eq("organization_id", orgId)
+    .eq("organization_id", params.organizationId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {
-    throw new Error(error.message);
+    throw new ValidationError({ message: error.message, details: error });
   }
 
   return data ?? [];
 }
 
-export async function getProjectById(projectId: UUID): Promise<Tables<"projects"> | null> {
-  const { data, error } = await supabaseAdmin
+export async function getProjectById(
+  supabase: SupabaseClient<Database>,
+  params: { organizationId: string; projectId: string }
+): Promise<Tables<"projects"> | null> {
+  const { data, error } = await supabase
     .from("projects")
     .select("*")
-    .eq("id", projectId)
+    .eq("organization_id", params.organizationId)
+    .eq("id", params.projectId)
     .is("deleted_at", null)
     .maybeSingle();
 
   if (error) {
-    throw new Error(error.message);
+    throw new ValidationError({ message: error.message, details: error });
   }
 
   return data ?? null;
 }
 
 export async function updateProjectStatus(
-  projectId: UUID,
-  status: "active" | "paused" | "archived"
+  supabase: SupabaseClient<Database>,
+  params: {
+    organizationId: string;
+    projectId: string;
+    status: "active" | "paused" | "archived";
+  }
 ): Promise<Tables<"projects">> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from("projects")
-    .update({ status })
-    .eq("id", projectId)
+    .update({ status: params.status })
+    .eq("organization_id", params.organizationId)
+    .eq("id", params.projectId)
     .is("deleted_at", null)
     .select("*")
-    .single();
+    .maybeSingle();
 
-  if (error || !data) {
-    throw new Error(error?.message ?? "Failed to update project status");
+  if (error) {
+    throw new ValidationError({ message: error.message, details: error });
+  }
+
+  if (!data) {
+    throw new NotFoundError({ message: "Project not found in your organization" });
   }
 
   return data;
 }
 
-export async function softDeleteProject(projectId: UUID): Promise<void> {
+export async function softDeleteProject(
+  supabase: SupabaseClient<Database>,
+  params: { organizationId: string; projectId: string }
+): Promise<void> {
   const now = new Date().toISOString();
 
-  const { error: projectError } = await supabaseAdmin
+  const { data, error: projectError } = await supabase
     .from("projects")
     .update({ deleted_at: now })
-    .eq("id", projectId);
+    .eq("organization_id", params.organizationId)
+    .eq("id", params.projectId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
 
   if (projectError) {
-    throw new Error(projectError.message);
+    throw new ValidationError({ message: projectError.message, details: projectError });
   }
 
-  // Also soft delete all tasks in this project
-  const { error: tasksError } = await supabaseAdmin
+  if (!data) {
+    throw new NotFoundError({ message: "Project not found in your organization" });
+  }
+
+  const { error: tasksError } = await supabase
     .from("tasks")
     .update({ deleted_at: now })
-    .eq("project_id", projectId);
+    .eq("organization_id", params.organizationId)
+    .eq("project_id", params.projectId)
+    .is("deleted_at", null);
 
   if (tasksError) {
-    throw new Error(tasksError.message);
+    throw new ValidationError({ message: tasksError.message, details: tasksError });
   }
 }

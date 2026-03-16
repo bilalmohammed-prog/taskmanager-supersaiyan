@@ -48,11 +48,15 @@ export async function createOrganization(
       return { data: null, error: { message: "Not authenticated." } };
     }
 
-    const result = await createOrganizationSvc(name.trim(), slug.trim(), user.id as UUID);
+    const result = await createOrganizationSvc(
+      supabase,
+      name.trim(),
+      slug.trim(),
+      user.id as UUID
+    );
     return { data: result, error: null };
   } catch (err) {
     // Do not leak internal details beyond the message.
     return { data: null, error: { message: safeErrorMessage(err) } };
   }
 }
-

@@ -27,10 +27,9 @@ export async function getUserOrganizationsAction(): Promise<
       return { data: null, error: { message: "Not authenticated." } };
     }
 
-    const orgs = await getUserOrganizations(user.id as UUID);
+    const orgs = await getUserOrganizations(supabase, user.id as UUID);
     return { data: orgs, error: null };
   } catch (err) {
     return { data: null, error: { message: safeErrorMessage(err) } };
   }
 }
-

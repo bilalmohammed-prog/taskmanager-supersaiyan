@@ -39,7 +39,7 @@ export async function switchOrganization(
       return { data: null, error: { message: "Not authenticated." } };
     }
 
-    const profile = await switchActiveOrganization(user.id as UUID, orgId);
+    const profile = await switchActiveOrganization(supabase, user.id as UUID, orgId);
 
     // Keep server session aligned with selection.
     const cookieStore = await cookies();
@@ -54,4 +54,3 @@ export async function switchOrganization(
     return { data: null, error: { message: safeErrorMessage(err) } };
   }
 }
-

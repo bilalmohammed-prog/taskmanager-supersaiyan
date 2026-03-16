@@ -1,110 +1,141 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import type { Tables, TablesInsert, UUID } from "@/lib/types/database";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { NotFoundError, ValidationError } from "@/lib/api/errors";
+import type { Database, Tables, TablesInsert } from "@/lib/types/database";
 
 export async function createTask(
-  projectId: UUID,
-  orgId: UUID,
-  title: string,
-  description?: string,
-  dueDate?: string
+  supabase: SupabaseClient<Database>,
+  params: {
+    projectId: string;
+    organizationId: string;
+    title: string;
+    description?: string;
+    dueDate?: string;
+  }
 ): Promise<Tables<"tasks">> {
-  // Verify project exists in organization
-  const { data: project, error: projectError } = await supabaseAdmin
+  const { data: project, error: projectError } = await supabase
     .from("projects")
     .select("id")
-    .eq("id", projectId)
-    .eq("organization_id", orgId)
+    .eq("id", params.projectId)
+    .eq("organization_id", params.organizationId)
     .is("deleted_at", null)
     .maybeSingle();
 
   if (projectError) {
-    throw new Error(projectError.message);
+    throw new ValidationError({ message: projectError.message, details: projectError });
   }
 
   if (!project) {
-    throw new Error("Project not found in this organization");
+    throw new NotFoundError({ message: "Project not found in this organization" });
   }
 
   const insert: TablesInsert<"tasks"> = {
-    project_id: projectId,
-    organization_id: orgId,
-    title,
-    description: description ?? null,
+    project_id: params.projectId,
+    organization_id: params.organizationId,
+    title: params.title,
+    description: params.description ?? null,
     status: "todo",
-    due_date: dueDate ?? null,
+    due_date: params.dueDate ?? null,
   };
 
-  const { data, error } = await supabaseAdmin
-    .from("tasks")
-    .insert(insert)
-    .select("*")
-    .single();
+  const { data, error } = await supabase.from("tasks").insert(insert).select("*").maybeSingle();
 
-  if (error || !data) {
-    throw new Error(error?.message ?? "Failed to create task");
+  if (error) {
+    throw new ValidationError({ message: error.message, details: error });
+  }
+
+  if (!data) {
+    throw new ValidationError({ message: "Failed to create task" });
   }
 
   return data;
 }
 
-export async function getTasksByProject(projectId: UUID): Promise<Tables<"tasks">[]> {
-  const { data, error } = await supabaseAdmin
+export async function getTasksByProject(
+  supabase: SupabaseClient<Database>,
+  params: { organizationId: string; projectId: string }
+): Promise<Tables<"tasks">[]> {
+  const { data, error } = await supabase
     .from("tasks")
     .select("*")
-    .eq("project_id", projectId)
+    .eq("organization_id", params.organizationId)
+    .eq("project_id", params.projectId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {
-    throw new Error(error.message);
+    throw new ValidationError({ message: error.message, details: error });
   }
 
   return data ?? [];
 }
 
-export async function getTaskById(taskId: UUID): Promise<Tables<"tasks"> | null> {
-  const { data, error } = await supabaseAdmin
+export async function getTaskById(
+  supabase: SupabaseClient<Database>,
+  params: { organizationId: string; taskId: string }
+): Promise<Tables<"tasks"> | null> {
+  const { data, error } = await supabase
     .from("tasks")
     .select("*")
-    .eq("id", taskId)
+    .eq("organization_id", params.organizationId)
+    .eq("id", params.taskId)
     .is("deleted_at", null)
     .maybeSingle();
 
   if (error) {
-    throw new Error(error.message);
+    throw new ValidationError({ message: error.message, details: error });
   }
 
   return data ?? null;
 }
 
 export async function updateTaskStatus(
-  taskId: UUID,
-  status: "todo" | "in_progress" | "blocked" | "done"
+  supabase: SupabaseClient<Database>,
+  params: {
+    organizationId: string;
+    taskId: string;
+    status: "todo" | "in_progress" | "blocked" | "done";
+  }
 ): Promise<Tables<"tasks">> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from("tasks")
-    .update({ status })
-    .eq("id", taskId)
+    .update({ status: params.status })
+    .eq("organization_id", params.organizationId)
+    .eq("id", params.taskId)
     .is("deleted_at", null)
     .select("*")
-    .single();
+    .maybeSingle();
 
-  if (error || !data) {
-    throw new Error(error?.message ?? "Failed to update task status");
+  if (error) {
+    throw new ValidationError({ message: error.message, details: error });
+  }
+
+  if (!data) {
+    throw new NotFoundError({ message: "Task not found in your organization" });
   }
 
   return data;
 }
 
-export async function deleteTask(taskId: UUID): Promise<void> {
+export async function deleteTask(
+  supabase: SupabaseClient<Database>,
+  params: { organizationId: string; taskId: string }
+): Promise<void> {
   const now = new Date().toISOString();
 
-  const { error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from("tasks")
     .update({ deleted_at: now })
-    .eq("id", taskId);
+    .eq("organization_id", params.organizationId)
+    .eq("id", params.taskId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
-    throw new Error(error.message);
+    throw new ValidationError({ message: error.message, details: error });
+  }
+
+  if (!data) {
+    throw new NotFoundError({ message: "Task not found in your organization" });
   }
 }

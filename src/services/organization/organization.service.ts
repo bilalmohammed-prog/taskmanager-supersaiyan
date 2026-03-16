@@ -1,5 +1,6 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import type { Tables, TablesInsert, UUID } from "@/lib/types/database";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { ForbiddenError, ValidationError } from "@/lib/api/errors";
+import type { Database, Tables, TablesInsert, UUID } from "@/lib/types/database";
 
 export type CreateOrganizationResult = {
   organization: Tables<"organizations">;
@@ -8,20 +9,24 @@ export type CreateOrganizationResult = {
 };
 
 export async function createOrganization(
+  supabase: SupabaseClient<Database>,
   name: string,
   slug: string,
   userId: UUID
 ): Promise<CreateOrganizationResult> {
   const orgInsert: TablesInsert<"organizations"> = { name, slug };
 
-  const { data: organization, error: orgError } = await supabaseAdmin
+  const { data: organization, error: orgError } = await supabase
     .from("organizations")
     .insert(orgInsert)
     .select("*")
-    .single();
+    .maybeSingle();
 
   if (orgError || !organization) {
-    throw new Error(orgError?.message ?? "Failed to create organization");
+    throw new ValidationError({
+      message: orgError?.message ?? "Failed to create organization",
+      details: orgError,
+    });
   }
 
   const memberInsert: TablesInsert<"org_members"> = {
@@ -30,19 +35,22 @@ export async function createOrganization(
     role: "admin",
   };
 
-  const { data: member, error: memberError } = await supabaseAdmin
+  const { data: member, error: memberError } = await supabase
     .from("org_members")
     .insert(memberInsert)
     .select("*")
-    .single();
+    .maybeSingle();
 
   if (memberError || !member) {
     // best-effort rollback
-    await supabaseAdmin.from("organizations").delete().eq("id", organization.id);
-    throw new Error(memberError?.message ?? "Failed to add org member");
+    await supabase.from("organizations").delete().eq("id", organization.id);
+    throw new ValidationError({
+      message: memberError?.message ?? "Failed to add org member",
+      details: memberError,
+    });
   }
 
-  const { data: profile, error: profileError } = await supabaseAdmin
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .upsert(
       {
@@ -52,36 +60,41 @@ export async function createOrganization(
       { onConflict: "id" }
     )
     .select("*")
-    .single();
+    .maybeSingle();
 
   if (profileError || !profile) {
     // best-effort rollback
-    await supabaseAdmin.from("org_members").delete().eq("id", member.id);
-    await supabaseAdmin.from("organizations").delete().eq("id", organization.id);
-    throw new Error(profileError?.message ?? "Failed to update user profile");
+    await supabase.from("org_members").delete().eq("id", member.id);
+    await supabase.from("organizations").delete().eq("id", organization.id);
+    throw new ValidationError({
+      message: profileError?.message ?? "Failed to update user profile",
+      details: profileError,
+    });
   }
 
   return { organization, member, profile };
 }
 
 export async function getOrganizationById(
+  supabase: SupabaseClient<Database>,
   orgId: UUID
 ): Promise<Tables<"organizations"> | null> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from("organizations")
     .select("*")
     .eq("id", orgId)
     .is("deleted_at", null)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new ValidationError({ message: error.message, details: error });
   return data ?? null;
 }
 
 export async function getUserOrganizations(
+  supabase: SupabaseClient<Database>,
   userId: UUID
 ): Promise<Array<Pick<Tables<"organizations">, "id" | "name" | "slug">>> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from("org_members")
     .select(
       `
@@ -94,7 +107,7 @@ export async function getUserOrganizations(
     )
     .eq("user_id", userId);
 
-  if (error) throw new Error(error.message);
+  if (error) throw new ValidationError({ message: error.message, details: error });
 
   return (data ?? [])
     .map((d) => d.organization)
@@ -105,21 +118,24 @@ export async function getUserOrganizations(
 }
 
 export async function switchActiveOrganization(
+  supabase: SupabaseClient<Database>,
   userId: UUID,
   orgId: UUID
 ): Promise<Tables<"profiles">> {
   // Ensure the user is actually a member of the organization.
-  const { data: membership, error: memberError } = await supabaseAdmin
+  const { data: membership, error: memberError } = await supabase
     .from("org_members")
     .select("id")
     .eq("user_id", userId)
     .eq("organization_id", orgId)
     .maybeSingle();
 
-  if (memberError) throw new Error(memberError.message);
-  if (!membership) throw new Error("Forbidden: user is not an org member");
+  if (memberError) {
+    throw new ValidationError({ message: memberError.message, details: memberError });
+  }
+  if (!membership) throw new ForbiddenError({ message: "Forbidden: user is not an org member" });
 
-  const { data: profile, error: profileError } = await supabaseAdmin
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .upsert(
       {
@@ -129,12 +145,14 @@ export async function switchActiveOrganization(
       { onConflict: "id" }
     )
     .select("*")
-    .single();
+    .maybeSingle();
 
   if (profileError || !profile) {
-    throw new Error(profileError?.message ?? "Failed to switch organization");
+    throw new ValidationError({
+      message: profileError?.message ?? "Failed to switch organization",
+      details: profileError,
+    });
   }
 
   return profile;
 }
-

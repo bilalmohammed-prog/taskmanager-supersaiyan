@@ -1,120 +1,266 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import type { Tables, TablesInsert, UUID } from "@/lib/types/database";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from "@/lib/api/errors";
+import type { AppRole } from "@/lib/auth/permissions";
+import type { Database, Tables, TablesInsert } from "@/lib/types/database";
 
-export type CommentWithAuthor = {
-  id: UUID;
-  content: string;
-  author_id: UUID;
-  author_name: string | null;
-  author_avatar: string | null;
-  created_at: string | null;
+type TaskTenantRow = Pick<
+  Tables<"tasks">,
+  "id" | "organization_id" | "project_id" | "deleted_at"
+>;
+
+type CommentRow = Tables<"comments">;
+
+export type CommentWithAuthor = CommentRow & {
+  author: {
+    id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+  } | null;
 };
 
-export async function addComment(
-  taskId: UUID,
-  userId: UUID,
-  content: string,
-  orgId: UUID
-): Promise<Tables<"comments">> {
-  // Derive tenant from the authenticated user's profile.
-  const { data: profile, error: profileError } = await supabaseAdmin
-    .from("profiles")
-    .select("id,active_organization_id")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (profileError) {
-    throw new Error(profileError.message);
+function canManageComment(role: AppRole, actorId: string, comment: CommentRow): boolean {
+  if (role === "owner" || role === "admin") {
+    return true;
   }
+  return comment.user_id === actorId;
+}
 
-  if (!profile?.active_organization_id) {
-    throw new Error("Active organization not found");
-  }
-
-  if (orgId && orgId !== profile.active_organization_id) {
-    throw new Error("Organization mismatch");
-  }
-
-  const organizationId = profile.active_organization_id;
-
-  // Verify task exists in organization
-  const { data: task, error: taskError } = await supabaseAdmin
+async function assertTaskInOrganization(
+  supabase: SupabaseClient<Database>,
+  params: { organizationId: string; taskId: string }
+): Promise<TaskTenantRow> {
+  const { data, error } = await supabase
     .from("tasks")
-    .select("id")
-    .eq("id", taskId)
-    .eq("organization_id", organizationId)
+    .select("id,organization_id,project_id,deleted_at")
+    .eq("id", params.taskId)
+    .eq("organization_id", params.organizationId)
     .is("deleted_at", null)
     .maybeSingle();
 
-  if (taskError) {
-    throw new Error(taskError.message);
+  if (error) {
+    throw new ValidationError({ message: error.message, details: error });
   }
 
-  if (!task) {
-    throw new Error("Task not found in this organization");
-  }
-
-  const insert: TablesInsert<"comments"> = {
-    task_id: taskId,
-    user_id: userId,
-    content,
-    organization_id: organizationId,
-  };
-
-  const { data, error } = await supabaseAdmin
-    .from("comments")
-    .insert(insert)
-    .select("*")
-    .single();
-
-  if (error || !data) {
-    throw new Error(error?.message ?? "Failed to add comment");
+  if (!data) {
+    throw new NotFoundError({
+      message: "Task not found in your organization",
+    });
   }
 
   return data;
 }
 
-export async function getTaskComments(taskId: UUID): Promise<CommentWithAuthor[]> {
-  const { data, error } = await supabaseAdmin
+async function getCommentForTask(
+  supabase: SupabaseClient<Database>,
+  params: { organizationId: string; taskId: string; commentId: string }
+): Promise<CommentRow> {
+  const { data, error } = await supabase
     .from("comments")
-    .select(
-      `
-      id,
-      content,
-      created_at,
-      profiles:created_by (
-        id,
-        full_name,
-        avatar_url
-      )
-      `
-    )
-    .eq("task_id", taskId)
+    .select("*")
+    .eq("id", params.commentId)
+    .eq("task_id", params.taskId)
+    .eq("organization_id", params.organizationId)
+    .maybeSingle();
+
+  if (error) {
+    throw new ValidationError({ message: error.message, details: error });
+  }
+
+  if (!data) {
+    throw new NotFoundError({ message: "Comment not found" });
+  }
+
+  return data;
+}
+
+export async function listCommentsForTask(
+  supabase: SupabaseClient<Database>,
+  params: { organizationId: string; taskId: string }
+): Promise<CommentWithAuthor[]> {
+  await assertTaskInOrganization(supabase, params);
+
+  const { data, error } = await supabase
+    .from("comments")
+    .select("id,task_id,user_id,content,created_at,organization_id,project_id")
+    .eq("organization_id", params.organizationId)
+    .eq("task_id", params.taskId)
     .order("created_at", { ascending: true });
 
   if (error) {
-    throw new Error(error.message);
+    throw new ValidationError({ message: error.message, details: error });
   }
 
-  type Row = {
-    id: UUID;
-    content: string;
-    created_at: string | null;
-    profiles:
-      | { id: UUID; full_name: string | null; avatar_url: string | null }
-      | Array<{ id: UUID; full_name: string | null; avatar_url: string | null }>
-      | null;
-  };
+  const rows = data ?? [];
+  const userIds = Array.from(
+    new Set(
+      rows
+        .map((row) => row.user_id)
+        .filter((userId): userId is string => typeof userId === "string")
+    )
+  );
 
-  return ((data ?? []) as unknown as Row[]).map((row) => {
-    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+  const { data: profiles, error: profilesError } =
+    userIds.length > 0
+      ? await supabase.from("profiles").select("id,full_name,avatar_url").in("id", userIds)
+      : { data: [], error: null };
+
+  if (profilesError) {
+    throw new ValidationError({
+      message: profilesError.message,
+      details: profilesError,
+    });
+  }
+
+  const profileById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
+
+  return rows.map((row) => {
+    const profile = row.user_id ? profileById.get(row.user_id) : undefined;
     return {
-    id: row.id,
-    content: row.content,
-    author_id: profile?.id ?? "",
-    author_name: profile?.full_name ?? null,
-    author_avatar: profile?.avatar_url ?? null,
-    created_at: row.created_at,
+      id: row.id,
+      task_id: row.task_id,
+      user_id: row.user_id,
+      content: row.content,
+      created_at: row.created_at,
+      organization_id: row.organization_id,
+      project_id: row.project_id,
+      author: profile
+        ? {
+            id: profile.id,
+            full_name: profile.full_name ?? null,
+            avatar_url: profile.avatar_url ?? null,
+          }
+        : null,
     };
   });
+}
+
+export async function createCommentForTask(
+  supabase: SupabaseClient<Database>,
+  params: { organizationId: string; userId: string; taskId: string; content: string }
+): Promise<CommentRow> {
+  const task = await assertTaskInOrganization(supabase, {
+    organizationId: params.organizationId,
+    taskId: params.taskId,
+  });
+
+  const insertPayload: TablesInsert<"comments"> = {
+    organization_id: params.organizationId,
+    task_id: params.taskId,
+    user_id: params.userId,
+    content: params.content,
+    project_id: task.project_id ?? null,
+  };
+
+  const { data, error } = await supabase
+    .from("comments")
+    .insert(insertPayload)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    throw new ValidationError({ message: error.message, details: error });
+  }
+
+  if (!data) {
+    throw new ValidationError({ message: "Unable to create comment" });
+  }
+
+  return data;
+}
+
+export async function updateCommentForTask(
+  supabase: SupabaseClient<Database>,
+  params: {
+    organizationId: string;
+    taskId: string;
+    commentId: string;
+    content: string;
+    actorId: string;
+    actorRole: AppRole;
+  }
+): Promise<CommentRow> {
+  await assertTaskInOrganization(supabase, {
+    organizationId: params.organizationId,
+    taskId: params.taskId,
+  });
+
+  const comment = await getCommentForTask(supabase, {
+    organizationId: params.organizationId,
+    taskId: params.taskId,
+    commentId: params.commentId,
+  });
+
+  if (!canManageComment(params.actorRole, params.actorId, comment)) {
+    throw new ForbiddenError({
+      message: "Only owner/admin or the comment author can edit this comment",
+    });
+  }
+
+  const { data, error } = await supabase
+    .from("comments")
+    .update({ content: params.content })
+    .eq("id", params.commentId)
+    .eq("task_id", params.taskId)
+    .eq("organization_id", params.organizationId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    throw new ValidationError({ message: error.message, details: error });
+  }
+
+  if (!data) {
+    throw new NotFoundError({ message: "Comment not found" });
+  }
+
+  return data;
+}
+
+export async function deleteCommentForTask(
+  supabase: SupabaseClient<Database>,
+  params: {
+    organizationId: string;
+    taskId: string;
+    commentId: string;
+    actorId: string;
+    actorRole: AppRole;
+  }
+): Promise<void> {
+  await assertTaskInOrganization(supabase, {
+    organizationId: params.organizationId,
+    taskId: params.taskId,
+  });
+
+  const comment = await getCommentForTask(supabase, {
+    organizationId: params.organizationId,
+    taskId: params.taskId,
+    commentId: params.commentId,
+  });
+
+  if (!canManageComment(params.actorRole, params.actorId, comment)) {
+    throw new ForbiddenError({
+      message: "Only owner/admin or the comment author can delete this comment",
+    });
+  }
+
+  const { data, error } = await supabase
+    .from("comments")
+    .delete()
+    .eq("id", params.commentId)
+    .eq("task_id", params.taskId)
+    .eq("organization_id", params.organizationId)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    throw new ValidationError({ message: error.message, details: error });
+  }
+
+  if (!data) {
+    throw new NotFoundError({ message: "Comment not found" });
+  }
 }
