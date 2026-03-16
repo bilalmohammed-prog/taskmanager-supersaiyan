@@ -16,7 +16,7 @@ export async function PATCH(
 ) {
   try {
     const tenant = await requireTenantContext(req);
-    authorize("create", "comment", tenant);
+    authorize("update", "comment", tenant);
     const { taskId, commentId } = taskCommentParamsSchema.parse(await params);
     const payload = commentUpdateSchema.parse(await req.json());
 
@@ -45,7 +45,7 @@ export async function DELETE(
 ) {
   try {
     const tenant = await requireTenantContext(req);
-    authorize("create", "comment", tenant);
+    authorize("delete", "comment", tenant);
     const { taskId, commentId } = taskCommentParamsSchema.parse(await params);
 
     await deleteCommentForTask(tenant.supabase, {
