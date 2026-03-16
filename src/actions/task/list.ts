@@ -1,27 +1,29 @@
 "use server";
 
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { listAssignments } from "@/services/resource/assignment.service";
 
 export async function listTasks(employeeId: string) {
-  const supabase = await getSupabaseServer();
+  const ctx = await requireOrgContext();
+  const rows = await listAssignments(ctx.supabase, {
+    organizationId: ctx.organizationId,
+    userId: employeeId,
+  });
 
-  const { data, error } = await supabase
-    .from("assignments")
-    .select(`
-      allocated_hours,
-      start_time,
-      end_time,
-      tasks!inner (
-        id,
-        title,
-        status,
-        due_date,
-        deleted_at
-      )
-    `)
-    .eq("user_id", employeeId)
-    .is("tasks.deleted_at", null);
-
-  if (error) throw new Error(error.message);
-  return data;
+  return rows
+    .filter((row) => row.task)
+    .map((row) => ({
+      allocated_hours: row.allocated_hours,
+      start_time: row.start_time,
+      end_time: row.end_time,
+      tasks: row.task
+        ? {
+            id: row.task.id,
+            title: row.task.title,
+            status: row.task.status,
+            due_date: null,
+            deleted_at: null,
+          }
+        : null,
+    }));
 }

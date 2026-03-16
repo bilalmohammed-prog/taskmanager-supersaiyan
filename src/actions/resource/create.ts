@@ -2,8 +2,8 @@
 
 import { createResourceAssignmentSchema } from "@/lib/validation/resource";
 import { getSupabaseServer } from "@/lib/supabase/server";
-import { createProfileAssignment } from "@/services/resource/resourceService";
-import { requireTenantContext } from "@/services/tenant";
+import { createProfileAssignment } from "@/services/resource/resource.service";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 
 type ActionError = { message: string };
 export type ActionResult<T> = { data: T; error: null } | { data: null; error: ActionError };
@@ -18,7 +18,7 @@ export async function createResource(
   try {
     const payload = createResourceAssignmentSchema.parse(input);
     const supabase = await getSupabaseServer();
-    const tenant = await requireTenantContext(supabase);
+    const tenant = await requireOrgContext({ supabase });
 
     const data = await createProfileAssignment(supabase, {
       organizationId: tenant.organizationId,
@@ -32,3 +32,4 @@ export async function createResource(
     return { data: null, error: { message: safeErrorMessage(err) } };
   }
 }
+

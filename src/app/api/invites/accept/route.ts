@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
+import { listOrganizationMembers } from "@/services/organization/organization.service";
 
 type AcceptInviteRequest = {
   manager_id?: string;
@@ -20,17 +21,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: membershipRows, error: membershipError } = await supabase
-      .from("org_members")
-      .select("user_id")
-      .eq("organization_id", organizationId)
-      .in("user_id", [userId, managerId]);
-
-    if (membershipError) {
-      return NextResponse.json({ error: membershipError.message }, { status: 500 });
-    }
-
-    const memberSet = new Set((membershipRows ?? []).map((m) => m.user_id));
+    const orgMembers = await listOrganizationMembers(supabase, { organizationId });
+    const memberSet = new Set(orgMembers.map((member) => member.userId));
 
     if (!memberSet.has(userId) || !memberSet.has(managerId)) {
       return NextResponse.json(

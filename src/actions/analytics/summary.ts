@@ -2,10 +2,10 @@
 
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { getAnalyticsSummaryFromDb } from "@/lib/api";
-import { requireTenantContext } from "@/services/tenant";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 
 export async function getAnalyticsSummary() {
   const supabase = await getSupabaseServer();
-  const ctx = await requireTenantContext(supabase);
+  const ctx = await requireOrgContext({ supabase });
   return await getAnalyticsSummaryFromDb(supabase, ctx.organizationId);
 }

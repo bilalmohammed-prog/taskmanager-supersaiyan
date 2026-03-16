@@ -2,8 +2,8 @@
 
 import { uuidSchema } from "@/lib/validation/common";
 import { getSupabaseServer } from "@/lib/supabase/server";
-import { removeProfileAssignment } from "@/services/resource/resourceService";
-import { requireTenantContext } from "@/services/tenant";
+import { removeProfileAssignment } from "@/services/resource/resource.service";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 
 type ActionError = { message: string };
 export type ActionResult<T> = { data: T; error: null } | { data: null; error: ActionError };
@@ -16,7 +16,7 @@ export async function deleteResource(resourceId: string): Promise<ActionResult<t
   try {
     const assignmentId = uuidSchema.parse(resourceId);
     const supabase = await getSupabaseServer();
-    const tenant = await requireTenantContext(supabase);
+    const tenant = await requireOrgContext({ supabase });
 
     await removeProfileAssignment(supabase, {
       organizationId: tenant.organizationId,
@@ -28,3 +28,4 @@ export async function deleteResource(resourceId: string): Promise<ActionResult<t
     return { data: null, error: { message: safeErrorMessage(err) } };
   }
 }
+

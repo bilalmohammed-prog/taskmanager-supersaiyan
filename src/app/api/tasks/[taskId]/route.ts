@@ -8,6 +8,9 @@ import {
   taskIdParamsSchema,
   taskUpdateSchema,
 } from "@/lib/validation/task";
+import { listAssignments } from "@/services/resource/assignment.service";
+import { getProjectById } from "@/services/resource/project.service";
+import { deleteTask as deleteTaskService, getTaskById } from "@/services/task/task.service";
 
 /* ---------- TYPES ---------- */
 interface TaskTableUpdate {
@@ -30,57 +33,17 @@ export async function PATCH(
     const { taskId } = taskIdParamsSchema.parse(await params);
     const body = taskUpdateSchema.parse(await req.json());
 
-    const { data: organization, error: organizationError } = await supabase
-      .from("organizations")
-      .select("id")
-      .eq("id", organizationId)
-      .is("deleted_at", null)
-      .maybeSingle();
-
-    if (organizationError) {
-      throw new ValidationError({
-        message: organizationError.message,
-        details: organizationError,
-      });
-    }
-
-    if (!organization) {
-      throw new ValidationError({
-        message: "Organization does not exist or is inactive",
-      });
-    }
-
-    const { data: task, error: taskError } = await supabase
-      .from("tasks")
-      .select("id, project_id")
-      .eq("id", taskId)
-      .eq("organization_id", organizationId)
-      .is("deleted_at", null)
-      .maybeSingle();
-
-    if (taskError) {
-      throw new ValidationError({ message: taskError.message, details: taskError });
-    }
+    const task = await getTaskById(supabase, { organizationId, taskId });
 
     if (!task) {
       throw new ValidationError({ message: "Task not found in your organization" });
     }
 
     if (task.project_id) {
-      const { data: project, error: projectError } = await supabase
-        .from("projects")
-        .select("id")
-        .eq("id", task.project_id)
-        .eq("organization_id", organizationId)
-        .is("deleted_at", null)
-        .maybeSingle();
-
-      if (projectError) {
-        throw new ValidationError({
-          message: projectError.message,
-          details: projectError,
-        });
-      }
+      const project = await getProjectById(supabase, {
+        organizationId,
+        projectId: task.project_id,
+      });
 
       if (!project) {
         throw new ValidationError({
@@ -114,12 +77,11 @@ export async function PATCH(
       throw new ValidationError({ message: "Task not found in your organization" });
     }
 
-    const { data: assignment } = await supabase
-      .from("assignments")
-      .select("user_id")
-      .eq("task_id", taskId)
-      .eq("organization_id", organizationId)
-      .maybeSingle();
+    const assignments = await listAssignments(supabase, {
+      organizationId,
+      taskId,
+    });
+    const assignment = assignments[0];
 
     return ok(
       {
@@ -156,16 +118,7 @@ export async function DELETE(
 
     const { taskId } = taskIdParamsSchema.parse(await params);
 
-    const { error } = await supabase
-      .from("tasks")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", taskId)
-      .eq("organization_id", organizationId)
-      .is("deleted_at", null);
-
-    if (error) {
-      throw new ValidationError({ message: error.message, details: error });
-    }
+    await deleteTaskService(supabase, { organizationId, taskId });
 
     return ok({ message: "Task deleted successfully" }, { status: 200 });
   } catch (err) {

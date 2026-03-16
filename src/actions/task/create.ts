@@ -1,7 +1,8 @@
 "use server";
 
-import { getSupabaseServer } from "@/lib/supabase/server";
-import type { Tables, TablesInsert } from "@/lib/types/database";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { createTask as createTaskService } from "@/services/task/task.service";
+import type { Tables } from "@/lib/types/database";
 
 export async function createTask(
   title: string,
@@ -10,26 +11,15 @@ export async function createTask(
   orgId: string,
   project_id: string | null
 ): Promise<Tables<"tasks">> {
-  const supabase = await getSupabaseServer();
-
   if (!orgId) throw new Error("No active organization");
+  if (!project_id) throw new Error("project_id is required");
 
-  const taskInsert: TablesInsert<"tasks"> = {
+  const ctx = await requireOrgContext({ organizationId: orgId });
+  return await createTaskService(ctx.supabase, {
+    organizationId: ctx.organizationId,
+    projectId: project_id,
     title,
     description,
-    organization_id: orgId,
-    status: "todo",
-    due_date: dueDate,
-    project_id: project_id ?? null,
-  };
-
-  const { data, error } = await supabase
-    .from("tasks")
-    .insert(taskInsert)
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-
-  return data;
+    dueDate: dueDate ?? undefined,
+  });
 }

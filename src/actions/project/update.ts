@@ -2,7 +2,7 @@
 
 import { updateProjectInDb } from "@/lib/api";
 import { getSupabaseServer } from "@/lib/supabase/server";
-import { requireTenantContext } from "@/services/tenant";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 
 export async function updateProjectAction(
   projectId: string,
@@ -14,7 +14,7 @@ export async function updateProjectAction(
   }
 ) {
   const supabase = await getSupabaseServer();
-  const ctx = await requireTenantContext(supabase);
+  const ctx = await requireOrgContext({ supabase });
   return await updateProjectInDb(supabase, {
     organizationId: ctx.organizationId,
     projectId,

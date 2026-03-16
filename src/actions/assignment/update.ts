@@ -1,22 +1,17 @@
 "use server";
 
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { updateAssignment as updateAssignmentService } from "@/services/resource/assignment.service";
 import type { TablesUpdate } from "@/lib/types/database";
 
 export async function updateAssignment(
   assignmentId: string,
   updates: TablesUpdate<"assignments">
 ) {
-  const supabase = await getSupabaseServer();
-
-  const { data, error } = await supabase
-    .from("assignments")
-    .update(updates)
-    .eq("id", assignmentId)
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-
-  return data;
+  const ctx = await requireOrgContext();
+  return await updateAssignmentService(ctx.supabase, {
+    organizationId: ctx.organizationId,
+    assignmentId,
+    updates,
+  });
 }

@@ -3,8 +3,8 @@
 import { uuidSchema } from "@/lib/validation/common";
 import { updateResourceAssignmentSchema } from "@/lib/validation/resource";
 import { getSupabaseServer } from "@/lib/supabase/server";
-import { updateProfileAssignment } from "@/services/resource/resourceService";
-import { requireTenantContext } from "@/services/tenant";
+import { updateProfileAssignment } from "@/services/resource/resource.service";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 
 type ActionError = { message: string };
 export type ActionResult<T> = { data: T; error: null } | { data: null; error: ActionError };
@@ -21,7 +21,7 @@ export async function updateResource(
     const assignmentId = uuidSchema.parse(resourceId);
     const payload = updateResourceAssignmentSchema.parse(updates);
     const supabase = await getSupabaseServer();
-    const tenant = await requireTenantContext(supabase);
+    const tenant = await requireOrgContext({ supabase });
 
     const data = await updateProfileAssignment(supabase, {
       organizationId: tenant.organizationId,
@@ -34,3 +34,4 @@ export async function updateResource(
     return { data: null, error: { message: safeErrorMessage(err) } };
   }
 }
+

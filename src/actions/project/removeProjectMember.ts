@@ -1,36 +1,38 @@
 "use server";
 
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { getTasksByProject } from "@/services/task/task.service";
+import {
+  deleteAssignment,
+  listAssignments,
+} from "@/services/resource/assignment.service";
+import { removeProjectMember as removeProjectMemberService } from "@/services/resource/projectMember.service";
 
 export async function removeProjectMember(projectId: string, userId: string) {
-  const supabase = await getSupabaseServer();
+  const ctx = await requireOrgContext();
+  await removeProjectMemberService(ctx.supabase, {
+    organizationId: ctx.organizationId,
+    projectId,
+    userId,
+  });
 
-  const { error } = await supabase
-    .from("project_members")
-    .update({
-      left_at: new Date().toISOString(),
-    })
-    .eq("project_id", projectId)
-    .eq("user_id", userId);
+  const tasks = await getTasksByProject(ctx.supabase, {
+    organizationId: ctx.organizationId,
+    projectId,
+  });
 
-  if (error) throw new Error(error.message);
+  for (const task of tasks) {
+    const assignments = await listAssignments(ctx.supabase, {
+      organizationId: ctx.organizationId,
+      taskId: task.id,
+      userId,
+    });
 
-  const { data: tasks, error: taskError } = await supabase
-    .from("tasks")
-    .select("id")
-    .eq("project_id", projectId)
-    .is("deleted_at", null);
-
-  if (taskError) throw new Error(taskError.message);
-
-  const taskIds = (tasks ?? []).map((t) => t.id);
-  if (taskIds.length === 0) return;
-
-  const { error: assignmentError } = await supabase
-    .from("assignments")
-    .delete()
-    .eq("user_id", userId)
-    .in("task_id", taskIds);
-
-  if (assignmentError) throw new Error(assignmentError.message);
+    for (const assignment of assignments) {
+      await deleteAssignment(ctx.supabase, {
+        organizationId: ctx.organizationId,
+        assignmentId: assignment.id,
+      });
+    }
+  }
 }

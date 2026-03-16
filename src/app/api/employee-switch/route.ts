@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
+import { listOrganizationMembers } from "@/services/organization/organization.service";
 
 export async function GET(req: Request) {
   try {
@@ -17,35 +18,18 @@ export async function GET(req: Request) {
 
     const employeeIds = links.map((l) => l.employee_id);
 
-    const { data, error } = await supabase
-      .from("org_members")
-      .select(
-        `
-          user_id,
-          profiles!org_members_user_id_fkey (
-            id,
-            full_name
-          )
-        `
-      )
-      .eq("organization_id", organizationId)
-      .in("user_id", employeeIds);
-
-    if (error) {
-      console.error(error);
-      return NextResponse.json({ success: true, data: { employees: [] } });
-    }
+    const orgMembers = await listOrganizationMembers(supabase, { organizationId });
+    const memberByUserId = new Map(orgMembers.map((member) => [member.userId, member.fullName]));
 
     const employees =
-      data?.map((e) => {
-        const profile = Array.isArray(e.profiles) ? e.profiles[0] : e.profiles;
+      employeeIds.map((employeeId) => {
         return {
-          id: e.user_id,
-          name: profile?.full_name ?? "Unnamed",
-          user_id: e.user_id,
-          emp_id: e.user_id,
+          id: employeeId,
+          name: memberByUserId.get(employeeId) ?? "Unnamed",
+          user_id: employeeId,
+          emp_id: employeeId,
         };
-      }) ?? [];
+      });
 
     return NextResponse.json({ success: true, data: { employees } });
   } catch (err) {

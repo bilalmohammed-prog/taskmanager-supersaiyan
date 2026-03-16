@@ -2,10 +2,10 @@
 
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { listAssignmentsFromDb } from "@/lib/api";
-import { requireTenantContext } from "@/services/tenant";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 
 export async function listAssignments() {
   const supabase = await getSupabaseServer();
-  const ctx = await requireTenantContext(supabase);
+  const ctx = await requireOrgContext({ supabase });
   return await listAssignmentsFromDb(supabase, ctx.organizationId);
 }

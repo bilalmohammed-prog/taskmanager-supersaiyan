@@ -1,28 +1,12 @@
 "use server";
 
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { listCommentsForTask } from "@/services/task/comment.service";
 
 export async function listComments(taskId: string) {
-  const supabase = await getSupabaseServer();
-
-  const { data, error } = await supabase
-    .from("comments")
-    .select(
-      `
-      id,
-      content,
-      created_at,
-      profiles:created_by (
-        id,
-        full_name,
-        avatar_url
-      )
-      `
-    )
-    .eq("task_id", taskId)
-    .order("created_at", { ascending: false });
-
-  if (error) throw new Error(error.message);
-
-  return data;
+  const ctx = await requireOrgContext();
+  return await listCommentsForTask(ctx.supabase, {
+    organizationId: ctx.organizationId,
+    taskId,
+  });
 }

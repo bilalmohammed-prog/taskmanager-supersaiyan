@@ -1,27 +1,17 @@
 "use server";
 
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { addProjectMember } from "@/services/resource/projectMember.service";
 
 export async function assignProjectMember(
   projectId: string,
   userId: string,
   orgId: string
 ) {
-  const supabase = await getSupabaseServer();
-
-  const { error } = await supabase
-    .from("project_members")
-    .upsert(
-      {
-        project_id: projectId,
-        user_id: userId,
-        organization_id: orgId,
-        left_at: null,
-      },
-      {
-        onConflict: "project_id,user_id",
-      }
-    );
-
-  if (error) throw new Error(error.message);
+  const ctx = await requireOrgContext({ organizationId: orgId });
+  await addProjectMember(ctx.supabase, {
+    organizationId: ctx.organizationId,
+    projectId,
+    userId,
+  });
 }

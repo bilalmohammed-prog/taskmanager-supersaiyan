@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
+import { listOrganizationMembers } from "@/services/organization/organization.service";
+import { listAssignments } from "@/services/resource/assignment.service";
+import { getTaskById } from "@/services/task/task.service";
 
 type TaskRow = {
   id: string;
@@ -24,81 +27,61 @@ export async function GET(req: Request): Promise<NextResponse> {
       return NextResponse.json({ success: true, data: { tasks: [] } });
     }
 
-    const { data: member } = await supabase
-      .from("org_members")
-      .select("user_id")
-      .eq("organization_id", organizationId)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (!member) {
+    const members = await listOrganizationMembers(supabase, { organizationId });
+    const isMember = members.some((member) => member.userId === userId);
+    if (!isMember) {
       return NextResponse.json({ success: true, data: { tasks: [] } });
     }
 
-
-
-    /* ================= QUERY ================= */
-    const { data, error } = await supabase
-      .from("assignments")
-      .select(
-        `
-          user_id,
-          tasks!inner (
-            id,
-            title,
-            description,
-            status,
-            due_date,
-            deleted_at
-          )
-        `
-      )
-      .eq("user_id", userId)
-      .eq("organization_id", organizationId)
-      .eq("tasks.organization_id", organizationId)
-      .is("tasks.deleted_at", null)
-      .order("due_date", { ascending: true, foreignTable: "tasks" });
-
-    if (error) {
-      console.error("DB ERROR:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch tasks" },
-        { status: 500 }
-      );
-    }
+    const assignments = await listAssignments(supabase, {
+      organizationId,
+      userId,
+    });
 
     /* ================= MAP ================= */
-    const formattedTasks =
-      (data as
-        | Array<{ user_id: string; tasks: TaskRow | TaskRow[] | null }>
-        | null
-      )?.flatMap((row) => {
-        const rawTask = row.tasks;
-        const task = Array.isArray(rawTask) ? rawTask[0] : rawTask;
-        if (!task) return [];
+    const formattedTasks = (
+      await Promise.all(
+        assignments.map(async (assignment) => {
+          const task = assignment.task
+            ? await getTaskById(supabase, {
+                organizationId,
+                taskId: assignment.task.id,
+              })
+            : null;
 
-        const legacyStatus =
-          task.status === "todo"
-            ? "pending"
-            : task.status === "in_progress"
-              ? "in-progress"
-              : task.status === "done"
-                ? "completed"
-                : task.status ?? "pending";
+          if (!task) return null;
 
-        return [
-          {
+          const typedTask: TaskRow = {
             id: task.id,
-            employee_id: row.user_id,
-            task: task.title ?? "",
-            description: task.description ?? "",
-            startTime: null,
-            endTime: task.due_date,
+            title: task.title,
+            description: task.description ?? null,
+            status: task.status,
+            due_date: task.due_date ?? null,
+            deleted_at: task.deleted_at ?? null,
+          };
+
+          const legacyStatus =
+            typedTask.status === "todo"
+              ? "pending"
+              : typedTask.status === "in_progress"
+                ? "in-progress"
+                : typedTask.status === "done"
+                  ? "completed"
+                  : typedTask.status ?? "pending";
+
+          return {
+            id: typedTask.id,
+            employee_id: assignment.user_id,
+            task: typedTask.title ?? "",
+            description: typedTask.description ?? "",
+            startTime: assignment.start_time,
+            endTime: typedTask.due_date,
             status: legacyStatus,
             proof: "",
-          },
-        ];
-      }) ?? [];
+          };
+        })
+      )
+    ).filter((row): row is NonNullable<typeof row> => Boolean(row));
 
     return NextResponse.json({ success: true, data: { tasks: formattedTasks } });
   } catch (err) {

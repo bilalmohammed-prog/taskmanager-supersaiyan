@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
+import { listWorkforceProfiles } from "@/services/resource/resource.service";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -10,42 +11,18 @@ export async function GET(req: Request) {
 
   try {
     const { supabase, organizationId } = await requireTenantContext(req);
-    const { data, error } = await supabase
-      .from("org_members")
-      .select(
-        `
-          user_id,
-          profiles!org_members_user_id_fkey (
-            id,
-            full_name,
-            username
-          )
-        `
-      )
-      .eq("organization_id", organizationId)
-      .eq("profiles.username", email)
-      .maybeSingle();
+    const profiles = await listWorkforceProfiles(supabase, { organizationId });
+    const matched = profiles.find((profile) => profile.username === email);
 
-    if (error) {
-      console.error(error);
-      return NextResponse.json({ error: "Database error" }, { status: 500 });
-    }
-
-    const profile = data
-      ? Array.isArray(data.profiles)
-        ? data.profiles[0]
-        : data.profiles
-      : null;
-
-    if (!data || !profile) {
+    if (!matched) {
       return NextResponse.json({ success: true, data: { empID: null } }, { status: 200 });
     }
 
     return NextResponse.json({
       success: true,
       data: {
-        empID: data.user_id,
-        name: profile.full_name ?? null,
+        empID: matched.id,
+        name: matched.full_name ?? null,
       },
     });
   } catch (err) {

@@ -1,8 +1,8 @@
 "use server";
 
 import { getSupabaseServer } from "@/lib/supabase/server";
-import { listAssignableProfiles } from "@/services/resource/resourceService";
-import { requireTenantContext } from "@/services/tenant";
+import { listAssignableProfiles } from "@/services/resource/resource.service";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 
 type ActionError = { message: string };
 export type ActionResult<T> = { data: T; error: null } | { data: null; error: ActionError };
@@ -17,7 +17,7 @@ export async function listHumanResources(
   try {
     void orgId;
     const supabase = await getSupabaseServer();
-    const tenant = await requireTenantContext(supabase);
+    const tenant = await requireOrgContext({ supabase });
     const data = await listAssignableProfiles(supabase, {
       organizationId: tenant.organizationId,
     });
@@ -26,3 +26,4 @@ export async function listHumanResources(
     return { data: null, error: { message: safeErrorMessage(err) } };
   }
 }
+

@@ -1,40 +1,55 @@
 "use server";
 
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import {
+  createAssignment,
+  deleteAssignment,
+  listAssignments,
+} from "@/services/resource/assignment.service";
+import { getTaskById } from "@/services/task/task.service";
 
 export async function assignTaskToResource(
   taskId: string,
   userId: string | null
 ) {
-  const supabase = await getSupabaseServer();
+  const ctx = await requireOrgContext();
+  const task = await getTaskById(ctx.supabase, {
+    organizationId: ctx.organizationId,
+    taskId,
+  });
+  if (!task) throw new Error("Task not found");
 
-  const { data: task, error: taskError } = await supabase
-    .from("tasks")
-    .select("organization_id")
-    .eq("id", taskId)
-    .single();
-
-  if (taskError || !task) throw new Error(taskError?.message ?? "Task not found");
+  const existingAssignments = await listAssignments(ctx.supabase, {
+    organizationId: ctx.organizationId,
+    taskId,
+  });
 
   // UNASSIGN
   if (!userId) {
-    const { error } = await supabase
-      .from("assignments")
-      .delete()
-      .eq("task_id", taskId);
-
-    if (error) throw new Error(error.message);
+    await Promise.all(
+      existingAssignments.map((assignment) =>
+        deleteAssignment(ctx.supabase, {
+          organizationId: ctx.organizationId,
+          assignmentId: assignment.id,
+        })
+      )
+    );
     return;
   }
 
-  // ASSIGN / REASSIGN (single query)
-  await supabase.from("assignments").delete().eq("task_id", taskId);
+  // ASSIGN / REASSIGN
+  await Promise.all(
+    existingAssignments.map((assignment) =>
+      deleteAssignment(ctx.supabase, {
+        organizationId: ctx.organizationId,
+        assignmentId: assignment.id,
+      })
+    )
+  );
 
-  const { error } = await supabase.from("assignments").insert({
-    task_id: taskId,
-    user_id: userId,
-    organization_id: task.organization_id,
+  await createAssignment(ctx.supabase, {
+    organizationId: task.organization_id,
+    taskId,
+    userId,
   });
-
-  if (error) throw new Error(error.message);
 }

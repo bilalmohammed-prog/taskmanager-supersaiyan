@@ -1,16 +1,13 @@
 "use server";
 
-import { getSupabaseServer } from "@/lib/supabase/server";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { deleteAssignment as deleteAssignmentService } from "@/services/resource/assignment.service";
 
 export async function deleteAssignment(assignmentId: string) {
-  const supabase = await getSupabaseServer();
-
-  const { error } = await supabase
-    .from("assignments")
-    .delete()
-    .eq("id", assignmentId);
-
-  if (error) throw new Error(error.message);
-
+  const ctx = await requireOrgContext();
+  await deleteAssignmentService(ctx.supabase, {
+    organizationId: ctx.organizationId,
+    assignmentId,
+  });
   return true;
 }
