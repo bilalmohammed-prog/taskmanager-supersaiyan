@@ -1,52 +1,18 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import type { Database } from "@/lib/types/database";
+import { requireTenantContext } from "@/lib/auth/tenant-context";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const cookieStore = await cookies();
-
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-        },
-      }
-    );
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ employees: [] });
-    }
-
-    const { data: me, error: meError } = await supabase
-      .from("profiles")
-      .select("active_organization_id")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (meError || !me?.active_organization_id) {
-      return NextResponse.json({ employees: [] });
-    }
-
-    const organizationId = me.active_organization_id;
+    const { supabase, userId, organizationId } = await requireTenantContext(req);
 
     const { data: links, error: linksError } = await supabase
       .from("manager_employees")
       .select("employee_id")
-      .eq("manager_id", user.id)
+      .eq("manager_id", userId)
       .eq("organization_id", organizationId);
 
     if (linksError || !links || links.length === 0) {
-      return NextResponse.json({ employees: [] });
+      return NextResponse.json({ success: true, data: { employees: [] } });
     }
 
     const employeeIds = links.map((l) => l.employee_id);
@@ -67,7 +33,7 @@ export async function GET() {
 
     if (error) {
       console.error(error);
-      return NextResponse.json({ employees: [] });
+      return NextResponse.json({ success: true, data: { employees: [] } });
     }
 
     const employees =
@@ -81,9 +47,9 @@ export async function GET() {
         };
       }) ?? [];
 
-    return NextResponse.json({ employees });
+    return NextResponse.json({ success: true, data: { employees } });
   } catch (err) {
     console.error("Error fetching employees:", err);
-    return NextResponse.json({ employees: [] });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 
 export async function POST() {
-  return NextResponse.json(
-    { error: "Messaging is not yet supported in the current schema." },
-    { status: 501 }
-  );
+  // Messaging is disabled for MVP. Keep response shape non-breaking.
+  return NextResponse.json({ success: false, message: "Messaging is disabled for MVP." });
 }

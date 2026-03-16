@@ -1,35 +1,15 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import type { Database } from "@/lib/types/database";
+import { requireTenantContext } from "@/lib/auth/tenant-context";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
-    const cookieStore = await cookies();
-
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-        },
-      }
-    );
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    return NextResponse.json({ success: true, message: "Invitation declined." });
+    await requireTenantContext(req);
+    return NextResponse.json({
+      success: true,
+      data: { message: "Invitation declined." },
+    });
   } catch (err) {
     console.error("Decline Invite Error:", err);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

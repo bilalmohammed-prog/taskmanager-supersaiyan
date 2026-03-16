@@ -2,7 +2,7 @@
 
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { requireTenantContext } from "@/services/tenant";
-import { listOrganizationMembers } from "@/services/organization/organizationService";
+import { listOrganizationMembers } from "@/services/organization/organization.service";
 
 export async function listOrgMembers(orgId: string) {
   const supabase = await getSupabaseServer();

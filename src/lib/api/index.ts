@@ -64,7 +64,8 @@ function toCanonicalTask(raw: RawTask | null | undefined) {
 // GET /api/displayTasks
 export async function getDisplayTasks(employeeId: string): Promise<DisplayTasksResponse> {
   const response = await apiFetch(`/api/displayTasks?employee_id=${encodeURIComponent(employeeId)}`);
-  const data = await response.json();
+  const responseBody = await response.json();
+  const data = responseBody?.success ? responseBody.data : responseBody;
   const normalized = {
     tasks: Array.isArray(data?.tasks)
       ? (data.tasks as RawTask[]).map((t) => toCanonicalTask(t))
@@ -76,14 +77,16 @@ export async function getDisplayTasks(employeeId: string): Promise<DisplayTasksR
 // GET /api/employee-overview
 export async function getEmployeeOverview(email: string): Promise<EmployeeOverviewResponse> {
   const response = await apiFetch(`/api/employee-overview?email=${encodeURIComponent(email)}`);
-  const data = await response.json();
+  const responseBody = await response.json();
+  const data = responseBody?.success ? responseBody.data : responseBody;
   return EmployeeOverviewResponseSchema.parse(data);
 }
 
 // GET /api/employee-switch
 export async function getEmployeeSwitch(): Promise<EmployeeSwitchResponse> {
   const response = await apiFetch('/api/employee-switch');
-  const data = await response.json();
+  const responseBody = await response.json();
+  const data = responseBody?.success ? responseBody.data : responseBody;
   return EmployeeSwitchResponseSchema.parse(data);
 }
 
@@ -182,7 +185,8 @@ export async function deleteTask(taskId: string): Promise<DeleteTaskResponse> {
 // GET /api/teamProgress
 export async function getTeamProgress(): Promise<TeamProgressResponse> {
   const response = await apiFetch('/api/teamProgress');
-  const data = await response.json();
+  const responseBody = await response.json();
+  const data = responseBody?.success ? responseBody.data : responseBody;
   return TeamProgressResponseSchema.parse(data);
 }
 

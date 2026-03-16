@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/types/database";
+import { requireTenantContext } from "@/lib/auth/tenant-context";
 
 type TaskRow = {
   id: string;
@@ -11,78 +10,9 @@ type TaskRow = {
   deleted_at: string | null;
 };
 
-async function resolveOrganizationId(
-  supabase: SupabaseClient<Database>,
-  userId: string
-): Promise<string | null> {
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("active_organization_id")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (!profileError && profile?.active_organization_id) {
-    return profile.active_organization_id;
-  }
-
-  const { data: member, error: memberError } = await supabase
-    .from("org_members")
-    .select("organization_id")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (memberError || !member?.organization_id) return null;
-  return member.organization_id;
-}
-
 export async function GET(req: Request): Promise<NextResponse> {
   try {
-
-
-    /* ================= AUTH HEADER ================= */
-    const authHeader = req.headers.get("authorization");
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.log("Missing or invalid Authorization header");
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const token = authHeader.split(" ")[1];
-
-    /* ================= SUPABASE CLIENT ================= */
-    const supabase = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`, // critical for RLS
-          },
-        },
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
-        },
-      }
-    );
-
-    /* ================= AUTH USER ================= */
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const organizationId = await resolveOrganizationId(supabase, user.id);
-    if (!organizationId) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 400 });
-    }
+    const { supabase, organizationId } = await requireTenantContext(req);
 
     /* ================= PARAMS ================= */
     const { searchParams } = new URL(req.url);
@@ -91,7 +21,7 @@ export async function GET(req: Request): Promise<NextResponse> {
 
 
     if (!userId) {
-      return NextResponse.json({ tasks: [] });
+      return NextResponse.json({ success: true, data: { tasks: [] } });
     }
 
     const { data: member } = await supabase
@@ -102,7 +32,7 @@ export async function GET(req: Request): Promise<NextResponse> {
       .maybeSingle();
 
     if (!member) {
-      return NextResponse.json({ tasks: [] });
+      return NextResponse.json({ success: true, data: { tasks: [] } });
     }
 
 
@@ -170,8 +100,7 @@ export async function GET(req: Request): Promise<NextResponse> {
         ];
       }) ?? [];
 
-
-    return NextResponse.json({ tasks: formattedTasks });
+    return NextResponse.json({ success: true, data: { tasks: formattedTasks } });
   } catch (err) {
     console.error("[TASK_ROUTE_EXCEPTION]", err);
     return NextResponse.json(

@@ -32,7 +32,7 @@ export async function createOrganization(
   const memberInsert: TablesInsert<"org_members"> = {
     organization_id: organization.id,
     user_id: userId,
-    role: "admin",
+    role: "owner",
   };
 
   const { data: member, error: memberError } = await supabase
@@ -115,6 +115,46 @@ export async function getUserOrganizations(
       (org): org is Pick<Tables<"organizations">, "id" | "name" | "slug"> =>
         !!org
     );
+}
+
+export async function listOrganizationsForUser(
+  supabase: SupabaseClient<Database>,
+  params: { userId: string }
+): Promise<Array<Pick<Tables<"organizations">, "id" | "name" | "slug">>> {
+  return getUserOrganizations(supabase, params.userId);
+}
+
+export async function listOrganizationMembers(
+  supabase: SupabaseClient<Database>,
+  params: { organizationId: string }
+): Promise<Array<{ userId: string; fullName: string }>> {
+  const { data: members, error: memberError } = await supabase
+    .from("org_members")
+    .select("user_id")
+    .eq("organization_id", params.organizationId);
+
+  if (memberError) {
+    throw new ValidationError({ message: memberError.message, details: memberError });
+  }
+
+  const userIds = members?.map((member) => member.user_id) ?? [];
+  if (userIds.length === 0) {
+    return [];
+  }
+
+  const { data: profiles, error: profileError } = await supabase
+    .from("profiles")
+    .select("id,full_name")
+    .in("id", userIds);
+
+  if (profileError) {
+    throw new ValidationError({ message: profileError.message, details: profileError });
+  }
+
+  return (profiles ?? []).map((profile) => ({
+    userId: profile.id,
+    fullName: profile.full_name ?? "Unknown",
+  }));
 }
 
 export async function switchActiveOrganization(

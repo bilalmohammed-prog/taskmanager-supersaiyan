@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import type { Database } from "@/lib/types/database";
+import { requireTenantContext } from "@/lib/auth/tenant-context";
 
 type AcceptInviteRequest = {
   manager_id?: string;
@@ -10,27 +8,7 @@ type AcceptInviteRequest = {
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = await cookies();
-
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value;
-          },
-        },
-      }
-    );
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { supabase, userId, organizationId } = await requireTenantContext(req);
 
     const body: AcceptInviteRequest = await req.json().catch(() => ({}));
     const managerId = body.manager_id ?? body.managerId;
@@ -42,33 +20,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: employeeProfile, error: employeeProfileError } = await supabase
-      .from("profiles")
-      .select("active_organization_id")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (employeeProfileError || !employeeProfile) {
-      return NextResponse.json(
-        { error: "Employee profile not found" },
-        { status: 400 }
-      );
-    }
-
-    const organizationId = employeeProfile.active_organization_id;
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Active organization not found" },
-        { status: 400 }
-      );
-    }
-
     const { data: membershipRows, error: membershipError } = await supabase
       .from("org_members")
       .select("user_id")
       .eq("organization_id", organizationId)
-      .in("user_id", [user.id, managerId]);
+      .in("user_id", [userId, managerId]);
 
     if (membershipError) {
       return NextResponse.json({ error: membershipError.message }, { status: 500 });
@@ -76,7 +32,7 @@ export async function POST(req: Request) {
 
     const memberSet = new Set((membershipRows ?? []).map((m) => m.user_id));
 
-    if (!memberSet.has(user.id) || !memberSet.has(managerId)) {
+    if (!memberSet.has(userId) || !memberSet.has(managerId)) {
       return NextResponse.json(
         { error: "Manager and employee must belong to the same organization" },
         { status: 400 }
@@ -88,7 +44,7 @@ export async function POST(req: Request) {
       .upsert(
         {
           manager_id: managerId,
-          employee_id: user.id,
+          employee_id: userId,
           organization_id: organizationId,
         },
         { onConflict: "organization_id,employee_id" }
@@ -100,7 +56,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Invitation accepted and manager linked.",
+      data: { message: "Invitation accepted and manager linked." },
     });
   } catch (err) {
     console.error("Accept Invite Error:", err);

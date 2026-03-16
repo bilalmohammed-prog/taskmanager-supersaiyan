@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  return NextResponse.json(
-    { error: "Messaging is not yet supported in the current schema." },
-    { status: 501 }
-  );
+  // Messaging is disabled for MVP. Return a stable empty payload for clients.
+  return NextResponse.json([]);
 }

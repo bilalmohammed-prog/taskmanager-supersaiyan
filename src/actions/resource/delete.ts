@@ -1,7 +1,30 @@
 "use server";
 
-export async function deleteResource(resourceId: string) {
-  void resourceId;
-  // TODO: Re-enable deletion after model migration to profiles/org_members.
-  throw new Error("Not implemented");
+import { uuidSchema } from "@/lib/validation/common";
+import { getSupabaseServer } from "@/lib/supabase/server";
+import { removeProfileAssignment } from "@/services/resource/resourceService";
+import { requireTenantContext } from "@/services/tenant";
+
+type ActionError = { message: string };
+export type ActionResult<T> = { data: T; error: null } | { data: null; error: ActionError };
+
+function safeErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : "Unexpected error";
+}
+
+export async function deleteResource(resourceId: string): Promise<ActionResult<true>> {
+  try {
+    const assignmentId = uuidSchema.parse(resourceId);
+    const supabase = await getSupabaseServer();
+    const tenant = await requireTenantContext(supabase);
+
+    await removeProfileAssignment(supabase, {
+      organizationId: tenant.organizationId,
+      assignmentId,
+    });
+
+    return { data: true, error: null };
+  } catch (err) {
+    return { data: null, error: { message: safeErrorMessage(err) } };
+  }
 }
