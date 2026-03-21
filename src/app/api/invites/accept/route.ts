@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { fail } from "@/lib/api/response";
 import { authorize } from "@/lib/auth/authorization";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
 import { listOrganizationMembers } from "@/services/organization/organization.service";
+import { uuidSchema } from "@/lib/validation/common";
 
-type AcceptInviteRequest = {
-  manager_id?: string;
-  managerId?: string;
-};
+const acceptInviteBodySchema = z.object({
+  manager_id: uuidSchema,
+}).strict();
 
 export async function POST(req: Request) {
   try {
@@ -15,15 +16,8 @@ export async function POST(req: Request) {
     authorize("read", "organization", tenant);
     const { supabase, userId, organizationId } = tenant;
 
-    const body: AcceptInviteRequest = await req.json().catch(() => ({}));
-    const managerId = body.manager_id ?? body.managerId;
-
-    if (!managerId) {
-      return NextResponse.json(
-        { error: "manager_id is required" },
-        { status: 400 }
-      );
-    }
+    const body = acceptInviteBodySchema.parse(await req.json());
+    const { manager_id: managerId } = body;
 
     const orgMembers = await listOrganizationMembers(supabase, { organizationId });
     const memberSet = new Set(orgMembers.map((member) => member.userId));

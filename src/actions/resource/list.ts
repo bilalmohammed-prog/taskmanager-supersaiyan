@@ -4,7 +4,7 @@ import { getSupabaseServer } from "@/lib/supabase/server";
 import { listWorkforceProfiles } from "@/services/resource/resource.service";
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 import { safeErrorMessage, type ActionResult } from "@/actions/organization/_shared";
-type ActionError = { message: string };
+
 
 
 export async function listResources(): Promise<

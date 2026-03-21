@@ -1,22 +1,24 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { fail } from "@/lib/api/response";
 import { authorize } from "@/lib/auth/authorization";
 import { requireTenantContext } from "@/lib/auth/tenant-context";
+import { uuidSchema } from "@/lib/validation/common";
+
+const dropInviteBodySchema = z.object({
+  employee_id: uuidSchema,
+  manager_id: uuidSchema,
+}).strict();
 
 export async function DELETE(req: Request) {
   try {
-    const { employee_id, manager_id } = await req.json();
-
-    if (!employee_id || !manager_id) {
-      return NextResponse.json(
-        { error: "employee_id and manager_id are required" },
-        { status: 400 }
-      );
-    }
+    const body = dropInviteBodySchema.parse(await req.json());
+    const { employee_id, manager_id } = body;
 
     const tenant = await requireTenantContext(req);
     authorize("read", "organization", tenant);
     const { supabase, userId, organizationId } = tenant;
+
     if (userId !== manager_id) {
       return NextResponse.json(
         { error: "Forbidden: manager_id must match authenticated user" },
