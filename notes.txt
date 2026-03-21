@@ -66,8 +66,7 @@ This audit reveals a project with a robust security foundation using Supabase Ro
   7. Prioritized Fix List
   
   
-   3. Expand Middleware: Update src/middleware.ts to protect all authenticated routes (/dashboard, /projects, /tasks,     
-      /settings).
+   
    4. Standardize Validation: Apply Zod parsing to all Server Actions and API Route handlers.
    5. Fix User Task Filtering: Update UserTasksView.tsx to filter tasks by assignment (supabase.from('assignments')...)   
       rather than fetching the entire tasks table.
