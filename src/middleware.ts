@@ -2,21 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
+  let res = NextResponse.next({
+    request: req,
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value;
+        getAll() {
+          return req.cookies.getAll();
         },
-        set(name: string, value: string, options) {
-          res.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options) {
-          res.cookies.set({ name, value: "", ...options });
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            req.cookies.set(name, value)
+          );
+          res = NextResponse.next({ request: req });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            res.cookies.set(name, value, options)
+          );
         },
       },
     }
@@ -28,9 +33,20 @@ export async function middleware(req: NextRequest) {
 
   const pathname = req.nextUrl.pathname;
 
-  // Protect organization routes
-  if (!user && pathname.startsWith("/organizations")) {
-    const loginUrl = new URL("/login", req.url);
+  const protectedPrefixes = [
+    "/organizations",
+    "/dashboard",
+    "/projects",
+    "/tasks",
+    "/settings",
+  ];
+
+  const isProtected = protectedPrefixes.some((prefix) =>
+    pathname.startsWith(prefix)
+  );
+
+  if (!user && isProtected) {
+    const loginUrl = new URL("/auth/login", req.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -39,5 +55,11 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/organizations/:path*"],
+  matcher: [
+    "/organizations/:path*",
+    "/dashboard/:path*",
+    "/projects/:path*",
+    "/tasks/:path*",
+    "/settings/:path*",
+  ],
 };
