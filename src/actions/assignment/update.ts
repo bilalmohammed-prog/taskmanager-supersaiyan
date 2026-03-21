@@ -2,16 +2,24 @@
 
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 import { updateAssignment as updateAssignmentService } from "@/services/resource/assignment.service";
-import type { TablesUpdate } from "@/lib/types/database";
+import { uuidSchema } from "@/lib/validation/common";
+import { assignmentUpdateSchema } from "@/lib/validation/assignment";
 
 export async function updateAssignment(
   assignmentId: string,
-  updates: TablesUpdate<"assignments">
+  updates: {
+    allocatedHours?: number | null;
+    start_time?: string | null;
+    end_time?: string | null;
+  }
 ) {
+  const validatedAssignmentId = uuidSchema.parse(assignmentId);
+  const validatedUpdates = assignmentUpdateSchema.parse(updates);
+
   const ctx = await requireOrgContext();
   return await updateAssignmentService(ctx.supabase, {
     organizationId: ctx.organizationId,
-    assignmentId,
-    updates,
+    assignmentId: validatedAssignmentId,
+    updates: validatedUpdates,
   });
 }

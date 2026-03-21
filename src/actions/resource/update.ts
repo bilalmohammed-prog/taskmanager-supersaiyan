@@ -5,13 +5,9 @@ import { updateResourceAssignmentSchema } from "@/lib/validation/resource";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { updateProfileAssignment } from "@/services/resource/resource.service";
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
-
+import { safeErrorMessage, type ActionResult } from "@/actions/organization/_shared";
 type ActionError = { message: string };
-export type ActionResult<T> = { data: T; error: null } | { data: null; error: ActionError };
 
-function safeErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : "Unexpected error";
-}
 
 export async function updateResource(
   resourceId: string,

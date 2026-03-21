@@ -2,12 +2,15 @@
 
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 import { listAssignments } from "@/services/resource/assignment.service";
+import { uuidSchema } from "@/lib/validation/common";
 
 export async function listTasks(employeeId: string) {
+  const validatedEmployeeId = uuidSchema.parse(employeeId);
+
   const ctx = await requireOrgContext();
   const rows = await listAssignments(ctx.supabase, {
     organizationId: ctx.organizationId,
-    userId: employeeId,
+    userId: validatedEmployeeId,
   });
 
   return rows

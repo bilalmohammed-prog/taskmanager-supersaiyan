@@ -3,6 +3,7 @@
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 import { listAssignments } from "@/services/resource/assignment.service";
 import { getTasksByProject } from "@/services/task/task.service";
+import { uuidSchema } from "@/lib/validation/common";
 import type { Tables } from "@/lib/types/database";
 
 type TaskWithAssignee = Tables<"tasks"> & {
@@ -11,10 +12,13 @@ type TaskWithAssignee = Tables<"tasks"> & {
 };
 
 export async function listTasksByProject(projectId: string, orgId: string) {
-  const ctx = await requireOrgContext({ organizationId: orgId });
+  const validatedProjectId = uuidSchema.parse(projectId);
+  const validatedOrgId = uuidSchema.parse(orgId);
+
+  const ctx = await requireOrgContext({ organizationId: validatedOrgId });
   const tasks = await getTasksByProject(ctx.supabase, {
     organizationId: ctx.organizationId,
-    projectId,
+    projectId: validatedProjectId,
   });
   if (!tasks || tasks.length === 0) return [];
 
@@ -22,7 +26,9 @@ export async function listTasksByProject(projectId: string, orgId: string) {
   const assignmentRows = await listAssignments(ctx.supabase, {
     organizationId: ctx.organizationId,
   });
-  const assignmentsForProjectTasks = assignmentRows.filter((row) => taskIds.includes(row.task_id));
+  const assignmentsForProjectTasks = assignmentRows.filter((row) =>
+    taskIds.includes(row.task_id)
+  );
 
   const assignmentByTaskId = new Map<string, string>();
   const profileById = new Map<string, string | null>();
@@ -38,7 +44,6 @@ export async function listTasksByProject(projectId: string, orgId: string) {
 
   const mapped: TaskWithAssignee[] = tasks.map((task) => {
     const assigneeId = assignmentByTaskId.get(task.id) ?? null;
-
     return {
       ...task,
       assignee_id: assigneeId,

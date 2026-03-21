@@ -2,14 +2,16 @@
 
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 import { deleteTask as deleteTaskService } from "@/services/task/task.service";
+import { uuidSchema } from "@/lib/validation/common";
 
 export async function deleteTask(taskId: string, orgId: string) {
-  if (!orgId) throw new Error("No active organization");
+  const validatedTaskId = uuidSchema.parse(taskId);
+  const validatedOrgId = uuidSchema.parse(orgId);
 
-  const ctx = await requireOrgContext({ organizationId: orgId });
+  const ctx = await requireOrgContext({ organizationId: validatedOrgId });
   await deleteTaskService(ctx.supabase, {
     organizationId: ctx.organizationId,
-    taskId,
+    taskId: validatedTaskId,
   });
 
   return true;

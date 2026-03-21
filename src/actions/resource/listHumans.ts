@@ -3,19 +3,12 @@
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { listAssignableProfiles } from "@/services/resource/resource.service";
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { safeErrorMessage, type ActionResult } from "@/actions/organization/_shared";
 
-type ActionError = { message: string };
-export type ActionResult<T> = { data: T; error: null } | { data: null; error: ActionError };
-
-function safeErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : "Unexpected error";
-}
-
-export async function listHumanResources(
-  orgId: string
-): Promise<ActionResult<Awaited<ReturnType<typeof listAssignableProfiles>>>> {
+export async function listHumanResources(): Promise<
+  ActionResult<Awaited<ReturnType<typeof listAssignableProfiles>>>
+> {
   try {
-    void orgId;
     const supabase = await getSupabaseServer();
     const tenant = await requireOrgContext({ supabase });
     const data = await listAssignableProfiles(supabase, {
@@ -26,4 +19,3 @@ export async function listHumanResources(
     return { data: null, error: { message: safeErrorMessage(err) } };
   }
 }
-

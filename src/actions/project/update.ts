@@ -3,6 +3,8 @@
 import { updateProjectInDb } from "@/lib/api";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { uuidSchema } from "@/lib/validation/common";
+import { projectUpdateSchema } from "@/lib/validation/project";
 
 export async function updateProjectAction(
   projectId: string,
@@ -13,11 +15,14 @@ export async function updateProjectAction(
     endDate?: string | null;
   }
 ) {
+  const validatedProjectId = uuidSchema.parse(projectId);
+  const validatedParams = projectUpdateSchema.parse(params);
+
   const supabase = await getSupabaseServer();
   const ctx = await requireOrgContext({ supabase });
   return await updateProjectInDb(supabase, {
     organizationId: ctx.organizationId,
-    projectId,
-    ...params,
+    projectId: validatedProjectId,
+    ...validatedParams,
   });
 }
