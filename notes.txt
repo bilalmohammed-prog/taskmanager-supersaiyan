@@ -1,0 +1,79 @@
+This audit reveals a project with a robust security foundation using Supabase Row-Level Security (RLS) but significant  
+  inconsistencies in its implementation of Next.js patterns and front-end best practices.
+
+  1. Project Overview
+   - Stack: Next.js (app router), React 19, Supabase (SSR & Client), Zod, Tailwind CSS, Radix UI.
+   - Architecture: Hybrid. Uses both Server Actions and internal API routes. Business logic is somewhat fragmented between
+     Services, API Route handlers, and the lib/api/index.ts file.
+   - Folder Structure: Standard Next.js structure. Highlights include a dedicated services layer and a complex actions    
+     setup that sometimes wraps API routes.
+
+  2. Backend Assessment
+   - Server Actions:
+     - Coverage: Moderate. Primary actions exist for projects and tasks.
+     - Inconsistency: Some actions (e.g., createTask) call services directly, while others (e.g., updateTask) manually    
+       invoke API Route handler functions by constructing Request objects—a major anti-pattern.
+     - Tenant Isolation: Enforced via requireOrgContext helper, but relies heavily on cookies/profile state which can be  
+       ambiguous.
+   - API Routes:
+     - REST Design: Generally follow /api/[resource] pattern.
+     - Auth/Validation: requireTenantContext is used in some routes to resolve identity. Validation coverage is
+       inconsistent (some use Zod, others use manual object property checks).
+   - Supabase:
+     - RLS: Excellent. Policies are comprehensive, enforcing organization boundaries across all core tables
+       (organizations, tasks, projects, assignments, messages).
+     - Identity Resolution: Correctly uses auth.uid() in RLS and resolves organization_id through membership checks.      
+   - RBAC: Permission matrix is well-defined in lib/auth/permissions.ts but usage is sparse in Server Actions. API routes 
+     use an authorize helper which is better.
+   - Zod: Schemas exist for almost all entities in lib/api/types.ts and lib/validation/, but they are often bypassed in   
+     direct Server Actions.
+
+  3. Frontend Assessment
+   - Auth Flow: Standard Supabase OAuth (Google). Redirection logic in page.tsx is broken (redirects to non-existent      
+     /userTasks).
+   - Layout & Providers: Good use of context providers for Dashboard and Organizations.
+   - Pages: The Dashboard (/dashboard) is well-implemented using Server Components. However, the UserTasksView and        
+     TeamTasksView components suffer from direct Supabase client calls and "legacy" internal API fetching.
+   - UI Components: Some components (like UserTasksView) use browser prompt() for input, which is not production-ready.   
+     Hardcoded SVG paths (/svg/) contradict the actual file structure (/icons/).
+
+  4. Security Audit
+   - Critical Risk: Hardcoded URLs: Server Actions like updateTask.ts (line 34) use http://localhost/api/.... This will   
+     break in production.
+   - Identity Trust: The system correctly avoids trusting user_id or org_id from the request body without verifying       
+     membership via the JWT/RLS.
+   - Unprotected Routes: Middleware only protects /organizations/:path*. Critical routes like /dashboard, /projects, and  
+     /tasks are missing middleware-level protection, though they are partially saved by RLS.
+   - Data Leakage: UserTasksView fetches all tasks in the organization without filtering for those specifically assigned  
+     to the user, potentially exposing other members' tasks depending on intended UX.
+
+  5. Critical Bugs & Blockers
+   1. Broken Redirect: src/app/page.tsx redirects to /userTasks, which results in a 404.
+   2. Hardcoded Localhost: Server Actions construction of Request objects with http://localhost will fail on
+      Vercel/Production.
+   3. Missing Validation: Several API routes (e.g., invites/accept/route.ts) skip Zod validation, risking malformed data  
+      entry.
+   4. Incorrect Icon Paths: UserTasksView and TeamTasksView reference /svg/ paths that do not exist in public/.
+
+  6. MVP Completion Score
+   - Backend: 85/100
+     - Justification: Strong RLS policies and well-structured service layer. The primary weakness is the inconsistent use 
+       of Server Actions vs. API routes.
+   - Frontend: 60/100
+     - Justification: The UI is functional but relies on direct client-side DB calls, browser prompts, and has broken     
+       navigation/dead links.
+
+  7. Prioritized Fix List
+  
+  
+   3. Expand Middleware: Update src/middleware.ts to protect all authenticated routes (/dashboard, /projects, /tasks,     
+      /settings).
+   4. Standardize Validation: Apply Zod parsing to all Server Actions and API Route handlers.
+   5. Fix User Task Filtering: Update UserTasksView.tsx to filter tasks by assignment (supabase.from('assignments')...)   
+      rather than fetching the entire tasks table.
+   6. Replace Browser Prompts: Build a proper Radix/Shadcn UI dialog for the "Proof of Work" input in UserTasksView.      
+   7. Fix Asset Paths: Correct icon URLs from /svg/*.svg to /icons/*.svg.
+   8. Centralize Auth Check: Move client-side auth checks to a dedicated ProtectedRoute wrapper or rely strictly on       
+      Middleware to avoid flickering.
+                                                                                                          ? for shortcuts 
+finsihed step 1 of priority

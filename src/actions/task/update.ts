@@ -1,50 +1,34 @@
 "use server";
 
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
-import { PATCH as patchTaskRoute } from "@/app/api/tasks/[taskId]/route";
-import type { TablesUpdate } from "@/lib/types/database";
-
+import { updateTask as updateTaskService } from "@/services/task/task.service";
+import type { TablesUpdate,Tables } from "@/lib/types/database";
 
 export async function updateTask(
   taskId: string,
   updates: TablesUpdate<"tasks">,
   orgId: string
-) {
+): Promise<Tables<"tasks">> {
   if (!orgId) throw new Error("No active organization");
 
   const ctx = await requireOrgContext({ organizationId: orgId });
-  const {
-    data: { session },
-    error: sessionError,
-  } = await ctx.supabase.auth.getSession();
-  const token = session?.access_token;
 
-  if (sessionError || !token) {
-    throw new Error("Unauthorized");
-  }
+  const safeUpdates: {
+    title?: string;
+    description?: string | null;
+    due_date?: string | null;
+    status?: "todo" | "in_progress" | "blocked" | "done";
+  } = {};
 
-  const payload: Record<string, unknown> = {};
-  if (updates.title !== undefined) payload.title = updates.title;
-  if (updates.description !== undefined) payload.description = updates.description;
-  if (typeof updates.due_date === "string") payload.dueDate = updates.due_date;
-  if (typeof updates.status === "string") payload.status = updates.status;
+  if (updates.title !== undefined) safeUpdates.title = updates.title ?? undefined;
+  if (updates.description !== undefined) safeUpdates.description = updates.description;
+  if (updates.due_date !== undefined) safeUpdates.due_date = updates.due_date;
+  if (updates.status !== undefined)
+    safeUpdates.status = updates.status as "todo" | "in_progress" | "blocked" | "done";
 
-  const response = await patchTaskRoute(
-    new Request(`http://localhost/api/tasks/${taskId}`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    }),
-    { params: Promise.resolve({ taskId }) }
-  );
-
-  const body = await response.json();
-  if (!response.ok || body?.ok === false) {
-    throw new Error(body?.error?.message ?? body?.error ?? "Failed to update task");
-  }
-
-  return body?.data?.task ?? null;
+  return updateTaskService(ctx.supabase, {
+    organizationId: orgId,
+    taskId,
+    updates: safeUpdates,
+  });
 }

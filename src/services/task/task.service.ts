@@ -139,3 +139,35 @@ export async function deleteTask(
     throw new NotFoundError({ message: "Task not found in your organization" });
   }
 }
+export async function updateTask(
+  supabase: SupabaseClient<Database>,
+  params: {
+    organizationId: string;
+    taskId: string;
+    updates: {
+      title?: string;
+      description?: string | null;
+      due_date?: string | null;
+      status?: "todo" | "in_progress" | "blocked" | "done";
+    };
+  }
+): Promise<Tables<"tasks">> {
+  const { data, error } = await supabase
+    .from("tasks")
+    .update(params.updates)
+    .eq("organization_id", params.organizationId)
+    .eq("id", params.taskId)
+    .is("deleted_at", null)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    throw new ValidationError({ message: error.message, details: error });
+  }
+
+  if (!data) {
+    throw new NotFoundError({ message: "Task not found in your organization" });
+  }
+
+  return data;
+}

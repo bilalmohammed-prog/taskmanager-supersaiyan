@@ -1,56 +1,15 @@
-"use client";
+import { redirect } from "next/navigation";
+import { getSupabaseServer } from "@/lib/supabase/server";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
-import "./globals.css";
+export default async function Page() {
+  const supabase = await getSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-export default function Page() {
-  const router = useRouter();
-  const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
-
-  useEffect(() => {
-    async function checkAuth(): Promise<void> {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        router.replace("/userTasks");
-        return;
-      }
-
-      setCheckingAuth(false);
-    }
-
-    checkAuth();
-  }, [router]);
-
-  const handleGoogleLogin = async (): Promise<void> => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/userTasks`,
-      },
-    });
-  };
-
-  if (checkingAuth) {
-    return <div className="loading">Loading...</div>;
+  if (user) {
+    redirect("/dashboard");
   }
 
-  return (
-    <div className="login-page">
-      <div className="login-box">
-        <h1 className="login-title">Task Manager</h1>
-
-        <button
-          className="google-btn"
-          onClick={handleGoogleLogin}
-        >
-          Continue with Google
-        </button>
-      </div>
-    </div>
-  );
+  redirect("/auth/login");
 }
