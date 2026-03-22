@@ -1,5 +1,6 @@
 "use client";
 
+import { createProjectAction } from "@/actions/project/create";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useParams } from "next/navigation";
@@ -87,22 +88,12 @@ const loadProjects = useCallback(async () => {
     try {
       setCreating(true);
 
-      const { data, error } = await supabase
-        .from("projects")
-        .insert({
-          name: name.trim(),
-          status,
-          start_date: startDate || null,
-          end_date: endDate || null,
-          organization_id: orgId
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-
-     
+      await createProjectAction({
+        name: name.trim(),
+        status,
+        startDate: startDate || null,
+        endDate: endDate || null,
+      });
 
       await loadProjects();
 

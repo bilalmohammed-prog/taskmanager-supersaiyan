@@ -6,12 +6,8 @@ import { supabase } from "@/lib/supabase/client";
 import { updateTask } from "@/actions/task/update";
 import type { TablesUpdate } from "@/lib/supabase/types";
 import { assignTaskToResource } from "@/actions/task/assign";
-
 import { createTask } from "@/actions/task/create";
 import { deleteTask as deleteTaskAction } from "@/actions/task/delete";
-
-import { deleteTask as deleteTaskApi } from "@/lib/api";
-import { getEmployeeOverview } from "@/lib/api";
 import EmployeeOverviewModal from "@/components/EmployeeOverviewModal";
 
 type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
@@ -24,211 +20,159 @@ type TaskRow = {
   description?: string | null;
 };
 
-
-type Profile = {
-  id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-};
-
-type EmployeeOverview = {
-  empID: string | null;
-  name: string | null;
-};
-
-function formatDate(date?: string | null) {
-  if (!date) return "—";
-  return new Date(date).toLocaleDateString();
-}
-
 export default function EmployeeDetailPage() {
-const [newDueDate, setNewDueDate] = useState<string>("");
+  const { employeeId, orgId } = useParams<{ employeeId: string; orgId: string }>();
 
-
-  const { employeeId } = useParams<{ employeeId: string }>();
-
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [newDueDate, setNewDueDate] = useState<string>("");
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [orgId, setOrgId] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [employeeEmail, setEmployeeEmail] = useState<string>("");
   const [showOverviewModal, setShowOverviewModal] = useState(false);
 
   const [showCreate, setShowCreate] = useState(false);
-const [newTitle, setNewTitle] = useState("");
-const [newStatus, setNewStatus] = useState<TaskStatus>("todo");
-const [creating, setCreating] = useState(false);
-const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState("");
+  const [newStatus, setNewStatus] = useState<TaskStatus>("todo");
+  const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-const [editingTask, setEditingTask] = useState<TaskRow | null>(null);
-const [editTitle, setEditTitle] = useState("");
-const [editStatus, setEditStatus] = useState<TaskStatus>("todo");
-const [editDueDate, setEditDueDate] = useState("");
-const [editDescription, setEditDescription] = useState("");
-const [updating, setUpdating] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskRow | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editStatus, setEditStatus] = useState<TaskStatus>("todo");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [updating, setUpdating] = useState(false);
 
-const [newDescription, setNewDescription] = useState("");
-
+  const [newDescription, setNewDescription] = useState("");
 
   // ---------- STATE HELPERS ----------
 
-function openEdit(task: TaskRow) {
-  setEditingTask(task);
-  setEditTitle(task.title);
-  setEditStatus(task.status ?? "todo");
-  setEditDueDate(task.due_date ?? "");
-  setEditDescription(task.description ?? "");
-}
-async function handleUpdate() {
-  if (!editingTask || !orgId) return;
-
-  try {
-    setUpdating(true);
-
-    await updateTask(editingTask.id, {
-      title: editTitle,
-      status: editStatus,
-      due_date: editDueDate || null,
-      description: editDescription || null
-    }, orgId);
-
-    // update local UI
-    setTasks(prev =>
-      prev.map(t =>
-        t.id === editingTask.id
-          ? {
-              ...t,
-              title: editTitle,
-              status: editStatus,
-              due_date: editDueDate || null,
-              description: editDescription || null
-            }
-          : t
-      )
-    );
-
-    setEditingTask(null);
-  } catch (e) {
-    alert("Update failed");
-  } finally {
-    setUpdating(false);
+  function openEdit(task: TaskRow) {
+    setEditingTask(task);
+    setEditTitle(task.title);
+    setEditStatus(task.status ?? "todo");
+    setEditDueDate(task.due_date ?? "");
+    setEditDescription(task.description ?? "");
   }
-}
 
-async function handleCreate() {
-  const trimmed = newTitle.trim();
+  async function handleUpdate() {
+    if (!editingTask || !orgId) return;
 
-  if (!trimmed || !newDueDate) return;
+    try {
+      setUpdating(true);
 
-  try {
-    setCreating(true);
+      await updateTask(
+        editingTask.id,
+        {
+          title: editTitle,
+          status: editStatus,
+          due_date: editDueDate || null,
+          description: editDescription || null,
+        },
+        orgId
+      );
 
-    if (!orgId) {
-      alert("No organization selected");
-      return;
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === editingTask.id
+            ? {
+                ...t,
+                title: editTitle,
+                status: editStatus,
+                due_date: editDueDate || null,
+                description: editDescription || null,
+              }
+            : t
+        )
+      );
+
+      setEditingTask(null);
+    } finally {
+      setUpdating(false);
     }
-
-    const created = await createTask(
-      trimmed,
-      newDescription || "",
-      newDueDate,
-      orgId,
-      null
-      
-    );
-
-await assignTaskToResource(created.id, employeeId);
-
-    setTasks(prev => [
-      ...prev,
-      {
-        ...created,
-        status: created.status as TaskStatus,
-      }
-    ]);
-
-    setShowCreate(false);
-    setNewTitle("");
-    setNewStatus("todo");
-    setNewDueDate("");
-    setNewDescription("");
-
-  } catch (e) {
-    console.error(e);
-    alert("Create failed");
-  } finally {
-    setCreating(false);
-  }
-}
-
-
-async function handleDelete(id: string) {
-  if (!orgId) {
-    alert("No organization selected");
-    return;
   }
 
-  const confirmDelete = confirm("Delete this task?");
-  if (!confirmDelete) return;
+  async function handleCreate() {
+    const trimmed = newTitle.trim();
+    if (!trimmed || !newDueDate) return;
 
-  const backup = tasks;
-  setDeletingId(id);
-  setTasks(prev => prev.filter(t => t.id !== id));
+    try {
+      setCreating(true);
 
-  try {
-    await deleteTaskAction(id, orgId);
-  } catch (e) {
-    console.error(e);
-    alert("Delete failed");
-    setTasks(backup);
-  } finally {
-    setDeletingId(null);
+      const created = await createTask(
+        trimmed,
+        newDescription || "",
+        newDueDate,
+        orgId,
+        null
+      );
+
+      await assignTaskToResource(created.id, employeeId);
+
+      setTasks((prev) => [
+        ...prev,
+        {
+          ...created,
+          status: created.status as TaskStatus,
+        },
+      ]);
+
+      setShowCreate(false);
+      setNewTitle("");
+      setNewStatus("todo");
+      setNewDueDate("");
+      setNewDescription("");
+    } catch (e) {
+      console.error(e);
+      alert("Create failed");
+    } finally {
+      setCreating(false);
+    }
   }
-}
 
+  async function handleDelete(id: string) {
+    const confirmDelete = confirm("Delete this task?");
+    if (!confirmDelete) return;
 
+    const backup = tasks;
+    setDeletingId(id);
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+
+    try {
+      await deleteTaskAction(id, orgId);
+    } catch (e) {
+      console.error(e);
+      alert("Delete failed");
+      setTasks(backup);
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   function updateTitleLocal(id: string, value: string) {
-    setTasks(prev =>
-      prev.map(t => (t.id === id ? { ...t, title: value } : t))
-    );
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, title: value } : t)));
   }
 
   function updateStatusLocal(id: string, value: TaskStatus) {
-    setTasks(prev =>
-      prev.map(t => (t.id === id ? { ...t, status: value } : t))
-    );
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: value } : t)));
   }
-function updateDueDateLocal(id: string, value: string | null) {
-  const normalized = value === "" ? null : value;
 
-  setTasks(prev =>
-    prev.map(t => (t.id === id ? { ...t, due_date: normalized } : t))
-  );
-}
+  function updateDueDateLocal(id: string, value: string | null) {
+    const normalized = value === "" ? null : value;
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, due_date: normalized } : t)));
+  }
 
-
-async function commitDueDate(id: string, value: string) {
-  const normalized = value === "" ? null : value;
-
-  const old = tasks.find(t => t.id === id)?.due_date ?? null;
-
-  updateDueDateLocal(id, normalized);
-
-  const ok = await saveTask(id, { due_date: normalized });
-  if (!ok) updateDueDateLocal(id, old);
-}
-
+  async function commitDueDate(id: string, value: string) {
+    const normalized = value === "" ? null : value;
+    const old = tasks.find((t) => t.id === id)?.due_date ?? null;
+    updateDueDateLocal(id, normalized);
+    const ok = await saveTask(id, { due_date: normalized });
+    if (!ok) updateDueDateLocal(id, old);
+  }
 
   // ---------- SERVER SAVE ----------
 
   async function saveTask(id: string, updates: TablesUpdate<"tasks">) {
-    if (!orgId) {
-      alert("No organization selected");
-      return false;
-    }
-
     try {
       setSavingId(id);
       await updateTask(id, updates, orgId);
@@ -242,42 +186,21 @@ async function commitDueDate(id: string, value: string) {
     }
   }
 
-  // ---------- COMMIT HANDLERS ----------
-
   async function commitTitle(id: string, newValue: string) {
     const trimmed = newValue.trim();
     if (trimmed.length === 0) return;
-
-    const old = tasks.find(t => t.id === id)?.title ?? "";
-
+    const old = tasks.find((t) => t.id === id)?.title ?? "";
     updateTitleLocal(id, trimmed);
-
     const ok = await saveTask(id, { title: trimmed });
     if (!ok) updateTitleLocal(id, old);
   }
 
   async function commitStatus(id: string, value: TaskStatus) {
-    const old = tasks.find(t => t.id === id)?.status ?? null;
-
+    const old = tasks.find((t) => t.id === id)?.status ?? null;
     updateStatusLocal(id, value);
-
     const ok = await saveTask(id, { status: value });
     if (!ok && old) updateStatusLocal(id, old);
   }
-
-  // ---------- CRUD ----------
-
-  async function deleteTask(id: string) {
-    try {
-      await deleteTaskApi(id);
-      setTasks(prev => prev.filter(t => t.id !== id));
-    } catch (err) {
-      console.error("Failed to delete task", err);
-      // Could add error handling UI here
-    }
-  }
-
-
 
   // ---------- LOAD DATA ----------
 
@@ -285,23 +208,9 @@ async function commitDueDate(id: string, value: string) {
     async function loadTasks() {
       setLoading(true);
 
-      const { data: org } = await supabase
-        .from("organizations")
-        .select("id")
-        .single();
-
-      setOrgId(org?.id ?? null);
-
-      const { data: p } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url")
-        .eq("id", employeeId)
-        .single();
-
-      setProfile(p);
-
-      // Get current user's email for employee overview
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       setEmployeeEmail(user?.email || "");
 
       const { data, error } = await supabase
@@ -309,18 +218,16 @@ async function commitDueDate(id: string, value: string) {
         .select(`
           task_id,
           tasks!inner (
-  id,
-  title,
-  status,
-  due_date,
-  description,
-  deleted_at
-)
-
+            id,
+            title,
+            status,
+            due_date,
+            description,
+            deleted_at
+          )
         `)
         .eq("user_id", employeeId)
-.is("tasks.deleted_at", null);
-
+        .is("tasks.deleted_at", null);
 
       if (error) {
         console.error(error);
@@ -328,17 +235,13 @@ async function commitDueDate(id: string, value: string) {
         return;
       }
 
-      const taskRows =
-        data?.map(row => ({
-          ...row.tasks
-        })).filter(Boolean) ?? [];
-
+      const taskRows = data?.map((row) => ({ ...row.tasks })).filter(Boolean) ?? [];
       setTasks(taskRows);
       setLoading(false);
     }
 
     loadTasks();
-  }, [employeeId]);
+  }, [employeeId]); // ← dependency array prevents infinite loop
 
   // ---------- UI ----------
 
@@ -359,212 +262,186 @@ async function commitDueDate(id: string, value: string) {
         </button>
       </div>
 
-
-      <table className="w-full border-collapse text-sm">
-        <thead className="text-gray-400 border-b border-white/10">
-          <tr>
-            <th className="p-2 text-left">Title</th>
-            <th>Status</th>
-            <th>Due</th>
-
-            <th></th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {tasks.map(task => (
-            <tr key={task.id} className="border-b border-white/5">
-              <td className="p-2">
-                <input
-                  disabled={!orgId}
-                  value={task.title}
-                  onChange={e =>
-                    updateTitleLocal(task.id, e.target.value)
-                  }
-                  onBlur={e =>
-                    commitTitle(task.id, e.target.value)
-                  }
-                  onKeyDown={e => {
-                    if (e.key === "Escape") {
-                      e.currentTarget.value = task.title;
-                      e.currentTarget.blur();
-                    }
-                    if (e.key === "Enter") e.currentTarget.blur();
-                  }}
-                  className="bg-transparent border-b border-white/20 hover:border-white/40 focus:border-blue-500 outline-none"
-                />
-              </td>
-
-              <td>
-                <select
-                  disabled={!orgId}
-                  value={task.status ?? ""}
-                  onChange={e =>
-                    commitStatus(
-                      task.id,
-                      e.target.value as TaskStatus
-                    )
-                  }
-                >
-                  <option value="todo">Todo</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="blocked">Blocked</option>
-                  <option value="done">Done</option>
-                </select>
-              </td>
-
-              <td>
-  <input
-    type="date"
-    disabled={!orgId}
-    value={task.due_date ?? ""}
-    onChange={e =>
-      updateDueDateLocal(task.id, e.target.value)
-    }
-    onBlur={e =>
-      commitDueDate(task.id, e.target.value)
-    }
-    className="bg-transparent border-b border-white/20 hover:border-white/40 focus:border-blue-500 outline-none"
-  />
-</td>
-
-
-
-              <td className="flex gap-2 items-center">
-                {savingId === task.id && (
-                  <span className="text-xs text-gray-400">
-                    Saving…
-                  </span>
-                )}
-                <button onClick={() => openEdit(task)}>✏️</button>
-
-                <button onClick={() => handleDelete(task.id)}>
-  {deletingId === task.id ? "…" : "🗑"}
-</button>
-
-              </td>
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : (
+        <table className="w-full border-collapse text-sm">
+          <thead className="text-gray-400 border-b border-white/10">
+            <tr>
+              <th className="p-2 text-left">Title</th>
+              <th>Status</th>
+              <th>Due</th>
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
 
-          {showCreate && (
-  <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-    <div className="bg-gray-900 p-6 rounded w-[420px] space-y-4">
-      <h2 className="text-lg font-semibold">Create Task</h2>
+          <tbody>
+            {tasks.map((task) => (
+              <tr key={task.id} className="border-b border-white/5">
+                <td className="p-2">
+                  <input
+                    value={task.title}
+                    onChange={(e) => updateTitleLocal(task.id, e.target.value)}
+                    onBlur={(e) => commitTitle(task.id, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        e.currentTarget.value = task.title;
+                        e.currentTarget.blur();
+                      }
+                      if (e.key === "Enter") e.currentTarget.blur();
+                    }}
+                    className="bg-transparent border-b border-white/20 hover:border-white/40 focus:border-blue-500 outline-none"
+                  />
+                </td>
 
-      {/* TITLE (REQUIRED) */}
-      <input
-        autoFocus
-        placeholder="Task title *"
-        value={newTitle}
-        onChange={e => setNewTitle(e.target.value)}
-        className="w-full bg-gray-800 p-2 rounded border border-gray-700"
-      />
+                <td>
+                  <select
+                    value={task.status ?? ""}
+                    onChange={(e) => commitStatus(task.id, e.target.value as TaskStatus)}
+                  >
+                    <option value="todo">Todo</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="blocked">Blocked</option>
+                    <option value="done">Done</option>
+                  </select>
+                </td>
 
-      {/* DUE DATE (REQUIRED) */}
-      <input
-        type="date"
-        value={newDueDate}
-        onChange={e => setNewDueDate(e.target.value)}
-        className="w-full bg-gray-800 p-2 rounded border border-gray-700"
-      />
+                <td>
+                  <input
+                    type="date"
+                    value={task.due_date ?? ""}
+                    onChange={(e) => updateDueDateLocal(task.id, e.target.value)}
+                    onBlur={(e) => commitDueDate(task.id, e.target.value)}
+                    className="bg-transparent border-b border-white/20 hover:border-white/40 focus:border-blue-500 outline-none"
+                  />
+                </td>
 
-      {/* DESCRIPTION */}
-      <textarea
-        placeholder="Description (optional)"
-        value={newDescription}
-        onChange={e => setNewDescription(e.target.value)}
-        className="w-full bg-gray-800 p-2 rounded border border-gray-700 h-24 resize-none"
-      />
+                <td className="flex gap-2 items-center">
+                  {savingId === task.id && (
+                    <span className="text-xs text-gray-400">Saving…</span>
+                  )}
+                  <button onClick={() => openEdit(task)}>✏️</button>
+                  <button onClick={() => handleDelete(task.id)}>
+                    {deletingId === task.id ? "…" : "🗑"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
-      {/* STATUS */}
-      <select
-        value={newStatus}
-        onChange={e => setNewStatus(e.target.value as TaskStatus)}
-        className="w-full bg-gray-800 p-2 rounded border border-gray-700"
-      >
-        <option value="todo">Todo</option>
-        <option value="in_progress">In Progress</option>
-        <option value="blocked">Blocked</option>
-        <option value="done">Done</option>
-      </select>
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-gray-900 p-6 rounded w-[420px] space-y-4">
+            <h2 className="text-lg font-semibold">Create Task</h2>
 
-      <div className="flex justify-end gap-2">
-        <button
-          onClick={() => setShowCreate(false)}
-          className="px-3 py-1 bg-gray-700 rounded"
-        >
-          Cancel
-        </button>
+            <input
+              autoFocus
+              placeholder="Task title *"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+            />
 
-        <button
-          disabled={!newTitle.trim() || !newDueDate || creating}
-          onClick={handleCreate}
-          className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-40"
-        >
-          {creating ? "Creating…" : "Create"}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+            <input
+              type="date"
+              value={newDueDate}
+              onChange={(e) => setNewDueDate(e.target.value)}
+              className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+            />
 
-{editingTask && (
-  <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-    <div className="bg-gray-900 p-6 rounded w-[420px] space-y-4">
-      <h2 className="text-lg font-semibold">Edit Task</h2>
+            <textarea
+              placeholder="Description (optional)"
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              className="w-full bg-gray-800 p-2 rounded border border-gray-700 h-24 resize-none"
+            />
 
-      <input
-        value={editTitle}
-        onChange={e => setEditTitle(e.target.value)}
-        className="w-full bg-gray-800 p-2 rounded border border-gray-700"
-      />
+            <select
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value as TaskStatus)}
+              className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+            >
+              <option value="todo">Todo</option>
+              <option value="in_progress">In Progress</option>
+              <option value="blocked">Blocked</option>
+              <option value="done">Done</option>
+            </select>
 
-      <select
-        value={editStatus}
-        onChange={e => setEditStatus(e.target.value as TaskStatus)}
-        className="w-full bg-gray-800 p-2 rounded border border-gray-700"
-      >
-        <option value="todo">Todo</option>
-        <option value="in_progress">In Progress</option>
-        <option value="blocked">Blocked</option>
-        <option value="done">Done</option>
-      </select>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowCreate(false)}
+                className="px-3 py-1 bg-gray-700 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!newTitle.trim() || !newDueDate || creating}
+                onClick={handleCreate}
+                className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-40"
+              >
+                {creating ? "Creating…" : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      <input
-        type="date"
-        value={editDueDate}
-        onChange={e => setEditDueDate(e.target.value)}
-        className="w-full bg-gray-800 p-2 rounded border border-gray-700"
-      />
+      {editingTask && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-gray-900 p-6 rounded w-[420px] space-y-4">
+            <h2 className="text-lg font-semibold">Edit Task</h2>
 
-      <textarea
-        placeholder="Description..."
-        value={editDescription}
-        onChange={e => setEditDescription(e.target.value)}
-        className="w-full bg-gray-800 p-2 rounded border border-gray-700 h-24 resize-none"
-      />
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+            />
 
-      <div className="flex justify-end gap-2">
-        <button
-          onClick={() => setEditingTask(null)}
-          className="px-3 py-1 bg-gray-700 rounded"
-        >
-          Cancel
-        </button>
+            <select
+              value={editStatus}
+              onChange={(e) => setEditStatus(e.target.value as TaskStatus)}
+              className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+            >
+              <option value="todo">Todo</option>
+              <option value="in_progress">In Progress</option>
+              <option value="blocked">Blocked</option>
+              <option value="done">Done</option>
+            </select>
 
-        <button
-          disabled={updating}
-          onClick={handleUpdate}
-          className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700"
-        >
-          {updating ? "Saving…" : "Save"}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+            <input
+              type="date"
+              value={editDueDate}
+              onChange={(e) => setEditDueDate(e.target.value)}
+              className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+            />
+
+            <textarea
+              placeholder="Description..."
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              className="w-full bg-gray-800 p-2 rounded border border-gray-700 h-24 resize-none"
+            />
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setEditingTask(null)}
+                className="px-3 py-1 bg-gray-700 rounded"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={updating}
+                onClick={handleUpdate}
+                className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700"
+              >
+                {updating ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <EmployeeOverviewModal
         employeeId={employeeId}
