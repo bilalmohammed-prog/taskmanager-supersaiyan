@@ -5,10 +5,7 @@ import Image from "next/image";
 import "./Cobox.css";
 import { supabase } from "@/lib/supabase/client";
 
-
-
-
-
+import { updateTask } from "@/actions/task/update";
 
 type Task = {
   id: string;
@@ -145,30 +142,33 @@ const { data, error } = await supabase
   
 
 async function markCompleted(task: Task): Promise<void> {
-  
+  const { data: { session } } = await supabase.auth.getSession();
+  const orgId = session?.user
+    ? (await supabase
+        .from("profiles")
+        .select("active_organization_id")
+        .eq("id", session.user.id)
+        .maybeSingle()
+      ).data?.active_organization_id
+    : null;
 
-  const { error } = await supabase
-  .from("tasks")
-  .update({ status: "done" })
-  .eq("id", task.id);
-
-  if (error) {
-    alert("Failed to mark task completed");
+  if (!orgId) {
+    alert("No active organization");
     return;
   }
 
-  setTasks((prev) =>
-    prev.map((t) =>
-      t.id === task.id
-        ? { ...t, status: "done" }
-        : t
-    )
-  );
-  setSelectedTask((prev) =>
-  prev && prev.id === task.id ? { ...prev, status: "done" } : prev
-);
-  
+  try {
+    await updateTask(task.id, { status: "done" }, orgId);
 
+    setTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, status: "done" } : t))
+    );
+    setSelectedTask((prev) =>
+      prev && prev.id === task.id ? { ...prev, status: "done" } : prev
+    );
+  } catch {
+    alert("Failed to mark task completed");
+  }
 }
 
   function getStatusColor(t: Task) {

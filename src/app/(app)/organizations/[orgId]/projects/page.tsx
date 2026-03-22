@@ -58,32 +58,64 @@ export default function ProjectsPage() {
 const router = useRouter();
   // ---------- LOAD ----------
  
-const loadProjects = useCallback(async () => {
-  if (!orgId) return;
+const PAGE_SIZE = 12;
+const [hasMore, setHasMore] = useState(true);
+const [loadingMore, setLoadingMore] = useState(false);
 
-  setLoading(true);
+const loadProjects = useCallback(
+  async (replace = true) => {
+    if (!orgId) return;
 
-  const { data, error } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("organization_id", orgId)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
+    try {
+      if (replace) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
 
-  if (!error && data) {
-    setProjects(
-      (data as ProjectRow[]).map(p => ({
+      // 👇 safer: compute offset based on latest state
+      const currentLength = replace ? 0 : projects.length;
+      const from = currentLength;
+      const to = from + PAGE_SIZE - 1;
+
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("organization_id", orgId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+
+      const mapped = (data as ProjectRow[]).map((p) => ({
         id: p.id,
         name: p.name,
         status: p.status ?? "active",
         startDate: p.start_date,
-        endDate: p.end_date
-      }))
-    );
-  }
+        endDate: p.end_date,
+      }));
 
-  setLoading(false);
-}, [orgId]);
+      setProjects((prev) =>
+        replace ? mapped : [...prev, ...mapped]
+      );
+
+      // 👇 important: determine if more data exists
+      setHasMore(data.length === PAGE_SIZE);
+    } catch (err) {
+      console.error("Load projects failed:", err);
+      addToast("Failed to load projects", "error");
+    } finally {
+      // ✅ FIXED
+      if (replace) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
+    }
+  },
+  [orgId, projects.length, addToast]
+);
   // ---------- CREATE ----------
   async function handleCreate() {
     if (!name.trim()) return;
@@ -193,7 +225,17 @@ useEffect(() => {
           ))}
         </div>
       )}
-
+      {hasMore && !loading && (
+  <div className="flex justify-center pt-2">
+    <button
+      onClick={() => loadProjects(false)}
+      disabled={loadingMore}
+      className="px-4 py-2 text-sm border border-border rounded-md hover:bg-accent transition-colors disabled:opacity-50"
+    >
+      {loadingMore ? "Loading…" : "Load more"}
+    </button>
+  </div>
+)}
       {/* CREATE MODAL */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
