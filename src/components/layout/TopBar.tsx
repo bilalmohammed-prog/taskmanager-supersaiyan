@@ -45,13 +45,16 @@ export default function TopBar() {
     loadUser();
   }, []);
 
-  const isEmployeesList =
-    pathname.includes("/employees") && !pathname.match(/\/employees\/[^/]+$/);
-  const isEmployeeDetail = pathname.match(/\/employees\/[^/]+$/);
-  const isProjects =
-    pathname.includes("/projects") && !pathname.match(/\/projects\/[^/]+$/);
-  const isAnalytics = pathname.includes("/analytics");
-  const isInbox = pathname.includes("/inbox");
+  // AFTER
+const isOrgRoute = pathname.includes("/organizations/");
+const isEmployeesList =
+  isOrgRoute && pathname.includes("/employees") && !pathname.match(/\/employees\/[^/]+$/);
+const isEmployeeDetail =
+  isOrgRoute && !!pathname.match(/\/employees\/[^/]+$/);
+const isProjects =
+  isOrgRoute && pathname.includes("/projects") && !pathname.match(/\/projects\/[^/]+$/);
+const isAnalytics = isOrgRoute && pathname.includes("/analytics");
+const isInbox = isOrgRoute && pathname.includes("/inbox");
 
   if (isEmployeesList) {
     return (
@@ -111,5 +114,7 @@ export default function TopBar() {
     );
   }
 
-  return null;
+  if (!isOrgRoute) return null;
+
+return <div className={topbarCls} />;
 }

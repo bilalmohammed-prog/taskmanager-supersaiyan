@@ -5,9 +5,9 @@ import Image from "next/image";
 import "./Cobox.css";
 import { supabase } from "@/lib/supabase/client";
 
-import type { Tables } from "@/lib/supabase/types";
 
-type TaskRow = Tables<"tasks">;
+
+
 
 
 type Task = {
@@ -75,15 +75,30 @@ initRef.current = true;
         
 
         // Fetch Tasks
-        const { data, error } = await supabase
+        const { data: profile } = await supabase
+  .from("profiles")
+  .select("active_organization_id")
+  .eq("id", user.id)
+  .maybeSingle();
+
+const orgId = profile?.active_organization_id;
+
+if (!orgId) {
+  setLoading(false);
+  initRef.current = false;
+  return;
+}
+
+const { data, error } = await supabase
   .from("tasks")
   .select("id, title, description, due_date, status")
+  .eq("organization_id", orgId)
   .order("created_at", { ascending: true });
 
 
         if (mounted) {
          if (!error && data) {
-  const rows = data as TaskRow[];
+  
 
   setTasks(data.map(t => ({
   id: t.id,
@@ -114,7 +129,7 @@ initRef.current = true;
 
     loadTasks();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN" && mounted) {
         loadTasks();
       }
@@ -130,16 +145,12 @@ initRef.current = true;
   
 
 async function markCompleted(task: Task): Promise<void> {
-  const proof = prompt("Enter proof of work");
-  if (!proof) return alert("Proof is required");
+  
 
   const { error } = await supabase
-    .from("tasks")
-    .update({
-      status: "done",
-      proof: proof,
-    })
-    .eq("id", task.id);
+  .from("tasks")
+  .update({ status: "done" })
+  .eq("id", task.id);
 
   if (error) {
     alert("Failed to mark task completed");
@@ -149,15 +160,14 @@ async function markCompleted(task: Task): Promise<void> {
   setTasks((prev) =>
     prev.map((t) =>
       t.id === task.id
-        ? { ...t, status: "done", proof }
+        ? { ...t, status: "done" }
         : t
     )
   );
-  setSelectedTask(prev =>
-  prev && prev.id === task.id
-    ? { ...prev, status: "done", proof }
-    : prev
+  setSelectedTask((prev) =>
+  prev && prev.id === task.id ? { ...prev, status: "done" } : prev
 );
+  
 
 }
 

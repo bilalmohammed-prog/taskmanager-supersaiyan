@@ -9,6 +9,7 @@ import { assignTaskToResource } from "@/actions/task/assign";
 import { createTask } from "@/actions/task/create";
 import { deleteTask as deleteTaskAction } from "@/actions/task/delete";
 import EmployeeOverviewModal from "@/components/EmployeeOverviewModal";
+import { useToast } from "@/components/providers/toast";
 
 type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
 
@@ -22,7 +23,7 @@ type TaskRow = {
 
 export default function EmployeeDetailPage() {
   const { employeeId, orgId } = useParams<{ employeeId: string; orgId: string }>();
-
+  const { addToast } = useToast();
   const [newDueDate, setNewDueDate] = useState<string>("");
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +88,9 @@ export default function EmployeeDetailPage() {
       );
 
       setEditingTask(null);
-    } finally {
+    } catch{
+      addToast("Update failed", "error");
+    }finally {
       setUpdating(false);
     }
   }
@@ -124,7 +127,7 @@ export default function EmployeeDetailPage() {
       setNewDescription("");
     } catch (e) {
       console.error(e);
-      alert("Create failed");
+      addToast("Create failed", "error");
     } finally {
       setCreating(false);
     }
@@ -142,7 +145,7 @@ export default function EmployeeDetailPage() {
       await deleteTaskAction(id, orgId);
     } catch (e) {
       console.error(e);
-      alert("Delete failed");
+      addToast("Delete failed", "error");
       setTasks(backup);
     } finally {
       setDeletingId(null);
@@ -179,7 +182,7 @@ export default function EmployeeDetailPage() {
       return true;
     } catch (e) {
       console.error(e);
-      alert("Save failed");
+      addToast("Save failed", "error");
       return false;
     } finally {
       setSavingId(null);

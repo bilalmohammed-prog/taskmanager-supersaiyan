@@ -19,7 +19,7 @@ type TaskWithAssignee = Tables<"tasks"> & {
   assignee_id: string | null;
   assignee_name: string | null;
 };
-type Task = Tables<"tasks">;
+
 type TaskStatus = Enums<"task_status">;
 type HumanResource = {
   user_id: string;

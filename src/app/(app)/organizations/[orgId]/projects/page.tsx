@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase/client";
 import { useParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { deleteProject } from "@/actions/project/deleteProject";
+import { useToast } from "@/components/providers/toast";
 
 type ProjectStatus = "active" | "paused" | "archived";
 
@@ -50,6 +51,8 @@ export default function ProjectsPage() {
   const [status, setStatus] = useState<ProjectStatus>("active");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  const { addToast } = useToast();
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
 const router = useRouter();
@@ -103,7 +106,7 @@ const loadProjects = useCallback(async () => {
       setEndDate("");
       setStatus("active");
     } catch {
-      alert("Create failed");
+      addToast("Create failed", "error");
     } finally {
       setCreating(false);
     }
@@ -120,8 +123,8 @@ const loadProjects = useCallback(async () => {
     try {
       await deleteProject(id);
       await loadProjects();
-    } catch (error) {
-      alert("Delete failed");
+    } catch  {
+      addToast("Delete failed", "error");
       setProjects(backup);
     }
 
