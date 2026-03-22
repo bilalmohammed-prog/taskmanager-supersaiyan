@@ -9,11 +9,12 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
   // wait until Supabase session + employee is loaded
   if (!hydrated) {
     return (
-      <div style={{
-        height: "100vh",
-        background: "#0f0f0f"
-      }} />
-    );
+  <div style={{
+    height: "100vh",
+    background: "var(--background)"
+  }} />
+);
+
   }
 
   return <>{children}</>;

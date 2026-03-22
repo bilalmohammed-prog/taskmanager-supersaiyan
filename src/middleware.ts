@@ -39,6 +39,7 @@ export async function middleware(req: NextRequest) {
     "/projects",
     "/tasks",
     "/settings",
+    "/onboarding",
   ];
 
   const isProtected = protectedPrefixes.some((prefix) =>

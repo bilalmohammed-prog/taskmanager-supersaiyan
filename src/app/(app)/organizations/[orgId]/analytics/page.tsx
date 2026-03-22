@@ -9,7 +9,7 @@ export default async function AnalyticsPage() {
       : Math.round((stats.completedTasks / stats.totalTasks) * 100);
 
   return (
-    <div className="p-6 text-white">
+    <div className="p-6 text-foreground">
       <h1 className="text-xl mb-6">Analytics</h1>
 
       <div className="grid grid-cols-2 gap-4">
@@ -25,9 +25,9 @@ export default async function AnalyticsPage() {
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="bg-[#1e1e1e] p-4 rounded-lg border border-white/10">
-      <p className="text-sm text-white/60">{label}</p>
-      <p className="text-2xl font-semibold mt-2">{value}</p>
+    <div className="bg-card p-4 rounded-lg border border-border">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="text-2xl font-semibold mt-2 text-foreground">{value}</p>
     </div>
   );
 }

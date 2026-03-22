@@ -9,12 +9,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { loginAction, type LoginState } from "@/actions/auth/login";
-
+import { useState, useEffect } from "react";
 const initialState: LoginState = { error: null };
 
 export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(loginAction, initialState);
+// Add to the top of the component (alongside existing useState/useActionState)
+const [stats, setStats] = useState({ organizations: 8, activeTasks: 148 });
 
+useEffect(() => {
+  fetch("/api/public/stats")
+    .then((r) => r.json())
+    .then((data) => setStats(data))
+    .catch(() => {}); // silently fallback to defaults
+}, []);
   return (
     <main className="min-h-screen w-full bg-background text-foreground">
       <section className="mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 gap-6 p-6 md:p-8 lg:grid-cols-2 lg:gap-0 lg:p-10">

@@ -17,7 +17,7 @@ export async function deleteTask(taskId: string, orgId: string) {
   });
 
   // ✅ invalidate cache AFTER mutation
-  revalidateTag(`analytics-${ctx.organizationId}`, "max");
+  revalidateTag(`analytics-${ctx.organizationId}`, "default");
 
   return true;
 }

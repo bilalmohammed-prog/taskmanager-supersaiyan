@@ -10,6 +10,7 @@ import { createTask } from "@/actions/task/create";
 import { deleteTask as deleteTaskAction } from "@/actions/task/delete";
 import EmployeeOverviewModal from "@/components/EmployeeOverviewModal";
 import { useToast } from "@/components/providers/toast";
+import { Button } from "@/components/ui/button";
 
 type TaskStatus = "todo" | "in_progress" | "blocked" | "done";
 
@@ -251,25 +252,19 @@ export default function EmployeeDetailPage() {
   return (
     <div className="mt-6">
       <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setShowCreate(true)}
-          className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
-        >
+        <Button onClick={() => setShowCreate(true)}>
           + Add Task
-        </button>
-        <button
-          onClick={() => setShowOverviewModal(true)}
-          className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
-        >
+        </Button>
+        <Button variant="outline" onClick={() => setShowOverviewModal(true)}>
           Employee Overview
-        </button>
+        </Button>
       </div>
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : (
         <table className="w-full border-collapse text-sm">
-          <thead className="text-gray-400 border-b border-white/10">
+          <thead className="text-muted-foreground border-b border-border">
             <tr>
               <th className="p-2 text-left">Title</th>
               <th>Status</th>
@@ -280,7 +275,7 @@ export default function EmployeeDetailPage() {
 
           <tbody>
             {tasks.map((task) => (
-              <tr key={task.id} className="border-b border-white/5">
+              <tr key={task.id} className="border-b border-border/40">
                 <td className="p-2">
                   <input
                     value={task.title}
@@ -293,7 +288,7 @@ export default function EmployeeDetailPage() {
                       }
                       if (e.key === "Enter") e.currentTarget.blur();
                     }}
-                    className="bg-transparent border-b border-white/20 hover:border-white/40 focus:border-blue-500 outline-none"
+                    className="bg-transparent border-b border-border hover:border-foreground/40 focus:border-primary outline-none"
                   />
                 </td>
 
@@ -315,13 +310,13 @@ export default function EmployeeDetailPage() {
                     value={task.due_date ?? ""}
                     onChange={(e) => updateDueDateLocal(task.id, e.target.value)}
                     onBlur={(e) => commitDueDate(task.id, e.target.value)}
-                    className="bg-transparent border-b border-white/20 hover:border-white/40 focus:border-blue-500 outline-none"
+                    className="bg-transparent border-b border-border hover:border-foreground/40 focus:border-primary outline-none"
                   />
                 </td>
 
                 <td className="flex gap-2 items-center">
                   {savingId === task.id && (
-                    <span className="text-xs text-gray-400">Saving…</span>
+                    <span className="text-xs text-muted-foreground">Saving…</span>
                   )}
                   <button onClick={() => openEdit(task)}>✏️</button>
                   <button onClick={() => handleDelete(task.id)}>
@@ -336,7 +331,7 @@ export default function EmployeeDetailPage() {
 
       {showCreate && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-gray-900 p-6 rounded w-[420px] space-y-4">
+          <div className="bg-card border border-border p-6 rounded w-[420px] space-y-4 text-foreground">
             <h2 className="text-lg font-semibold">Create Task</h2>
 
             <input
@@ -344,27 +339,27 @@ export default function EmployeeDetailPage() {
               placeholder="Task title *"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+              className="w-full bg-background border border-border p-2 rounded text-foreground"
             />
 
             <input
               type="date"
               value={newDueDate}
               onChange={(e) => setNewDueDate(e.target.value)}
-              className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+              className="w-full bg-background border border-border p-2 rounded text-foreground"
             />
 
             <textarea
               placeholder="Description (optional)"
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
-              className="w-full bg-gray-800 p-2 rounded border border-gray-700 h-24 resize-none"
+              className="w-full bg-background border border-border p-2 rounded text-foreground h-24 resize-none"
             />
 
             <select
               value={newStatus}
               onChange={(e) => setNewStatus(e.target.value as TaskStatus)}
-              className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+              className="w-full bg-background border border-border p-2 rounded text-foreground"
             >
               <option value="todo">Todo</option>
               <option value="in_progress">In Progress</option>
@@ -375,14 +370,14 @@ export default function EmployeeDetailPage() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowCreate(false)}
-                className="px-3 py-1 bg-gray-700 rounded"
+                className="px-3 py-1 bg-muted rounded hover:bg-muted/80 text-foreground"
               >
                 Cancel
               </button>
               <button
                 disabled={!newTitle.trim() || !newDueDate || creating}
                 onClick={handleCreate}
-                className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-40"
+                className="px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-40"
               >
                 {creating ? "Creating…" : "Create"}
               </button>
@@ -393,19 +388,19 @@ export default function EmployeeDetailPage() {
 
       {editingTask && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-gray-900 p-6 rounded w-[420px] space-y-4">
+          <div className="bg-card border border-border p-6 rounded w-[420px] space-y-4 text-foreground">
             <h2 className="text-lg font-semibold">Edit Task</h2>
 
             <input
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+              className="w-full bg-background border border-border p-2 rounded text-foreground"
             />
 
             <select
               value={editStatus}
               onChange={(e) => setEditStatus(e.target.value as TaskStatus)}
-              className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+              className="w-full bg-background border border-border p-2 rounded text-foreground"
             >
               <option value="todo">Todo</option>
               <option value="in_progress">In Progress</option>
@@ -417,27 +412,27 @@ export default function EmployeeDetailPage() {
               type="date"
               value={editDueDate}
               onChange={(e) => setEditDueDate(e.target.value)}
-              className="w-full bg-gray-800 p-2 rounded border border-gray-700"
+              className="w-full bg-background border border-border p-2 rounded text-foreground"
             />
 
             <textarea
               placeholder="Description..."
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
-              className="w-full bg-gray-800 p-2 rounded border border-gray-700 h-24 resize-none"
+              className="w-full bg-background border border-border p-2 rounded text-foreground h-24 resize-none"
             />
 
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setEditingTask(null)}
-                className="px-3 py-1 bg-gray-700 rounded"
+                className="px-3 py-1 bg-muted rounded hover:bg-muted/80 text-foreground"
               >
                 Cancel
               </button>
               <button
                 disabled={updating}
                 onClick={handleUpdate}
-                className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700"
+                className="px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-40"
               >
                 {updating ? "Saving…" : "Save"}
               </button>

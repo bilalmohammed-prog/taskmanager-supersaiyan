@@ -17,5 +17,5 @@ export async function deleteProject(projectId: string) {
     projectId: validatedProjectId,
   });
 
-  revalidateTag(`analytics-${ctx.organizationId}`,"max");
+  revalidateTag(`analytics-${ctx.organizationId}`,"default");
 }

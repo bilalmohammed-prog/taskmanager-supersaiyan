@@ -23,7 +23,7 @@ export async function createProjectAction(params: {
     ...validated,
   });
 
-  revalidateTag(`analytics-${ctx.organizationId}`,"max");
+  revalidateTag(`analytics-${ctx.organizationId}`,"default");
 
   return result;
 }

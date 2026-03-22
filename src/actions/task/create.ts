@@ -35,7 +35,7 @@ export async function createTask(
   });
 
   // ✅ NOW it runs
-  revalidateTag(`analytics-${ctx.organizationId}`, "max");
+  revalidateTag(`analytics-${ctx.organizationId}`, "default");
 
   return result;
 }

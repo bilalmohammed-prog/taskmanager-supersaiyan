@@ -51,5 +51,5 @@ export async function signupAction(
     return { error: error.message };
   }
 
-  redirect("/dashboard");
+  redirect("/onboarding");
 }

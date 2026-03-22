@@ -95,49 +95,32 @@ const initials = displayName?.charAt(0).toUpperCase() ?? "?";
       <div
   role="menu"
   className={`
-    absolute left-0 bottom-[calc(100%+16px)]
-    w-[280px] max-w-[90vw]
-    p-[20px_24px]
-    rounded-[14px]
-    bg-[#1e1e1e]
-    border border-white/40
-    shadow-[0_20px_60px_rgba(0,0,0,0.65),inset_0_0_0_1px_rgba(255,255,255,0.04)]
-    backdrop-blur-[10px]
-    flex flex-col gap-[16px]
-    z-[99999]
-    transition-all duration-300
-    ${open
-      ? "opacity-100 visible translate-y-0"
-      : "opacity-0 invisible translate-y-[12px]"
-    }
-
-    max-[768px]:left-[-20px]
-    max-[768px]:w-[260px]
-    max-[768px]:max-w-[calc(100vw-32px)]
-    max-[768px]:bottom-[calc(100%+12px)]
-  `}
+  absolute left-0 bottom-[calc(100%+16px)]
+  w-[280px] max-w-[90vw]
+  p-[20px_24px]
+  rounded-[14px]
+  bg-card
+  border border-border
+  shadow-lg
+  flex flex-col gap-[16px]
+  z-[99999]
+  transition-all duration-300
+  ${open ? "opacity-100 visible translate-y-0" : "opacity-0 invisible translate-y-[12px]"}
+  max-[768px]:left-[-20px]
+  max-[768px]:w-[260px]
+`}
 >
 
         <div className="profile-header">
-          <p className="font-semibold text-[16.5px] text-white m-0">
+          <p className="font-semibold text-[16.5px] text-foreground m-0">
   {employee?.full_name || metaName || "User"}
 </p>
 
-<p className="text-[13px] text-white/45 mt-[2px] mb-[12px] break-all">
+<p className="text-[13px] text-muted-foreground mt-[2px] mb-[12px] break-all">
   {email}
 </p>
 
-<span
-  className="
-    text-[11px] font-bold uppercase tracking-[1px]
-    text-[#cfcfcf]
-    bg-[#1e1e1e]
-    px-[10px] py-[4px]
-    rounded-[12px]
-    border border-white/20
-    self-start
-  "
->
+<span className="text-[11px] font-bold uppercase tracking-[1px] text-muted-foreground bg-muted px-[10px] py-[4px] rounded-[12px] border border-border self-start">
   ID: {employee?.id || "Loading..."}
 </span>
 

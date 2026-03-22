@@ -7,9 +7,19 @@ export default async function Page() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user) {
-    redirect("/dashboard");
+  if (!user) {
+    redirect("/auth/login");
   }
 
-  redirect("/auth/login");
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("active_organization_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!profile?.active_organization_id) {
+    redirect("/onboarding");
+  }
+
+  redirect("/dashboard");
 }
