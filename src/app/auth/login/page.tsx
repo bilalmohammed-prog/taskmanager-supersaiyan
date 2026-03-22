@@ -1,3 +1,6 @@
+"use client";
+
+import { useActionState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -5,8 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { loginAction, type LoginState } from "@/actions/auth/login";
+
+const initialState: LoginState = { error: null };
 
 export default function LoginPage() {
+  const [state, formAction, isPending] = useActionState(loginAction, initialState);
+
   return (
     <main className="min-h-screen w-full bg-background text-foreground">
       <section className="mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 gap-6 p-6 md:p-8 lg:grid-cols-2 lg:gap-0 lg:p-10">
@@ -67,7 +75,7 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 p-8 pt-2 md:p-10 md:pt-2">
-            <form className="space-y-4">
+            <form action={formAction} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="font-body text-sm font-normal">
                   Email
@@ -103,8 +111,16 @@ export default function LoginPage() {
                 />
               </div>
 
-              <Button type="submit" className="h-10 w-full rounded-md bg-primary text-primary-foreground shadow-none">
-                Sign in
+              {state.error && (
+                <p className="text-sm font-medium text-destructive">{state.error}</p>
+              )}
+
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="h-10 w-full rounded-md bg-primary text-primary-foreground shadow-none"
+              >
+                {isPending ? "Signing in…" : "Sign in"}
               </Button>
             </form>
 
@@ -127,4 +143,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
