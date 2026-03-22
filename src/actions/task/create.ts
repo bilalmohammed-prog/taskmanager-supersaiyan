@@ -3,6 +3,7 @@
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 import { createTask as createTaskService } from "@/services/task/task.service";
 import type { Tables } from "@/lib/types/database";
+import { revalidateTag } from "next/cache";
 import {
   uuidSchema,
   nonEmptyStringSchema,
@@ -24,11 +25,17 @@ export async function createTask(
   const validatedProjectId = uuidSchema.parse(project_id);
 
   const ctx = await requireOrgContext({ organizationId: validatedOrgId });
-  return await createTaskService(ctx.supabase, {
+
+  const result = await createTaskService(ctx.supabase, {
     organizationId: ctx.organizationId,
     projectId: validatedProjectId,
     title: validatedTitle,
     description: validatedDescription,
     dueDate: validatedDueDate ?? undefined,
   });
+
+  // ✅ NOW it runs
+  revalidateTag(`analytics-${ctx.organizationId}`, "max");
+
+  return result;
 }
