@@ -63,16 +63,6 @@ This audit reveals a project with a robust security foundation using Supabase Ro
      - Justification: The UI is functional but relies on direct client-side DB calls, browser prompts, and has broken     
        navigation/dead links.
 
-  7. Prioritized Fix List
-  
-  
-   
-   4. Standardize Validation: Apply Zod parsing to all Server Actions and API Route handlers.
-   5. Fix User Task Filtering: Update UserTasksView.tsx to filter tasks by assignment (supabase.from('assignments')...)   
-      rather than fetching the entire tasks table.
-   6. Replace Browser Prompts: Build a proper Radix/Shadcn UI dialog for the "Proof of Work" input in UserTasksView.      
-   7. Fix Asset Paths: Correct icon URLs from /svg/*.svg to /icons/*.svg.
-   8. Centralize Auth Check: Move client-side auth checks to a dedicated ProtectedRoute wrapper or rely strictly on       
-      Middleware to avoid flickering.
-                                                                                                          ? for shortcuts 
-finsihed step 1 of priority
+REPORT IN WORD DOC
+
+Refer claude chat for next steps also del leftsidebarfirst? at end of the chat its there.
