@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
 const signupSchema = z
@@ -18,6 +18,7 @@ const signupSchema = z
 
 export type SignupState = {
   error: string | null;
+  success?: string | null;
 };
 
 export async function signupAction(
@@ -32,7 +33,23 @@ export async function signupAction(
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
+    return { error: parsed.error.issues[0].message, success: null };
+  }
+
+  const headerStore = await headers();
+  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
+  const protocol =
+    headerStore.get("x-forwarded-proto") ??
+    (process.env.NODE_ENV === "development" ? "http" : "https");
+  const appOrigin = host
+    ? `${protocol}://${host}`
+    : process.env.NEXT_PUBLIC_SITE_URL;
+
+  if (!appOrigin) {
+    return {
+      error: "Unable to determine callback URL. Please contact support.",
+      success: null,
+    };
   }
 
   const supabase = await getSupabaseServer();
@@ -41,6 +58,7 @@ export async function signupAction(
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
+      emailRedirectTo: `${appOrigin}/auth/callback`,
       data: {
         full_name: parsed.data.fullName,
       },
@@ -48,8 +66,11 @@ export async function signupAction(
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: error.message, success: null };
   }
 
-  redirect("/onboarding");
+  return {
+    error: null,
+    success: "Check your email to confirm your account before continuing.",
+  };
 }

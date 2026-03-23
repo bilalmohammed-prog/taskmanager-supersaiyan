@@ -5,9 +5,9 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
 
   const code = searchParams.get("code");
-  let next = searchParams.get("next") ?? "/";
+  let next = searchParams.get("next") ?? "/onboarding";
 
-  if (!next.startsWith("/")) next = "/";
+  if (!next.startsWith("/")) next = "/onboarding";
 
   if (code) {
     const supabase = await getSupabaseServer();
