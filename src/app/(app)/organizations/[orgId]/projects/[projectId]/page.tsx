@@ -13,6 +13,7 @@ import { assignTaskToResource } from "@/actions/task/assign";
 import { listProjectMembers } from "@/actions/project/listProjectMembers";
 import { assignProjectMember } from "@/actions/project/assignProjectMember";
 import { removeProjectMember } from "@/actions/project/removeProjectMember";
+import { useOrgRole } from "@/hooks/useOrgRole";
 
 
 type TaskWithAssignee = Tables<"tasks"> & {
@@ -27,6 +28,8 @@ type HumanResource = {
 };
 
 export default function ProjectWorkspacePage() {
+  const role = useOrgRole();
+const canManage = role === "owner" || role === "admin" || role === "manager";
     const [projectMembers, setProjectMembers] =
   useState<HumanResource[]>([]);
 
@@ -173,26 +176,30 @@ setTasks(prev => [newTask, ...prev]);;
   // ---------- UI ----------
   return (
     <div className="mt-6 space-y-4">
-<button
-  onClick={() => setShowProjectAssign(true)}
-  className="px-4 py-2 bg-gray-700 rounded"
->
-  + Assign Member to Project
-</button>
-      <button
-        onClick={() => setShowCreate(true)}
-        className="px-4 py-2 bg-blue-600 rounded"
-      >
-        + Add Task
-      </button>
-      <div className="flex gap-2 items-center">
-
-  <select
-    value={selectedProjectMember}
-    onChange={e =>
+{canManage && (
+  <button
+    onClick={() => setShowProjectAssign(true)}
+    className="px-4 py-2 bg-muted rounded border border-border text-foreground hover:bg-accent text-sm"
+  >
+    + Assign Member to Project
+  </button>
+)}
+      {canManage && (
+  <button
+    onClick={() => setShowCreate(true)}
+    className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 text-sm"
+  >
+    + Add Task
+  </button>
+)}
+      {canManage && (
+        <div className="flex gap-2 items-center">
+          <select
+            value={selectedProjectMember}
+            onChange={e =>
       setSelectedProjectMember(e.target.value)
     }
-    className="bg-gray-800 p-2 rounded"
+    className="bg-background border border-border p-2 rounded text-foreground text-sm"
   >
     <option value="">Select project member</option>
 
@@ -227,13 +234,14 @@ setTasks(prev => [newTask, ...prev]);;
       setSelectedProjectMember("");
     }}
     
-    className="px-3 py-2 bg-red-600 rounded"
+    className="px-3 py-2 bg-destructive text-white rounded hover:bg-destructive/90 text-sm"
+
   >
     Remove Member
   </button>
 
 </div>
-
+      )}
       {loading ? (
         <p>Loading...</p>
       ) : (
@@ -283,7 +291,7 @@ setTasks(prev => [newTask, ...prev]);;
     )
   );
 }}
-    className="bg-gray-800 p-1 rounded"
+    className="bg-background border border-border p-2 rounded text-foreground"
   >
     <option value="">Unassigned</option>
 
@@ -366,16 +374,14 @@ onKeyDown={e => {
 
                 <td className="flex items-center gap-2">
   {savingId === task.id && (
-    <span className="text-xs text-gray-400">
+    <span className="text-xs text-muted-foreground">
       Saving…
     </span>
   )}
 
-  <button
-    onClick={() => handleDelete(task.id)}
-  >
-    🗑
-  </button>
+  {canManage && (
+  <button onClick={() => handleDelete(task.id)}>🗑</button>
+)}
 </td>
               </tr>
             ))}
@@ -386,7 +392,7 @@ onKeyDown={e => {
       {/* CREATE MODAL */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-gray-900 p-6 rounded w-[400px] space-y-3">
+          <div className="bg-card border border-border text-foreground p-6 rounded w-[400px] space-y-3">
 
             <input
               placeholder="Task title"
@@ -394,7 +400,7 @@ onKeyDown={e => {
               onChange={e =>
                 setTitle(e.target.value)
               }
-              className="w-full bg-gray-800 p-2 rounded"
+              className="bg-background border border-border p-2 rounded text-foreground text-sm"
             />
 
             <input
@@ -403,11 +409,12 @@ onKeyDown={e => {
               onChange={e =>
                 setDueDate(e.target.value)
               }
-              className="w-full bg-gray-800 p-2 rounded"
+              className="bg-background border border-border p-2 rounded text-foreground text-sm"
             />
 
             <div className="flex justify-end gap-2">
               <button
+              className="px-3 py-1 bg-muted rounded hover:bg-muted/80 text-foreground"
                 onClick={() =>
                   setShowCreate(false)
                 }
@@ -415,20 +422,16 @@ onKeyDown={e => {
                 Cancel
               </button>
 
-              <button
-                disabled={creating}
-                onClick={handleCreate}
-              >
-                {creating
-                  ? "Creating..."
-                  : "Create"}
-              </button>
+              <button disabled={creating} onClick={handleCreate}
+  className="px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-40">
+  {creating ? "Creating..." : "Create"}
+</button>
               <select
   value={selectedEmployee}
   onChange={e =>
     setSelectedEmployee(e.target.value)
   }
-  className="w-full bg-gray-800 p-2 rounded"
+  className="bg-background border border-border p-2 rounded text-foreground text-sm"
 >
   <option value="">Unassigned</option>
 
@@ -445,7 +448,7 @@ onKeyDown={e => {
       )}
 {assigningTaskId && (
   <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-    <div className="bg-gray-900 p-6 rounded w-[360px] space-y-4">
+    <div className="bg-card border border-border text-foreground p-6 rounded w-[400px] space-y-3">
 
       <h2 className="text-lg font-semibold">
         Assign Employee
@@ -456,7 +459,7 @@ onKeyDown={e => {
         onChange={e =>
           setSelectedEmployee(e.target.value)
         }
-        className="w-full bg-gray-800 p-2 rounded"
+        className="bg-background border border-border p-2 rounded text-foreground text-sm"
       >
         <option value="">Select employee</option>
 
@@ -472,6 +475,7 @@ onKeyDown={e => {
           onClick={() =>
             setAssigningTaskId(null)
           }
+          className="px-3 py-1 bg-muted rounded hover:bg-muted/80 text-foreground"
         >
           Cancel
         </button>
@@ -503,6 +507,7 @@ onKeyDown={e => {
             setAssigningTaskId(null);
             setSelectedEmployee("");
           }}
+          className="px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90"
         >
           Assign
         </button>
@@ -513,7 +518,7 @@ onKeyDown={e => {
 )}
 {showProjectAssign && (
   <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-    <div className="bg-gray-900 p-6 rounded w-[400px] space-y-4">
+    <div className="bg-card border border-border text-foreground p-6 rounded w-[400px] space-y-3">
 
       <h2 className="text-lg font-semibold">
         Assign Project Member
@@ -524,7 +529,7 @@ onKeyDown={e => {
         onChange={e =>
           setSelectedEmployee(e.target.value)
         }
-        className="w-full bg-gray-800 p-2 rounded"
+        className="bg-background border border-border p-2 rounded text-foreground text-sm"
       >
         <option value="">Select employee</option>
 
@@ -548,6 +553,7 @@ onKeyDown={e => {
       <div className="flex justify-end gap-2">
         <button
           onClick={() => setShowProjectAssign(false)}
+          className="px-3 py-1 bg-muted rounded hover:bg-muted/80 text-foreground"
         >
           Cancel
         </button>
@@ -576,6 +582,7 @@ onKeyDown={e => {
             setSelectedEmployee("");
             setShowProjectAssign(false);
           }}
+          className="px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90"
         >
           Assign
         </button>

@@ -9,12 +9,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { signupAction, type SignupState } from "@/actions/auth/signup";
+import { useState, useEffect } from "react";
 
 const initialState: SignupState = { error: null };
 
 export default function SignupPage() {
   const [state, formAction, isPending] = useActionState(signupAction, initialState);
+const [stats, setStats] = useState({ organizations: 8, activeTasks: 148 });
 
+useEffect(() => {
+  fetch("/api/public/stats")
+    .then((r) => r.json())
+    .then((data) => setStats(data))
+    .catch(() => {});
+}, []);
   return (
     <main className="min-h-screen w-full bg-background text-foreground">
       <section className="mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 gap-6 p-6 md:p-8 lg:grid-cols-2 lg:gap-0 lg:p-10">
@@ -51,11 +59,11 @@ export default function SignupPage() {
             <div className="grid grid-cols-3 gap-px">
               <div className="bg-card p-4">
                 <p className="font-body text-xs text-muted-foreground">Teams</p>
-                <p className="font-heading pt-1 text-2xl font-bold tracking-tight">8</p>
+                <p className="font-heading pt-1 text-2xl font-bold tracking-tight">{stats.organizations}</p>
               </div>
               <div className="bg-card p-4">
                 <p className="font-body text-xs text-muted-foreground">Active Tasks</p>
-                <p className="font-heading pt-1 text-2xl font-bold tracking-tight">148</p>
+                <p className="font-heading pt-1 text-2xl font-bold tracking-tight">{stats.activeTasks}</p>
               </div>
               <div className="bg-card p-4">
                 <p className="font-body text-xs text-muted-foreground">On-time Rate</p>

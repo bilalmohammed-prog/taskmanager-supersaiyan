@@ -58,9 +58,7 @@ boxShadow: "2px 0 8px rgba(0,0,0,0.06)",
                 variant="sidebar"
                 style={{
                   width: "100%",
-                  backgroundColor: isActive
-                    ? "rgba(255,255,255,0.12)"
-                    : "transparent",
+                  backgroundColor: isActive ? "var(--accent)" : "transparent",
                   borderRadius: "8px",
                 }}
               >
@@ -71,7 +69,7 @@ boxShadow: "2px 0 8px rgba(0,0,0,0.06)",
                   height={22}
                   style={{ flexShrink: 0 }}
                 />
-                <span style={{ fontSize: "10px", color: "white" }}>
+                <span style={{ fontSize: "10px", color: "var(--foreground)" }}>
                   {label}
                 </span>
               </Button>

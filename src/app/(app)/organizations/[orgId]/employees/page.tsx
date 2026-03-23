@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { dropInvite } from "@/lib/api";
 import { useToast } from "@/components/providers/toast";
+import { useOrgRole } from "@/hooks/useOrgRole";
 
 type Profile = {
   id: string;
@@ -26,6 +27,8 @@ type ManagerEmployeeRow = {
 };
 
 export default function EmployeesPage() {
+  const role = useOrgRole();
+const canManage = role === "owner" || role === "admin" || role === "manager";
   const router = useRouter();
   const { orgId } = useParams<{ orgId: string }>();
 
@@ -162,7 +165,7 @@ const managerMap = new Map(
   }
 
   return (
-    <div className="p-6 text-white">
+    <div className="p-6 text-foreground">
       <h1 className="text-xl mb-4">Employees</h1>
 
       {loading && <p>Loading...</p>}
@@ -175,12 +178,12 @@ const managerMap = new Map(
         employees.map(emp => (
           <div
             key={emp.id}
-            className="p-3 bg-[#1e1e1e] rounded mb-2 cursor-pointer hover:bg-[#2a2a2a] flex justify-between items-center relative"
+            className="p-3 bg-card border border-border rounded-lg mb-2 cursor-pointer hover:bg-accent/50 flex justify-between items-center relative transition-colors"
           >
             <div onClick={() => openEmployee(emp.id)}>
               {emp.full_name}
               {emp.hasManager && (
-                <span className="ml-2 text-sm text-green-400">✓ Has Manager</span>
+                <span className="ml-2 text-sm text-primary font-medium">✓ Has Manager</span>
               )}
             </div>
             <div className="relative">
@@ -189,32 +192,32 @@ const managerMap = new Map(
                   e.stopPropagation();
                   setDropdownOpen(dropdownOpen === emp.id ? null : emp.id);
                 }}
-                className="px-2 py-1 text-white/70 hover:text-white"
+                className="px-2 py-1 text-muted-foreground hover:text-foreground"
               >
                 ⋮
               </button>
               {dropdownOpen === emp.id && (
-                <div className="absolute right-0 top-full mt-1 bg-[#2a2a2a] border border-white/20 rounded shadow-lg z-10 min-w-[120px]">
-                  {emp.hasManager && (
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-[#3a3a3a] disabled:opacity-50"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDropInvite(emp);
-                        setDropdownOpen(null);
-                      }}
-                      disabled={actionLoading === emp.id}
-                    >
-                      {actionLoading === emp.id ? "Removing..." : "Unlink Employee"}
-                    </button>
-                  )}
-                  {!emp.hasManager && (
-                    <div className="px-3 py-2 text-sm text-white/50">
-                      No manager assigned
-                    </div>
-                  )}
-                </div>
-              )}
+  <div className="absolute right-0 top-full mt-1 bg-card border border-border rounded shadow-lg z-10 min-w-[120px]">
+    {canManage && emp.hasManager && (
+      <button
+        className="w-full text-left px-3 py-2 text-sm text-destructive hover:bg-accent disabled:opacity-50"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleDropInvite(emp);
+          setDropdownOpen(null);
+        }}
+        disabled={actionLoading === emp.id}
+      >
+        {actionLoading === emp.id ? "Removing..." : "Unlink Employee"}
+      </button>
+    )}
+    {(!canManage || !emp.hasManager) && (
+      <div className="px-3 py-2 text-sm text-muted-foreground">
+        No actions available
+      </div>
+    )}
+  </div>
+)}
             </div>
           </div>
         ))}

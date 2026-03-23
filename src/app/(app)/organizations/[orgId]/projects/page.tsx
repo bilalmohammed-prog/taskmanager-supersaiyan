@@ -1,5 +1,6 @@
 "use client";
 
+import { useOrgRole } from "@/hooks/useOrgRole";
 import { createProjectAction } from "@/actions/project/create";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
@@ -63,6 +64,8 @@ const router = useRouter();
 const PAGE_SIZE = 12;
 const [hasMore, setHasMore] = useState(true);
 const [loadingMore, setLoadingMore] = useState(false);
+const role = useOrgRole();
+const canManage = role === "owner" || role === "admin" || role === "manager";
 
 const loadProjects = useCallback(
   async (replace = true) => {
@@ -171,9 +174,11 @@ useEffect(() => {
   return (
     <div className="mt-6 space-y-6">
 
-      <Button onClick={() => setShowCreate(true)}>
-        + New Project
-      </Button>
+      {canManage && (
+  <Button onClick={() => setShowCreate(true)}>
+    + New Project
+  </Button>
+)}
 
       {loading ? (
   <div className="grid grid-cols-3 gap-4">
@@ -219,15 +224,17 @@ useEffect(() => {
                 End: {formatDate(p.endDate)}
               </p>
 
-              <button
-  onClick={(e) => {
-    e.stopPropagation();
-    handleDelete(p.id);
-  }}
-  className="text-destructive text-sm"
->
-                {deletingId === p.id ? "…" : "Delete"}
-              </button>
+              {canManage && (
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      handleDelete(p.id);
+    }}
+    className="text-destructive text-sm"
+  >
+    {deletingId === p.id ? "…" : "Delete"}
+  </button>
+)}
             </div>
           ))}
         </div>

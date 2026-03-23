@@ -62,5 +62,6 @@ export const config = {
     "/projects/:path*",
     "/tasks/:path*",
     "/settings/:path*",
+    "/onboarding/:path*",
   ],
 };
