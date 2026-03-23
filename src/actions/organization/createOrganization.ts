@@ -1,6 +1,7 @@
 "use server";
 
 import { getSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { UUID } from "@/lib/types/database";
 import { requireActionUser } from "@/actions/_helpers/requireOrgContext";
 import {
@@ -25,15 +26,18 @@ export async function createOrganization(
   try {
     const validated = createOrganizationSchema.parse({ name, slug });
 
+    // Verify identity first using user-scoped client
     const supabase = await getSupabaseServer();
     const { user } = await requireActionUser(supabase);
 
+    // Admin client only for bootstrapping first org — identity already verified above
     const result = await createOrganizationSvc(
-      supabase,
+      supabaseAdmin,
       validated.name,
       validated.slug,
       user.id as UUID
     );
+
     return { data: result, error: null };
   } catch (err) {
     return { data: null, error: { message: safeErrorMessage(err) } };
