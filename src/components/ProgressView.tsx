@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { getTeamProgress } from "@/lib/api";
-import "./Cobox.css";
 
 type EmployeeProgress = {
   user_id: string;
@@ -20,7 +19,6 @@ export default function ProgressView() {
     async function fetchStats() {
       try {
         setLoading(true);
-
         const { employees } = await getTeamProgress();
         setData(employees);
       } catch (err) {
@@ -47,73 +45,66 @@ export default function ProgressView() {
 
   if (loading) {
     return (
-      <div className="cobox">
-        <div className="teamSpinner"></div>
-        <p className="loadingTeamMetrics">Loading team metrics...</p>
+      <div className="flex items-center justify-center h-64">
+        <p className="text-sm text-muted-foreground">Loading team metrics...</p>
       </div>
     );
   }
 
   return (
-    <div className="coboxContainer">
-      <div className="progress-view-container">
-        <div className="progress-header">
-          <h2>Team Progress Dashboard</h2>
-        </div>
+    <div className="p-6 space-y-6">
+      <h2 className="text-xl font-semibold text-foreground">Team Progress Dashboard</h2>
 
-        <div className="progress-grid">
-          {/* TEAM SUMMARY */}
-          <div className="progress-card summary">
-            <h3 className="emp-name">Total Team Output</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
-            <div className="progress-stat">
-              <span className="stat-label">Tasks Completed</span>
-              <span className="stat-number">
-                {overall.completed} / {overall.total}
-              </span>
-            </div>
-
-            <div className="progress-bar-bg">
-              <div
-                className="progress-bar-fill high"
-                style={{
-                  width: `${getPercentage(
-                    overall.completed,
-                    overall.total
-                  )}%`,
-                }}
-              />
-            </div>
+        {/* TEAM SUMMARY CARD */}
+        <div className="bg-card border border-primary/40 rounded-xl p-5 space-y-3">
+          <p className="text-sm font-medium text-foreground">Total Team Output</p>
+          <p className="text-2xl font-semibold text-foreground">
+            {overall.completed}
+            <span className="text-base text-muted-foreground font-normal"> / {overall.total}</span>
+          </p>
+          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-2 rounded-full bg-primary transition-all duration-700"
+              style={{ width: `${getPercentage(overall.completed, overall.total)}%` }}
+            />
           </div>
-
-          {/* EMPLOYEE CARDS */}
-          {data.map((emp, index) => {
-            const pct = getPercentage(emp.completed_tasks, emp.total_tasks);
-
-            return (
-              <div className="progress-card" key={index}>
-                <h3 className="emp-name">{emp.full_name}</h3>
-                <p className="emp-id">{emp.user_id}</p>
-
-                <div className="progress-stat">
-                  <span className="stat-label">Completion</span>
-                  <span className="stat-number">
-                    {emp.completed_tasks} / {emp.total_tasks}
-                  </span>
-                </div>
-
-                <div className="progress-bar-bg">
-                  <div
-                    className={`progress-bar-fill ${
-                      pct < 40 ? "low" : pct < 80 ? "med" : "high"
-                    }`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
+          <p className="text-xs text-muted-foreground">
+            {getPercentage(overall.completed, overall.total)}% completion
+          </p>
         </div>
+
+        {/* EMPLOYEE CARDS */}
+        {data.map((emp, index) => {
+          const pct = getPercentage(emp.completed_tasks, emp.total_tasks);
+          const barColor =
+            pct >= 80 ? "bg-green-500" : pct >= 40 ? "bg-blue-500" : "bg-amber-500";
+
+          return (
+            <div key={index} className="bg-card border border-border rounded-xl p-5 space-y-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">{emp.full_name}</p>
+                <p className="text-xs text-muted-foreground font-mono">{emp.user_id}</p>
+              </div>
+
+              <p className="text-xl font-semibold text-foreground">
+                {emp.completed_tasks}
+                <span className="text-sm text-muted-foreground font-normal"> / {emp.total_tasks} tasks</span>
+              </p>
+
+              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={`h-2 rounded-full transition-all duration-700 ${barColor}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+
+              <p className="text-xs text-muted-foreground">{pct}% complete</p>
+            </div>
+          );
+        })}
+
       </div>
     </div>
   );

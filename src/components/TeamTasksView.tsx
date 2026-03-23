@@ -6,6 +6,7 @@ import Image from "next/image";
 import "./Cobox.css";
 import { useDashboard } from "@/components/providers/dashboard/DashboardContext";
 import { supabase } from "@/lib/supabase/client";
+import { useToast } from "@/components/providers/toast";
 import {
   getDisplayTasks,
   createTask as createTaskApi,
@@ -62,6 +63,7 @@ export default function TeamTasksView() {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
 
   const { selectedEmp, openAssignModal, setOpenAssignModal } = useDashboard();
+  const { addToast } = useToast();
 
   const userId = selectedEmp?.user_id ?? selectedEmp?.id;
 
@@ -122,13 +124,20 @@ export default function TeamTasksView() {
   }, [userId]);
 
   async function createTask() {
-    if (!userId) return alert("No employee selected");
-    if (!organizationId) return alert("No active organization selected");
+    if (!userId) {
+      addToast("No employee selected", "error");
+      return;
+    }
+    if (!organizationId) {
+      addToast("No active organization selected", "error");
+      return;
+    }
 
     const { title, description, dueDate } = newTask;
 
     if (!title.trim() || !description.trim() || !dueDate) {
-      return alert("Please enter title, description and due date");
+      addToast("Please enter title, description and due date", "error");
+      return;
     }
 
     try {
@@ -155,7 +164,7 @@ export default function TeamTasksView() {
       setNewTask({ title: "", description: "", dueDate: "" });
     } catch (err) {
       console.error("Failed to create task", err);
-      alert("Failed to create task");
+      addToast("Failed to create task", "error");
     }
   }
 
@@ -167,7 +176,7 @@ export default function TeamTasksView() {
     const currentDesc = t.description || "";
 
     if (!currentTitle.trim() || !currentDesc.trim() || !t.due_date) {
-      alert("All fields (Title, Description, Due date) are required.");
+      addToast("All fields (Title, Description, Due date) are required.", "error");
       return;
     }
 
@@ -195,7 +204,7 @@ export default function TeamTasksView() {
       const errorMessage =
         err instanceof Error ? err.message : "An unexpected error occurred. Please try again.";
 
-      alert(errorMessage);
+      addToast(errorMessage, "error");
       console.error("Save error:", err);
     }
   }
@@ -207,7 +216,7 @@ export default function TeamTasksView() {
       if (selectedTask?.id === taskId) setSelectedTask(null);
     } catch (err) {
       console.error("Failed to delete task", err);
-      alert("Failed to delete task");
+      addToast("Failed to delete task", "error");
     }
   }
 

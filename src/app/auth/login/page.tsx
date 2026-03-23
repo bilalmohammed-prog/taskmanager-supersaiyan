@@ -59,11 +59,11 @@ useEffect(() => {
             <div className="grid grid-cols-3 gap-px">
               <div className="bg-card p-4">
                 <p className="font-body text-xs text-muted-foreground">Teams</p>
-                <p className="font-heading pt-1 text-2xl font-bold tracking-tight">8</p>
+                <p className="font-heading pt-1 text-2xl font-bold tracking-tight">{stats.organizations}</p>
               </div>
               <div className="bg-card p-4">
                 <p className="font-body text-xs text-muted-foreground">Active Tasks</p>
-                <p className="font-heading pt-1 text-2xl font-bold tracking-tight">148</p>
+                <p className="font-heading pt-1 text-2xl font-bold tracking-tight">{stats.activeTasks}</p>
               </div>
               <div className="bg-card p-4">
                 <p className="font-body text-xs text-muted-foreground">On-time Rate</p>

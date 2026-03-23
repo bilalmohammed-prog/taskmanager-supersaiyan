@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import "./Cobox.css";
 import { supabase } from "@/lib/supabase/client";
-
 import { updateTask } from "@/actions/task/update";
+import { useToast } from "@/components/providers/toast";
 
 type Task = {
   id: string;
@@ -14,8 +13,6 @@ type Task = {
   due_date: string | null;
   status: string | null;
 };
-
-
 
 function prettyDateTime(dt: string | Date | number | null) {
   if (!dt) return "-";
@@ -32,28 +29,23 @@ function prettyDateTime(dt: string | Date | number | null) {
   });
 }
 
-
 export default function UserTasksView() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const { addToast } = useToast();
 
   const initRef = useRef(false);
-
 
   useEffect(() => {
     let mounted = true;
 
     async function loadTasks() {
       try {
-        // Prevent concurrent initialization
         if (initRef.current) return;
-initRef.current = true;
-
+        initRef.current = true;
 
         setLoading(true);
-
-   
 
         const { data: { session } } = await supabase.auth.getSession();
 
@@ -61,65 +53,50 @@ initRef.current = true;
           if (mounted) {
             setLoading(false);
             initRef.current = false;
-
-
           }
           return;
         }
 
         const user = session.user;
 
-        
-
-        // Fetch Tasks
         const { data: profile } = await supabase
-  .from("profiles")
-  .select("active_organization_id")
-  .eq("id", user.id)
-  .maybeSingle();
+          .from("profiles")
+          .select("active_organization_id")
+          .eq("id", user.id)
+          .maybeSingle();
 
-const orgId = profile?.active_organization_id;
+        const orgId = profile?.active_organization_id;
 
-if (!orgId) {
-  setLoading(false);
-  initRef.current = false;
-  return;
-}
-
-const { data, error } = await supabase
-  .from("tasks")
-  .select("id, title, description, due_date, status")
-  .eq("organization_id", orgId)
-  .order("created_at", { ascending: true });
-
-
-        if (mounted) {
-         if (!error && data) {
-  
-
-  setTasks(data.map(t => ({
-  id: t.id,
-  title: t.title,
-  description: t.description,
-  due_date: t.due_date,
-  status: t.status,
-})));
-
-}
-
+        if (!orgId) {
           setLoading(false);
           initRef.current = false;
+          return;
+        }
 
+        const { data, error } = await supabase
+          .from("tasks")
+          .select("id, title, description, due_date, status")
+          .eq("organization_id", orgId)
+          .order("created_at", { ascending: true });
 
+        if (mounted) {
+          if (!error && data) {
+            setTasks(data.map(t => ({
+              id: t.id,
+              title: t.title,
+              description: t.description,
+              due_date: t.due_date,
+              status: t.status,
+            })));
+          }
+          setLoading(false);
+          initRef.current = false;
         }
       } catch (err) {
         console.error("Error in loadTasks:", err);
         if (mounted) {
-
           setLoading(false);
           initRef.current = false;
-
-
         }
       }
     }
@@ -136,131 +113,125 @@ const { data, error } = await supabase
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []); // Keep dependencies empty
+  }, []);
 
+  async function markCompleted(task: Task): Promise<void> {
+    const { data: { session } } = await supabase.auth.getSession();
+    const orgId = session?.user
+      ? (await supabase
+          .from("profiles")
+          .select("active_organization_id")
+          .eq("id", session.user.id)
+          .maybeSingle()
+        ).data?.active_organization_id
+      : null;
 
-  
+    if (!orgId) {
+      addToast("No active organization", "error");
+      return;
+    }
 
-async function markCompleted(task: Task): Promise<void> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const orgId = session?.user
-    ? (await supabase
-        .from("profiles")
-        .select("active_organization_id")
-        .eq("id", session.user.id)
-        .maybeSingle()
-      ).data?.active_organization_id
-    : null;
+    try {
+      await updateTask(task.id, { status: "done" }, orgId);
 
-  if (!orgId) {
-    alert("No active organization");
-    return;
+      setTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? { ...t, status: "done" } : t))
+      );
+      setSelectedTask((prev) =>
+        prev && prev.id === task.id ? { ...prev, status: "done" } : prev
+      );
+    } catch {
+      addToast("Failed to mark task completed", "error");
+    }
   }
 
-  try {
-    await updateTask(task.id, { status: "done" }, orgId);
-
-    setTasks((prev) =>
-      prev.map((t) => (t.id === task.id ? { ...t, status: "done" } : t))
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
     );
-    setSelectedTask((prev) =>
-      prev && prev.id === task.id ? { ...prev, status: "done" } : prev
-    );
-  } catch {
-    alert("Failed to mark task completed");
   }
-}
-
-  function getStatusColor(t: Task) {
-  if (t.status === "done") return "green";
-  return "gray";
-}
-
-
 
   return (
-    <div className="coboxContainer">
-      <div className="cobox">
-        {loading && (
-          <div className="loading-container">
-            <div className="spinner"></div>
-            <p>Loading...</p>
-          </div>
+    <div className="flex gap-6 p-6 h-full">
+
+      {/* TASK LIST */}
+      <div className="flex-1 space-y-3 overflow-y-auto">
+        {tasks.length === 0 && (
+          <p className="text-sm text-muted-foreground">You have no tasks.</p>
         )}
 
-        {!loading && tasks.length === 0 && (
-          <p className="select-promptTaskLoading">
-            You have no tasks.
-          </p>
-        )}
-
-        {!loading &&
-          tasks.map((t) => (
-            <div
-              key={t.id}
-              className={`container3 ${
-                selectedTask?.id === t.id ? "active-card" : ""
-              }`}
-              onClick={() => setSelectedTask(t)}
-              style={{ cursor: "pointer" }}
-            >
-              <div className="taskText">
-                {t.title}
-                <br />
-                {prettyDateTime(t.due_date)}
+        {tasks.map((t) => (
+          <div
+            key={t.id}
+            onClick={() => setSelectedTask(t)}
+            className={`
+              p-4 rounded-xl border cursor-pointer transition-all duration-200
+              hover:-translate-y-0.5
+              ${selectedTask?.id === t.id
+                ? "bg-accent border-primary/50"
+                : "bg-card border-border hover:border-border/80"
+              }
+            `}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">{t.title}</p>
+                <p className="text-xs text-muted-foreground mt-1">{prettyDateTime(t.due_date)}</p>
               </div>
 
-              <div className="container2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <button
-                  className="action-btn completed-button"
                   onClick={(e) => {
                     e.stopPropagation();
                     markCompleted(t);
                   }}
                   disabled={t.status === "done"}
-
+                  className="px-3 py-1 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  <Image
-                    src="/svg/completed.svg"
-                    alt=""
-                    width={32}
-                    height={32}
-                  />
+                  {t.status === "done" ? "Done" : "Complete"}
                 </button>
 
-                <button
-                  className="checkbox"
-                  disabled
-                  style={{ background: getStatusColor(t) }}
+                <div
+                  className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                    t.status === "done" ? "bg-green-500" : "bg-muted-foreground/30"
+                  }`}
                 />
               </div>
             </div>
-          ))}
-          
+          </div>
+        ))}
       </div>
 
-      <div className="taskDescription">
+      {/* TASK DETAIL PANEL */}
+      <div className="w-[280px] flex-shrink-0 bg-card border border-border rounded-xl p-5">
         {selectedTask ? (
-          <div className="description-content">
-            <h2>{selectedTask.title}</h2>
-            <hr />
-            <p>
-              <strong>Status:</strong> {selectedTask.status}
-            </p>
-            
-            <p>
-              <strong>Deadline:</strong>{" "}
-              {prettyDateTime(selectedTask.due_date)}
-            </p>
-
-            
+          <div className="space-y-4">
+            <h2 className="text-base font-semibold text-foreground">{selectedTask.title}</h2>
+            <hr className="border-border" />
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Status</p>
+              <p className="text-sm text-foreground">{selectedTask.status}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Deadline</p>
+              <p className="text-sm text-foreground">{prettyDateTime(selectedTask.due_date)}</p>
+            </div>
+            {selectedTask.description && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Description</p>
+                <p className="text-sm text-foreground whitespace-pre-wrap">{selectedTask.description}</p>
+              </div>
+            )}
           </div>
         ) : (
-          <p className="select-promptTaskDesc">
-            Select a task to view details
-          </p>
+          <div className="h-full flex items-center justify-center">
+            <p className="text-sm text-muted-foreground text-center">Select a task to view details</p>
+          </div>
         )}
       </div>
+
     </div>
   );
 }

@@ -70,40 +70,40 @@ export const DropInviteResponseSchema = z.object({
 export type DropInviteResponse = z.infer<typeof DropInviteResponseSchema>;
 
 // Messages
+// AFTER
 export const MessageSchema = z.object({
   id: z.string(),
   sender_id: z.string(),
-  receiver_id: z.string(),
-  sender_email: z.string().nullable(),
-  receiver_email: z.string(),
-  subject: z.string(),
-  body: z.string(),
-  type: z.string(),
-  status: z.string(),
+  recipient_id: z.string().nullable(),
+  content: z.string(),
   created_at: z.string(),
+  project_id: z.string().nullable(),
+  organization_id: z.string(),
+  deleted_at: z.string().nullable(),
 });
 
 export type Message = z.infer<typeof MessageSchema>;
 
-export const MessagesResponseSchema = z.array(MessageSchema);
+export const MessagesResponseSchema = z.object({
+  messages: z.array(MessageSchema),
+});
 
 export type MessagesResponse = z.infer<typeof MessagesResponseSchema>;
 
 export const SendMessageRequestSchema = z.object({
-  receiverEmail: z.string(),
-  subject: z.string(),
-  body: z.string(),
-  type: z.string(),
+  recipientId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
+  content: z.string().min(1),
 });
 
 export type SendMessageRequest = z.infer<typeof SendMessageRequestSchema>;
 
 export const SendMessageResponseSchema = z.object({
-  success: z.boolean(),
+  message: z.string(),
+  data: MessageSchema,
 });
 
 export type SendMessageResponse = z.infer<typeof SendMessageResponseSchema>;
-
 // Tasks
 export const CreateTaskRequestSchema = z.object({
   user_id: z.string(),
