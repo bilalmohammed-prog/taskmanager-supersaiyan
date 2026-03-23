@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,8 @@ import { useState, useEffect } from "react";
 const initialState: LoginState = { error: null };
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get("redirect") ?? "";
   const [state, formAction, isPending] = useActionState(loginAction, initialState);
 // Add to the top of the component (alongside existing useState/useActionState)
 const [stats, setStats] = useState({ organizations: 8, activeTasks: 148 });
@@ -84,6 +87,7 @@ useEffect(() => {
           </CardHeader>
           <CardContent className="space-y-6 p-8 pt-2 md:p-10 md:pt-2">
             <form action={formAction} className="space-y-4">
+              <input type="hidden" name="redirect" value={redirectParam} />
               <div className="space-y-2">
                 <Label htmlFor="email" className="font-body text-sm font-normal">
                   Email

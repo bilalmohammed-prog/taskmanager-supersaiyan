@@ -9,6 +9,28 @@ const loginSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
+const MAX_REDIRECT_LENGTH = 1024;
+
+function getSafeRedirect(value: FormDataEntryValue | null): string {
+  if (typeof value !== "string") {
+    return "/dashboard";
+  }
+
+  const candidate = value.trim();
+
+  if (
+    candidate.length === 0 ||
+    candidate.length > MAX_REDIRECT_LENGTH ||
+    !candidate.startsWith("/") ||
+    candidate.startsWith("//") ||
+    /^https?:\/\//i.test(candidate)
+  ) {
+    return "/dashboard";
+  }
+
+  return candidate;
+}
+
 export type LoginState = {
   error: string | null;
 };
@@ -26,6 +48,8 @@ export async function loginAction(
     return { error: parsed.error.issues[0].message };
   }
 
+  const nextPath = getSafeRedirect(formData.get("redirect"));
+
   const supabase = await getSupabaseServer();
 
   const { error } = await supabase.auth.signInWithPassword({
@@ -37,5 +61,5 @@ export async function loginAction(
     return { error: "Invalid email or password" };
   }
 
-  redirect("/dashboard");
+  redirect(nextPath);
 }
