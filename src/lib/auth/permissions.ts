@@ -24,12 +24,15 @@ export type Permission =
   | "project:create"
   | "project:update"
   | "project:delete"
+  | "task:read"
   | "task:create"
   | "task:update"
   | "task:delete"
   | "task:assign"
+  | "assignment:read"
   | "assignment:update"
   | "comment:create"
+  | "comment:update"
   | "comment:delete";
 
 const ROLE_PERMISSION_MATRIX: Record<AppRole, readonly Permission[]> = {
@@ -39,12 +42,15 @@ const ROLE_PERMISSION_MATRIX: Record<AppRole, readonly Permission[]> = {
     "project:create",
     "project:update",
     "project:delete",
+    "task:read",
     "task:create",
     "task:update",
     "task:delete",
     "task:assign",
+    "assignment:read",
     "assignment:update",
     "comment:create",
+    "comment:update",
     "comment:delete",
   ],
   admin: [
@@ -53,12 +59,15 @@ const ROLE_PERMISSION_MATRIX: Record<AppRole, readonly Permission[]> = {
     "project:create",
     "project:update",
     "project:delete",
+    "task:read",
     "task:create",
     "task:update",
     "task:delete",
     "task:assign",
+    "assignment:read",
     "assignment:update",
     "comment:create",
+    "comment:update",
     "comment:delete",
   ],
   manager: [
@@ -72,7 +81,13 @@ const ROLE_PERMISSION_MATRIX: Record<AppRole, readonly Permission[]> = {
     "comment:create",
     "comment:delete",
   ],
-  member: ["organization:read", "comment:create"],
+  member: [
+    "organization:read",
+    "task:read",
+    "assignment:read",
+    "comment:create",
+    "comment:update",
+  ],
 };
 
 const VALID_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
@@ -81,12 +96,15 @@ const VALID_PERMISSIONS: ReadonlySet<Permission> = new Set<Permission>([
   "project:create",
   "project:update",
   "project:delete",
+  "task:read",
   "task:create",
   "task:update",
   "task:delete",
   "task:assign",
+  "assignment:read",
   "assignment:update",
   "comment:create",
+  "comment:update",
   "comment:delete",
 ]);
 
