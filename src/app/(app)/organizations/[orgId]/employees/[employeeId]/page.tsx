@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { updateTask } from "@/actions/task/update";
-import type { TablesUpdate } from "@/lib/supabase/types";
+import type { TablesUpdate } from "@/lib/types/database";
 import { assignTaskToResource } from "@/actions/task/assign";
 import { createTask } from "@/actions/task/create";
 import { deleteTask as deleteTaskAction } from "@/actions/task/delete";
