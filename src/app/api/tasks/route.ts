@@ -51,6 +51,7 @@ export async function POST(req: Request) {
     const data = await createTask(supabase, {
       organizationId,
       projectId: project.id,
+      createdBy: tenant.user.id,
       title: payload.title,
       description: payload.description ?? undefined,
       dueDate: payload.due_date ?? undefined,

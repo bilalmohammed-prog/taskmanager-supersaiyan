@@ -7,6 +7,7 @@ export async function createTask(
   params: {
     projectId: string;
     organizationId: string;
+    createdBy: string;
     title: string;
     description?: string;
     dueDate?: string;
@@ -31,6 +32,7 @@ export async function createTask(
   const insert: TablesInsert<"tasks"> = {
     project_id: params.projectId,
     organization_id: params.organizationId,
+    created_by: params.createdBy,
     title: params.title,
     description: params.description ?? null,
     status: "todo",

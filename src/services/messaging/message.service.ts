@@ -115,30 +115,70 @@ export async function listMessages(
 ): Promise<MessageRow[]> {
   await assertOrgMember(supabase, params.organizationId, params.userId);
 
-  let query = supabase
+  // Project messages (safe)
+  if (params.projectId) {
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("organization_id", params.organizationId)
+      .eq("project_id", params.projectId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("[LIST_MESSAGES_PROJECT_ERROR]", error);
+      throw new ValidationError({ message: "Failed to fetch messages" });
+    }
+
+    return data ?? [];
+  }
+
+  // Direct conversation (NO string interpolation)
+  if (params.recipientId) {
+    const [sent, received] = await Promise.all([
+      supabase
+        .from("messages")
+        .select("*")
+        .eq("organization_id", params.organizationId)
+        .eq("sender_id", params.userId)
+        .eq("recipient_id", params.recipientId)
+        .is("deleted_at", null),
+
+      supabase
+        .from("messages")
+        .select("*")
+        .eq("organization_id", params.organizationId)
+        .eq("sender_id", params.recipientId)
+        .eq("recipient_id", params.userId)
+        .is("deleted_at", null),
+    ]);
+
+    if (sent.error || received.error) {
+      console.error("[LIST_MESSAGES_DIRECT_ERROR]", sent.error || received.error);
+      throw new ValidationError({ message: "Failed to fetch messages" });
+    }
+
+    return [...(sent.data ?? []), ...(received.data ?? [])].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }
+
+  // All messages involving user
+  const { data, error } = await supabase
     .from("messages")
     .select("*")
     .eq("organization_id", params.organizationId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
-  if (params.projectId) {
-    query = query.eq("project_id", params.projectId);
-  } else if (params.recipientId) {
-    query = query.or(
-      `and(sender_id.eq.${params.userId},recipient_id.eq.${params.recipientId}),and(sender_id.eq.${params.recipientId},recipient_id.eq.${params.userId})`
-    );
-  } else {
-    query = query.or(`sender_id.eq.${params.userId},recipient_id.eq.${params.userId}`);
-  }
-
-  const { data, error } = await query;
-
   if (error) {
-    throw new ValidationError({ message: error.message, details: error });
+    console.error("[LIST_MESSAGES_ALL_ERROR]", error);
+    throw new ValidationError({ message: "Failed to fetch messages" });
   }
 
-  return data ?? [];
+  return (data ?? []).filter(
+    (m) => m.sender_id === params.userId || m.recipient_id === params.userId
+  );
 }
 
 export async function deleteMessage(

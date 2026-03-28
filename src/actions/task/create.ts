@@ -31,6 +31,7 @@ export async function createTask(
   const result = await createTaskService(ctx.supabase, {
     organizationId: ctx.organizationId,
     projectId: validatedProjectId,
+    createdBy: ctx.user.id,
     title: validatedTitle,
     description: validatedDescription,
     dueDate: validatedDueDate ?? undefined,
