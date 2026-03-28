@@ -58,7 +58,17 @@ export async function loginAction(
   });
 
   if (error) {
-    return { error: "Invalid email or password" };
+    const message = error.message.toLowerCase();
+
+    if (message.includes("email not confirmed")) {
+      return { error: "Please confirm your email before logging in" };
+    }
+
+    if (message.includes("invalid login credentials")) {
+      return { error: "Invalid email or password" };
+    }
+
+    return { error: error.message };
   }
 
   redirect(nextPath);

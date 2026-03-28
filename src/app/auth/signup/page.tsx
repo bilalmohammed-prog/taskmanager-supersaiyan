@@ -147,6 +147,12 @@ useEffect(() => {
                 <p className="text-sm font-medium text-destructive">{state.error}</p>
               )}
 
+              {state.success && (
+                <p className="text-sm font-medium text-emerald-600">
+                  {state.success}
+                </p>
+              )}
+
               <Button
                 type="submit"
                 disabled={isPending}

@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
 const signupSchema = z
@@ -54,7 +55,7 @@ export async function signupAction(
 
   const supabase = await getSupabaseServer();
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
@@ -69,8 +70,12 @@ export async function signupAction(
     return { error: error.message, success: null };
   }
 
+  if (data.session) {
+    redirect("/");
+  }
+
   return {
     error: null,
-    success: "Check your email to confirm your account before continuing.",
+    success: "Check your email to confirm your account.",
   };
 }
