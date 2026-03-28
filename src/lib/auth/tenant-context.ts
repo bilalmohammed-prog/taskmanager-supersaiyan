@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/types/database";
-import { UnauthorizedError, ValidationError, ForbiddenError } from "@/lib/api/errors";
+import { UnauthorizedError, ValidationError } from "@/lib/api/errors";
 import { normalizeRole, type AppRole, type DatabaseRole } from "./permissions";
 
 type MembershipRow = {
@@ -56,7 +56,7 @@ export async function resolveActiveOrganizationId(
   supabase: SupabaseClient<Database>,
   userId: string,
   organizationId?: string | null
-): Promise<string> {
+): Promise<string | null> {
   if (organizationId) {
     return organizationId;
   }
@@ -93,7 +93,7 @@ export async function resolveActiveOrganizationId(
   }
 
   if (!membership?.organization_id) {
-    throw new ValidationError({ message: "Organization not found" });
+    return null;
   }
 
   return membership.organization_id;
@@ -121,6 +121,18 @@ export async function requireTenantContext(
     options?.organizationId
   );
 
+  if (!organizationId) {
+    return {
+      supabase,
+      token,
+      user,
+      userId: user.id,
+      organizationId: null,
+      databaseRole: null,
+      role: null,
+    } as unknown as TenantContext;
+  }
+
   const { data: membership, error: membershipError } = await supabase
     .from("org_members")
     .select("organization_id, role")
@@ -133,7 +145,15 @@ export async function requireTenantContext(
   }
 
   if (!membership) {
-    throw new ForbiddenError({ message: "Not a member of this organization" });
+    return {
+      supabase,
+      token,
+      user,
+      userId: user.id,
+      organizationId: null,
+      databaseRole: null,
+      role: null,
+    } as unknown as TenantContext;
   }
 
   return {

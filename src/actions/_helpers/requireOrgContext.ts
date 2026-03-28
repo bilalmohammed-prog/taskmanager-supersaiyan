@@ -1,9 +1,10 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import { redirect } from "next/navigation";
 import {
   UnauthorizedError,
 } from "@/lib/api/errors";
-import { requireTenantContext, resolveActiveOrganizationId } from "@/lib/auth/tenant-context";
-import { normalizeRole, type AppRole, type DatabaseRole } from "@/lib/auth/permissions";
+import { requireTenantContext } from "@/lib/auth/tenant-context";
+import type { AppRole, DatabaseRole } from "@/lib/auth/permissions";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import type { Database } from "@/lib/types/database";
 
@@ -37,11 +38,6 @@ export async function requireOrgContext(options?: {
   organizationId?: string | null;
 }): Promise<OrgActionContext> {
   const { supabase, user, userId } = await requireActionUser(options?.supabase);
-  const organizationId = await resolveActiveOrganizationId(
-    supabase,
-    userId,
-    options?.organizationId
-  );
 
   const {
     data: { session },
@@ -57,7 +53,13 @@ export async function requireOrgContext(options?: {
       Authorization: `Bearer ${token}`,
     },
   });
-  const tenant = await requireTenantContext(request, { organizationId });
+  const tenant = await requireTenantContext(request, {
+    organizationId: options?.organizationId,
+  });
+
+  if (!tenant.organizationId || !tenant.databaseRole || !tenant.role) {
+    redirect("/onboarding");
+  }
 
   return {
     supabase: tenant.supabase,
@@ -65,6 +67,6 @@ export async function requireOrgContext(options?: {
     userId: tenant.userId,
     organizationId: tenant.organizationId,
     databaseRole: tenant.databaseRole,
-    role: normalizeRole(tenant.databaseRole),
+    role: tenant.role,
   };
 }
