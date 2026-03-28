@@ -1,7 +1,6 @@
 "use server";
 
 import { createResourceAssignmentSchema } from "@/lib/validation/resource";
-import { getSupabaseServer } from "@/lib/supabase/server";
 import { createProfileAssignment } from "@/services/resource/resource.service";
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 import { authorize } from "@/lib/auth/authorization";
@@ -16,11 +15,10 @@ export async function createResource(
 ): Promise<ActionResult<{ id: string }>> {
   try {
     const payload = createResourceAssignmentSchema.parse(input);
-    const supabase = await getSupabaseServer();
-    const ctx = await requireOrgContext({ supabase });
+    const ctx = await requireOrgContext();
     authorize("update", "assignment", { role: ctx.role });
 
-    const data = await createProfileAssignment(supabase, {
+    const data = await createProfileAssignment(ctx.supabase, {
       organizationId: ctx.organizationId,
       userId: payload.userId,
       taskId: payload.taskId,

@@ -2,7 +2,6 @@
 
 import { uuidSchema } from "@/lib/validation/common";
 import { updateResourceAssignmentSchema } from "@/lib/validation/resource";
-import { getSupabaseServer } from "@/lib/supabase/server";
 import { updateProfileAssignment } from "@/services/resource/resource.service";
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 import { authorize } from "@/lib/auth/authorization";
@@ -17,11 +16,10 @@ export async function updateResource(
   try {
     const assignmentId = uuidSchema.parse(resourceId);
     const payload = updateResourceAssignmentSchema.parse(updates);
-    const supabase = await getSupabaseServer();
-    const ctx = await requireOrgContext({ supabase });
+    const ctx = await requireOrgContext();
     authorize("update", "assignment", { role: ctx.role });
 
-    const data = await updateProfileAssignment(supabase, {
+    const data = await updateProfileAssignment(ctx.supabase, {
       organizationId: ctx.organizationId,
       assignmentId,
       updates: { allocated_hours: payload.allocatedHours },

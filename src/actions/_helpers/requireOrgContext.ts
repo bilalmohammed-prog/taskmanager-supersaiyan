@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import {
   UnauthorizedError,
 } from "@/lib/api/errors";
-import { requireTenantContext } from "@/lib/auth/tenant-context";
+import { getTenantContext } from "@/lib/auth/tenant-context";
 import type { AppRole, DatabaseRole } from "@/lib/auth/permissions";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import type { Database } from "@/lib/types/database";
@@ -34,26 +34,11 @@ export async function requireActionUser(
 }
 
 export async function requireOrgContext(options?: {
-  supabase?: SupabaseClient<Database>;
   organizationId?: string | null;
 }): Promise<OrgActionContext> {
-  const { supabase, user, userId } = await requireActionUser(options?.supabase);
+  const { supabase, user, userId } = await requireActionUser();
 
-  const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (sessionError || !token) {
-    throw new UnauthorizedError();
-  }
-
-  const request = new Request("http://localhost/actions/require-org-context", {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  const tenant = await requireTenantContext(request, {
+  const tenant = await getTenantContext(supabase, user, {
     organizationId: options?.organizationId,
   });
 

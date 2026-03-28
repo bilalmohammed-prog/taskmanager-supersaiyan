@@ -1,6 +1,5 @@
 "use server";
 
-import { getSupabaseServer } from "@/lib/supabase/server";
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 import { listOrganizationMembers } from "@/services/organization/organization.service";
 import { safeErrorMessage, type ActionResult } from "./_shared";
@@ -12,9 +11,8 @@ export async function listOrgMembers(
   try {
     const validatedOrgId = uuidSchema.parse(orgId);
 
-    const supabase = await getSupabaseServer();
-    const ctx = await requireOrgContext({ supabase, organizationId: validatedOrgId });
-    const members = await listOrganizationMembers(supabase, {
+    const ctx = await requireOrgContext({ organizationId: validatedOrgId });
+    const members = await listOrganizationMembers(ctx.supabase, {
       organizationId: ctx.organizationId,
     });
     const data = members.map((m) => ({ user_id: m.userId, name: m.fullName }));

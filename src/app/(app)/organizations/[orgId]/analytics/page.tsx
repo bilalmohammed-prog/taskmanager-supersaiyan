@@ -1,7 +1,14 @@
-import { getAnalyticsSummary } from "@/actions/analytics/summary";
+import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { getAnalyticsSummaryFromDb } from "@/lib/api";
 
-export default async function AnalyticsPage() {
-  const stats = await getAnalyticsSummary();
+export default async function AnalyticsPage({
+  params,
+}: {
+  params: Promise<{ orgId: string }>;
+}) {
+  const { orgId } = await params;
+  const tenant = await requireOrgContext({ organizationId: orgId });
+  const stats = await getAnalyticsSummaryFromDb(tenant.supabase, tenant.organizationId);
 
   const completionRate =
     stats.totalTasks === 0

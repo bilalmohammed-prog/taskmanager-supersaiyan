@@ -1,6 +1,5 @@
 "use server";
 
-import { getSupabaseServer } from "@/lib/supabase/server";
 import { requireActionUser } from "@/actions/_helpers/requireOrgContext";
 import type { UUID, Tables } from "@/lib/types/database";
 import { getUserOrganizations } from "@/services/organization/organization.service";
@@ -12,8 +11,7 @@ export async function getUserOrganizationsAction(): Promise<
   ActionResult<UserOrganization[]>
 > {
   try {
-    const supabase = await getSupabaseServer();
-    const { user } = await requireActionUser(supabase);
+    const { supabase, user } = await requireActionUser();
 
     const orgs = await getUserOrganizations(supabase, user.id as UUID);
     return { data: orgs, error: null };

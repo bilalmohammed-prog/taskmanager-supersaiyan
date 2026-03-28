@@ -1,7 +1,6 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { getSupabaseServer } from "@/lib/supabase/server";
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
 import type { Tables, UUID } from "@/lib/types/database";
 import { switchActiveOrganization } from "@/services/organization/organization.service";
@@ -14,10 +13,13 @@ export async function switchOrganization(
   try {
     const validatedOrgId = uuidSchema.parse(orgId) as UUID;
 
-    const supabase = await getSupabaseServer();
-    const ctx = await requireOrgContext({ supabase, organizationId: validatedOrgId });
+    const ctx = await requireOrgContext({ organizationId: validatedOrgId });
 
-    const profile = await switchActiveOrganization(supabase, ctx.userId as UUID, validatedOrgId);
+    const profile = await switchActiveOrganization(
+      ctx.supabase,
+      ctx.userId as UUID,
+      validatedOrgId
+    );
 
     const cookieStore = await cookies();
     cookieStore.set("activeOrg", validatedOrgId, {
