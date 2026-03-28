@@ -84,6 +84,7 @@ export async function resolveActiveOrganizationId(
     .from("org_members")
     .select("organization_id")
     .eq("user_id", userId)
+    .order("created_at", { ascending: true }) 
     .limit(1)
     .maybeSingle();
 
