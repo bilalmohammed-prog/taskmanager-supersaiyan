@@ -1,6 +1,7 @@
 "use server";
 
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { authorize } from "@/lib/auth/authorization";
 import { createTask as createTaskService } from "@/services/task/task.service";
 import type { Tables } from "@/lib/types/database";
 import { revalidateTag } from "next/cache";
@@ -25,6 +26,7 @@ export async function createTask(
   const validatedProjectId = uuidSchema.parse(project_id);
 
   const ctx = await requireOrgContext({ organizationId: validatedOrgId });
+  authorize("create", "task", { role: ctx.role });
 
   const result = await createTaskService(ctx.supabase, {
     organizationId: ctx.organizationId,

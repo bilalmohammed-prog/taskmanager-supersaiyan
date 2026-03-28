@@ -1,6 +1,7 @@
 "use server";
 
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { authorize } from "@/lib/auth/authorization";
 import { getTasksByProject } from "@/services/task/task.service";
 import { deleteAssignment, listAssignments } from "@/services/resource/assignment.service";
 import { removeProjectMember as removeProjectMemberService } from "@/services/resource/projectMember.service";
@@ -11,6 +12,7 @@ export async function removeProjectMember(projectId: string, userId: string) {
   const validatedUserId = uuidSchema.parse(userId);
 
   const ctx = await requireOrgContext();
+  authorize("manage_members", "organization", { role: ctx.role });
   await removeProjectMemberService(ctx.supabase, {
     organizationId: ctx.organizationId,
     projectId: validatedProjectId,

@@ -1,6 +1,7 @@
 "use server";
 
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { authorize } from "@/lib/auth/authorization";
 import { createAssignment, deleteAssignment, listAssignments } from "@/services/resource/assignment.service";
 import { getTaskById } from "@/services/task/task.service";
 import { uuidSchema } from "@/lib/validation/common";
@@ -13,6 +14,7 @@ export async function assignTaskToResource(
   const validatedUserId = userId ? uuidSchema.parse(userId) : null;
 
   const ctx = await requireOrgContext();
+  authorize("assign", "task", { role: ctx.role });
   const task = await getTaskById(ctx.supabase, {
     organizationId: ctx.organizationId,
     taskId: validatedTaskId,

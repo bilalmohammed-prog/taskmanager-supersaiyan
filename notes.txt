@@ -66,3 +66,65 @@ This audit reveals a project with a robust security foundation using Supabase Ro
 REPORT IN WORD DOC
 
 Refer claude chat for next steps also del leftsidebarfirst? at end of the chat its there.
+
+ 1. P0: Server Actions bypass role authorization checks (privilege escalation path).                                     
+     Evidence: task/project/assignment server actions only call requireOrgContext and do not call authorize(...), unlike  
+     API routes.                                                                                                          
+                                                                                                                          
+  - src/actions/task/create.ts:27                                                                                         
+  - src/actions/task/update.ts:23:23                                                                                      
+  - src/actions/task/delete.ts:12:12                                                                                      
+  - src/actions/project/create.ts:19:19                                                                                   
+  - API contrast: src/app/api/tasks/route.ts:18, src/app/api/projects/route.ts:42                                         
+    Fix: add explicit authorize(...) in every mutating server action (or centralize via requireOrgContext({ action,       
+    resource })).                                                                                                         
+                                                                                                                          
+  2. P0: Task create contract is inconsistent and likely broken in UI path.                                               
+     TeamTasksView sends organization_id, dueDate, status; API expects strict taskCreateSchema with due_date, no          
+     organization_id, no status.                                                                                          
+                                                                                                                          
+  - Sender: src/components/TeamTasksView.tsx:144, src/components/TeamTasksView.tsx:146                                    
+  - Client type: src/lib/api/types.ts:108                                                                                 
+  - Route validation: src/app/api/tasks/route.ts:20, src/lib/validation/task.ts:11                                        
+    Fix: unify request/response contracts (prefer shared zod schema exported to both client and route).                   
+                                                                                                                          
+  3. P1: Invite API response schemas mismatch actual route responses.                                                     
+     Client expects { success, message } / { success }, routes return { success, data: { ... } }.                         
+                                                                                                                          
+  - Expected: src/lib/api/types.ts:59, src/lib/api/types.ts:66                                                            
+  - Actual: src/app/api/invites/accept/route.ts:49, src/app/api/invites/decline/route.ts:12, src/app/api/invites/drop/    
+    route.ts:40                                                                                                           
+    Fix: standardize on one envelope (ok/fail or success/data) and update schemas + parsers together.                     
+                                                                                                                          
+  4. P1: Internal DB error details are returned to clients.                                                               
+     fail() includes details, and many thrown ValidationErrors pass raw Supabase error objects.                           
+                                                                                                                          
+  - src/lib/api/response.ts:17                                                                                            
+  - Example throw: src/services/task/task.service.ts:43                                                                   
+    Fix: strip details from API responses in production; keep full detail only in server logs.
+                                                                                                                          
+  5. P1: created_by ownership policy is weakened by null inserts.                                                         
+     RLS permits updates when created_by is null, and task inserts currently do not set created_by.                       
+                                                                                                                          
+  - Insert payload has no created_by: src/services/task/task.service.ts:31                                                
+  - Policy clause: supabase/migrations/20260323_harden_rls.sql:238                                                        
+    Fix: always set created_by on task creation and tighten update/delete policy conditions.                              
+                                                                                                                          
+  6. P2: Test suite is not operational without missing env file.                                                          
+     npm test fails because NEXT_PUBLIC_SUPABASE_URL is missing from .env.test.local.                                     
+                                                                                                                          
+  - src/tests/tenant-isolation/fixtures.ts:48                                                                             
+    Fix: add .env.test.local.example, document required vars, and make CI inject secrets.                                 
+                                                                                                                          
+  7. P2: Broken asset paths in UI.                                                                                        
+     Referenced icons do not exist at used paths.                                                                         
+                                                                                                                          
+  - src/components/layout/TopBar.tsx:76                                                                                   
+  - src/components/TeamTasksView.tsx:332:332                                                                              
+    Fix: update to existing files under public/icons/* or add missing assets.                                             
+                                                                                                                          
+  8. P3: Duplicate migration content (same SHA256) in two files.                                                          
+                                                                                                                          
+  - supabase/migrations/20260323_harden_rls.sql                                                                           
+  - supabase/migrations/20260323090000_harden_row_scope_rls.sql                                                           
+    Fix: keep one canonical migration to avoid deployment/order confusion. 

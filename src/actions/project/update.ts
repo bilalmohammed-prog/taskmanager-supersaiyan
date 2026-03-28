@@ -3,6 +3,7 @@
 import { updateProjectInDb } from "@/lib/api";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { authorize } from "@/lib/auth/authorization";
 import { uuidSchema } from "@/lib/validation/common";
 import { projectUpdateSchema } from "@/lib/validation/project";
 
@@ -20,6 +21,7 @@ export async function updateProjectAction(
 
   const supabase = await getSupabaseServer();
   const ctx = await requireOrgContext({ supabase });
+  authorize("update", "project", { role: ctx.role });
   return await updateProjectInDb(supabase, {
     organizationId: ctx.organizationId,
     projectId: validatedProjectId,

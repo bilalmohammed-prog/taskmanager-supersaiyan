@@ -1,6 +1,7 @@
 "use server";
 
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { authorize } from "@/lib/auth/authorization";
 import { addProjectMember } from "@/services/resource/projectMember.service";
 import { uuidSchema } from "@/lib/validation/common";
 
@@ -14,6 +15,7 @@ export async function assignProjectMember(
   const validatedOrgId = uuidSchema.parse(orgId);
 
   const ctx = await requireOrgContext({ organizationId: validatedOrgId });
+  authorize("manage_members", "organization", { role: ctx.role });
   await addProjectMember(ctx.supabase, {
     organizationId: ctx.organizationId,
     projectId: validatedProjectId,

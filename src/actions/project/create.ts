@@ -4,6 +4,7 @@ import { revalidateTag } from "next/cache";
 import { createProjectInDb } from "@/lib/api";
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { authorize } from "@/lib/auth/authorization";
 import { projectCreateSchema } from "@/lib/validation/project";
 
 
@@ -17,6 +18,7 @@ export async function createProjectAction(params: {
 
   const supabase = await getSupabaseServer();
   const ctx = await requireOrgContext({ supabase });
+  authorize("create", "project", { role: ctx.role });
 
   const result = await createProjectInDb(supabase, {
     organizationId: ctx.organizationId,

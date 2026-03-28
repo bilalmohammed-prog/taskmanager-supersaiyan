@@ -1,6 +1,7 @@
 "use server";
 
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { authorize } from "@/lib/auth/authorization";
 import { updateTask as updateTaskService } from "@/services/task/task.service";
 import { uuidSchema } from "@/lib/validation/common";
 import { taskUpdateSchema, normalizeTaskUpdateStatus } from "@/lib/validation/task";
@@ -21,6 +22,7 @@ export async function updateTask(
   });
 
   const ctx = await requireOrgContext({ organizationId: validatedOrgId });
+  authorize("update", "task", { role: ctx.role });
 
   return updateTaskService(ctx.supabase, {
     organizationId: ctx.organizationId,

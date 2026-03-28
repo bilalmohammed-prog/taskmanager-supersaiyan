@@ -1,6 +1,7 @@
 "use server";
 
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { authorize } from "@/lib/auth/authorization";
 import { updateAssignment as updateAssignmentService } from "@/services/resource/assignment.service";
 import { uuidSchema } from "@/lib/validation/common";
 import { assignmentUpdateSchema } from "@/lib/validation/assignment";
@@ -17,6 +18,7 @@ export async function updateAssignment(
   const validatedUpdates = assignmentUpdateSchema.parse(updates);
 
   const ctx = await requireOrgContext();
+  authorize("update", "assignment", { role: ctx.role });
   return await updateAssignmentService(ctx.supabase, {
     organizationId: ctx.organizationId,
     assignmentId: validatedAssignmentId,
