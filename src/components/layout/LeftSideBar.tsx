@@ -1,85 +1,65 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import ProfileMenu from "@/components/ProfileMenu";
+import { BarChart3, FolderKanban, Inbox, Users } from "lucide-react";
+import { useAuthEmployee } from "@/components/providers/auth/AuthContext";
 
 const NAV_ITEMS = [
-  { label: "Employees", href: "employees", icon: "/icons/createEmp.svg" },
-  { label: "Projects",  href: "projects",  icon: "/icons/tasks.svg"     },
-  { label: "Analytics", href: "analytics", icon: "/icons/progress.svg"  },
-  { label: "Inbox",     href: "inbox",     icon: "/icons/inbox.svg"     },
+  { label: "Employees", href: "employees", icon: Users },
+  { label: "Projects", href: "projects", icon: FolderKanban },
+  { label: "Analytics", href: "analytics", icon: BarChart3 },
+  { label: "Inbox", href: "inbox", icon: Inbox },
 ] as const;
 
 export default function LeftSideBar() {
   const { orgId } = useParams<{ orgId: string }>();
-  const pathname  = usePathname();
+  const pathname = usePathname();
+  const { employee } = useAuthEmployee();
+  const fullName = employee?.full_name?.trim() || "User";
+  const initials = fullName.charAt(0).toUpperCase();
 
   return (
-    <aside
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "64px",
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        paddingTop: "12px",
-        paddingBottom: "16px",
-        backgroundColor: "var(--card)",
-borderRight: "1px solid var(--border)",
-boxShadow: "2px 0 8px rgba(0,0,0,0.06)",
-        zIndex: 999,
-      }}
-    >
-      {/* Nav links */}
-      <nav
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: "4px",
-          flex: 1,
-          width: "100%",
-          paddingTop: "52px", // clears the TopBar height
-        }}
-      >
-        {NAV_ITEMS.map(({ label, href, icon }) => {
-          const fullHref  = `/organizations/${orgId}/${href}`;
-          const isActive  = pathname.startsWith(fullHref);
+    <aside className="hidden h-full w-[280px] shrink-0 flex-col justify-between border-r border-zinc-200 bg-white py-6 md:flex">
+      <div className="space-y-8 px-6">
+        <div className="text-lg font-semibold tracking-tight text-zinc-800">
+          ResourceManager
+        </div>
 
-          return (
-            <Link key={href} href={fullHref} style={{ width: "100%" }}>
-              <Button
-                variant="sidebar"
-                style={{
-                  width: "100%",
-                  backgroundColor: isActive ? "var(--accent)" : "transparent",
-                  borderRadius: "8px",
-                }}
+        <nav className="mt-8 space-y-1">
+          {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+            const fullHref = `/organizations/${orgId}/${href}`;
+            const isActive = pathname.startsWith(fullHref);
+
+            return (
+              <Link
+                key={href}
+                href={fullHref}
+                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-zinc-100 text-zinc-900 shadow-sm ring-1 ring-zinc-200/50"
+                    : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+                }`}
               >
-                <Image
-                  src={icon}
-                  alt={label}
-                  width={22}
-                  height={22}
-                  style={{ flexShrink: 0 }}
-                />
-                <span style={{ fontSize: "10px", color: "var(--foreground)" }}>
-                  {label}
-                </span>
-              </Button>
-            </Link>
-          );
-        })}
-      </nav>
+                <Icon className="h-4 w-4 shrink-0" strokeWidth={2.5} />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
 
-      {/* Profile menu pinned to bottom */}
-      <ProfileMenu />
+      <div className="mt-auto border-t border-zinc-100 px-6 pt-6">
+        <div className="group flex cursor-default items-center gap-3 rounded-lg p-2 transition-colors hover:bg-zinc-50">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-sm font-semibold text-zinc-700 shadow-sm">
+            {initials}
+          </div>
+          <div className="flex min-w-0 flex-col text-sm">
+            <span className="truncate font-medium text-zinc-900">{fullName}</span>
+            <span className="truncate text-xs text-zinc-500">Admin</span>
+          </div>
+        </div>
+      </div>
     </aside>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { DashboardProvider, useDashboard } from "@/components/providers/dashboard/DashboardContext";
 import LeftSideBar from "@/components/layout/LeftSideBar";
 import TopBar from "@/components/layout/TopBar";
+import SupportWidget from "@/components/layout/SupportWidget";
 import { supabase } from "@/lib/supabase/client";
 import { ToastProvider, ToastContainer } from "@/components/providers/toast";
 
@@ -38,12 +39,15 @@ function DashboardShell({ children }: DashboardShellProps) {
   }, [setCurrentUserId]);
 
   return (
-    <div className="dashboard-shell flex min-h-screen">
+    <div className="flex h-screen w-full overflow-hidden bg-zinc-50 font-sans text-zinc-900">
       <LeftSideBar />
-      <div className="flex-1">
+      <div className="relative flex min-w-0 flex-1 flex-col">
         <TopBar />
-        <main className="p-4">{children}</main>
+        <main className="relative mx-auto flex-1 w-full max-w-5xl overflow-y-auto px-6 py-12 lg:px-12">
+          {children}
+        </main>
       </div>
+      <SupportWidget />
       <ToastContainer />
     </div>
   );

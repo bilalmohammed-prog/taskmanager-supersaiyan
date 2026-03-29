@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
-
+import { Menu, UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import ComposeMessagePopup from "@/components/ComposeMessagePopup";
@@ -13,17 +12,6 @@ export default function TopBar() {
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [composeMode, setComposeMode] = useState<"message" | "invite" | null>(null);
-
-  const topbarCls = `
-    fixed top-0 left-0 right-0
-    h-13
-    grid grid-cols-[1fr_auto_auto_1fr]
-    items-center
-    bg-card
-    border-b border-border
-    px-4
-    z-[1000]
-  `;
 
   useEffect(() => {
     async function loadUser(): Promise<void> {
@@ -45,76 +33,52 @@ export default function TopBar() {
     loadUser();
   }, []);
 
-  // AFTER
-const isOrgRoute = pathname.includes("/organizations/");
-const isEmployeesList =
-  isOrgRoute && pathname.includes("/employees") && !pathname.match(/\/employees\/[^/]+$/);
-const isEmployeeDetail =
-  isOrgRoute && !!pathname.match(/\/employees\/[^/]+$/);
-const isProjects =
-  isOrgRoute && pathname.includes("/projects") && !pathname.match(/\/projects\/[^/]+$/);
-const isAnalytics = isOrgRoute && pathname.includes("/analytics");
-const isInbox = isOrgRoute && pathname.includes("/inbox");
+  const isOrgRoute = pathname.includes("/organizations/");
+  const isEmployeesList =
+    isOrgRoute && pathname.includes("/employees") && !pathname.match(/\/employees\/[^/]+$/);
+  const isInbox = isOrgRoute && pathname.includes("/inbox");
 
-  if (isEmployeesList) {
-    return (
-      <div className={topbarCls}>
-        <div className="col-[2] flex gap-3">
-          <Button variant="topbar" onClick={() => setComposeMode("invite")}>
-            <Image src="/icons/createEmp.svg" alt="" width={22} height={22} />
+  if (!isOrgRoute) {
+    return null;
+  }
+
+  return (
+    <header className="sticky top-0 z-10 flex h-16 w-full shrink-0 items-center justify-between border-b border-zinc-200/80 bg-white px-8 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]">
+      <button className="rounded-md p-2 text-zinc-600 hover:bg-zinc-100 md:hidden">
+        <Menu className="h-5 w-5" />
+      </button>
+
+      <div className="flex flex-1 justify-center">
+        {isEmployeesList && (
+          <Button
+            type="button"
+            className="h-9 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-50 shadow-sm hover:bg-zinc-800"
+            onClick={() => setComposeMode("invite")}
+          >
+            <UserPlus className="mr-2 h-4 w-4 opacity-80" strokeWidth={2.5} />
             Invite Employee
           </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (isEmployeeDetail) {
-    return (
-      <div className={topbarCls}>
-        <Button variant="topbar">
-          <Image src="/icons/addTask.svg" alt="" width={22} height={22} />
-          Assign Task
-        </Button>
-      </div>
-    );
-  }
-
-  if (isProjects) {
-    return (
-      <div className={topbarCls}>
-        <Button variant="topbar">
-          <Image src="/icons/addResource.svg" alt="" width={22} height={22} />
-          Add Resource
-        </Button>
-      </div>
-    );
-  }
-
-  if (isAnalytics) {
-    return <div className={topbarCls} />;
-  }
-
-  if (isInbox) {
-    return (
-      <div className={topbarCls}>
-        {composeMode && (
-          <ComposeMessagePopup
-            userEmail={userEmail ?? ""}
-            fixedType={composeMode}
-            onClose={() => setComposeMode(null)}
-          />
         )}
-
-        <Button variant="topbar" onClick={() => setComposeMode("message")}>
-          <Image src="/icons/draft.svg" alt="Draft" width={22} height={22} />
-          Draft
-        </Button>
+        {!isEmployeesList && isInbox && (
+          <Button
+            type="button"
+            className="h-9 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-50 shadow-sm hover:bg-zinc-800"
+            onClick={() => setComposeMode("message")}
+          >
+            Draft
+          </Button>
+        )}
       </div>
-    );
-  }
 
-  if (!isOrgRoute) return null;
+      <div className="w-10" />
 
-return <div className={topbarCls} />;
+      {composeMode && (
+        <ComposeMessagePopup
+          userEmail={userEmail ?? ""}
+          fixedType={composeMode}
+          onClose={() => setComposeMode(null)}
+        />
+      )}
+    </header>
+  );
 }
