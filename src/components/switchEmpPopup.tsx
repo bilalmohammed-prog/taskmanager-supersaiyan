@@ -43,48 +43,20 @@ export default function SwitchEmpPopup({
   }, []);
 
   return (
-    <div
-      className="
-        fixed inset-0
-        bg-black/50
-        backdrop-blur-[6px]
-        flex items-center justify-center
-        z-[10000]
-      "
-    >
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
       <div
         role="dialog"
-        className="
-          relative
-          w-[90%] max-w-[450px]
-          max-h-[80vh]
-          p-[30px]
-          flex flex-col
-          rounded-[14px]
-          bg-card
-          border border-border
-          text-foreground
-          shadow-lg
-          animate-[fadeIn_.2s_ease]
-        "
+        className="relative flex max-h-[80vh] w-[90%] max-w-[450px] flex-col rounded-xl border border-border bg-card p-6 text-foreground shadow-sm"
       >
         <button
           onClick={onClose}
-          className="
-            absolute top-[16px] right-[16px]
-            w-[28px] h-[28px]
-            flex items-center justify-center
-            rounded-[6px]
-            bg-muted text-foreground
-            text-[18px] font-bold
-            transition hover:bg-muted/80
-          "
+          className="absolute top-4 right-4 flex h-7 w-7 items-center justify-center rounded-md bg-muted text-lg font-bold text-foreground transition-all duration-200 hover:bg-accent"
         >
           ×
         </button>
 
-        <div className="mb-[18px]">
-          <h2 className="text-[20px] font-medium text-foreground">
+        <div className="mb-4">
+          <h2 className="text-xl font-medium text-foreground">
             Select Employee
           </h2>
         </div>
@@ -92,44 +64,35 @@ export default function SwitchEmpPopup({
         <div className="switch-emp-list-container">
 
           {loading && (
-            <div className="flex flex-col items-center justify-center py-[40px] text-muted-foreground">
-              <div
-                className="
-                  w-[40px] h-[40px]
-                  border-[3px] border-border
-                  border-t-foreground
-                  rounded-full
-                  animate-spin
-                  mb-[16px]
-                "
-              />
+            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+              <div className="mb-4 h-10 w-10 animate-spin rounded-full border-[3px] border-border border-t-foreground" />
               <p>Loading employees...</p>
             </div>
           )}
 
           {!loading && employees.length === 0 && (
-            <div className="flex items-center justify-center py-[40px] text-muted-foreground italic">
+            <div className="flex items-center justify-center py-10 text-muted-foreground italic">
               No employees found
             </div>
           )}
 
           {!loading && employees.length > 0 && (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-[14px]">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4">
               {employees.map(e => (
                 <div
                   key={e.id}
                   className={`
-                    mt-[10px]
-                    flex flex-col gap-[6px]
-                    p-[14px_16px]
-                    rounded-[10px]
+                    mt-2
+                    flex flex-col gap-1.5
+                    rounded-lg
                     cursor-pointer
                     border
                     bg-background
+                    p-4
                     transition-all duration-200
-                    hover:bg-accent/50 hover:-translate-y-[2px]
+                    hover:bg-accent/50
                     ${selectedEmpID === e.id
-                      ? "bg-accent border-primary/50 shadow-none translate-y-0"
+                      ? "border-primary/50 bg-accent shadow-none"
                       : "border-border"
                     }
                   `}
@@ -140,10 +103,10 @@ export default function SwitchEmpPopup({
                     emp_id: e.emp_id
                   })}
                 >
-                  <div className="text-foreground text-[16px] font-medium">
+                  <div className="text-base font-medium text-foreground">
                     {e.name}
                   </div>
-                  <div className="text-muted-foreground text-[13px]">
+                  <div className="text-sm text-muted-foreground">
                     ID: {e.id}
                   </div>
                 </div>

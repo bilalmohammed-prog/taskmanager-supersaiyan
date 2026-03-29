@@ -46,59 +46,59 @@ export default function EmployeeOverviewModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-card border border-border rounded-lg p-6 w-96 max-w-[90vw]">
-        <div className="flex justify-between items-center mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-96 max-w-[90vw] rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-foreground">Employee Overview</h2>
           <button
             onClick={onClose}
-            className="text-muted-foreground hover:text-foreground text-2xl"
+            className="text-2xl text-muted-foreground transition-colors hover:text-foreground"
           >
             ×
           </button>
         </div>
 
         {loading ? (
-          <div className="text-center py-8">
+          <div className="py-8 text-center">
             <p className="text-muted-foreground">Loading...</p>
           </div>
         ) : overview ? (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">
+              <label className="mb-1 block text-sm font-medium text-muted-foreground">
                 Employee ID
               </label>
-              <p className="text-foreground bg-background border border-border p-2 rounded text-sm">
+              <p className="rounded-md border border-border bg-background p-2 text-sm text-foreground">
                 {overview.empID || "Not available"}
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">
+              <label className="mb-1 block text-sm font-medium text-muted-foreground">
                 Name
               </label>
-              <p className="text-foreground bg-background border border-border p-2 rounded text-sm">
+              <p className="rounded-md border border-border bg-background p-2 text-sm text-foreground">
                 {overview.name || "Not available"}
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">
+              <label className="mb-1 block text-sm font-medium text-muted-foreground">
                 Email
               </label>
-              <p className="text-foreground bg-background border border-border p-2 rounded text-sm">
+              <p className="rounded-md border border-border bg-background p-2 text-sm text-foreground">
                 {employeeEmail}
               </p>
             </div>
           </div>
         ) : (
-          <div className="text-center py-8">
+          <div className="py-8 text-center">
             <p className="text-muted-foreground">No overview data available</p>
           </div>
         )}
 
-        <div className="flex justify-end mt-6">
+        <div className="mt-6 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-muted rounded hover:bg-muted/80 text-foreground"
+            className="inline-flex items-center justify-center gap-2 rounded-md border bg-background px-4 py-2 text-sm font-medium text-foreground shadow-xs transition-all hover:bg-accent hover:text-accent-foreground"
           >
             Close
           </button>

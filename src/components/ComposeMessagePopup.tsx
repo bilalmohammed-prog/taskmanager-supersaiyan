@@ -44,10 +44,10 @@ export default function ComposeMessagePopup({ onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-card border border-border rounded-xl p-6 w-[440px] space-y-4 shadow-lg">
+      <div className="w-[440px] space-y-4 rounded-xl border border-border bg-card p-6 shadow-sm">
         <h3 className="text-base font-semibold text-foreground">New Message</h3>
 
         <div className="space-y-2">
@@ -58,7 +58,7 @@ export default function ComposeMessagePopup({ onClose }: Props) {
             placeholder="Paste recipient UUID"
             value={recipientId}
             onChange={(e) => setRecipientId(e.target.value)}
-            className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
 
@@ -71,7 +71,7 @@ export default function ComposeMessagePopup({ onClose }: Props) {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={4}
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring resize-none"
+            className="min-h-24 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
 
