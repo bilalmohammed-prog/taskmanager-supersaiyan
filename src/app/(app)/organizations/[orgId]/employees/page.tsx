@@ -12,12 +12,14 @@ type Profile = {
   id: string;
   full_name: string | null;
   avatar_url: string | null;
+  username: string | null;
 };
 
 type Employee = {
   id: string;
   full_name: string;
   avatar_url: string | null;
+  email: string | null;
   role: string;
   hasManager: boolean;
   empId: string | null;
@@ -58,7 +60,8 @@ export default function EmployeesPage() {
           profiles!org_members_user_id_fkey (
             id,
             full_name,
-            avatar_url
+            avatar_url,
+            username
           )
         `)
         .eq("organization_id", orgId);
@@ -100,6 +103,7 @@ export default function EmployeesPage() {
             id: profile.id,
             full_name: profile.full_name ?? "Unnamed",
             avatar_url: profile.avatar_url,
+            email: profile.username ?? null,
             role: "member",
             hasManager: !!managerInfo,
             empId: managerInfo?.employee_id ?? null,
@@ -225,12 +229,13 @@ export default function EmployeesPage() {
                   <span className="truncate text-[15px] font-medium text-zinc-900">
                     {employee.full_name}
                   </span>
-                  <span className="mt-0.5 flex items-center gap-2 truncate text-sm text-zinc-500">
-                    {employee.id}
-                    <span className="hidden h-1 w-1 rounded-full bg-zinc-300 sm:inline-block" />
-                    <span className="hidden sm:inline-block">
-                      {employee.hasManager ? "Assigned" : "Unassigned"}
+                  {employee.email && (
+                    <span className="mt-0.5 truncate text-sm text-zinc-500">
+                      {employee.email}
                     </span>
+                  )}
+                  <span className="mt-0.5 truncate text-xs text-zinc-500">
+                    {employee.role}
                   </span>
                 </div>
               </div>
@@ -238,7 +243,7 @@ export default function EmployeesPage() {
               <div className="mt-2 flex w-full items-center justify-between gap-6 border-t border-zinc-100 pt-3 sm:mt-0 sm:w-auto sm:justify-end sm:border-0 sm:pt-0">
                 <div className="flex items-center gap-4">
                   <span className="inline-flex items-center rounded-md border border-zinc-200/60 bg-zinc-50 px-2.5 py-1 text-xs font-medium text-zinc-600">
-                    {employee.hasManager ? "Managed" : "Independent"}
+                    {employee.role}
                   </span>
                 </div>
 

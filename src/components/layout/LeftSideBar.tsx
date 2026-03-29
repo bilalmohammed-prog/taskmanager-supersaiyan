@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { BarChart3, FolderKanban, Inbox, Users } from "lucide-react";
-import { useAuthEmployee } from "@/components/providers/auth/AuthContext";
+import ProfileMenu from "@/components/ProfileMenu";
 
 const NAV_ITEMS = [
   { label: "Employees", href: "employees", icon: Users },
@@ -15,9 +15,6 @@ const NAV_ITEMS = [
 export default function LeftSideBar() {
   const { orgId } = useParams<{ orgId: string }>();
   const pathname = usePathname();
-  const { employee } = useAuthEmployee();
-  const fullName = employee?.full_name?.trim() || "User";
-  const initials = fullName.charAt(0).toUpperCase();
 
   return (
     <aside className="hidden h-full w-[280px] shrink-0 flex-col justify-between border-r border-zinc-200 bg-white py-6 md:flex">
@@ -50,15 +47,7 @@ export default function LeftSideBar() {
       </div>
 
       <div className="mt-auto border-t border-zinc-100 px-6 pt-6">
-        <div className="group flex cursor-default items-center gap-3 rounded-lg p-2 transition-colors hover:bg-zinc-50">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-sm font-semibold text-zinc-700 shadow-sm">
-            {initials}
-          </div>
-          <div className="flex min-w-0 flex-col text-sm">
-            <span className="truncate font-medium text-zinc-900">{fullName}</span>
-            <span className="truncate text-xs text-zinc-500">Admin</span>
-          </div>
-        </div>
+        <ProfileMenu />
       </div>
     </aside>
   );

@@ -11,24 +11,18 @@ export default function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-// 1. Add this state at the top of ProfileMenu
-const [metaName, setMetaName] = useState("");
+  const [metaName, setMetaName] = useState("");
 
-// 2. Add this tiny effect to grab metadata instantly
-useEffect(() => {
-  supabase.auth.getUser().then(({ data }) => {
-    setMetaName(data.user?.user_metadata?.full_name || "");
-    setEmail(data.user?.email || "");
-  });
-}, []);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setMetaName(data.user?.user_metadata?.full_name || "");
+      setEmail(data.user?.email || "");
+    });
+  }, []);
 
+  const displayName = employee?.full_name || metaName || "User";
+  const initials = displayName.charAt(0).toUpperCase();
 
-// 3. Update your initials line to use the fallback
-const displayName = employee?.full_name || metaName;
-const initials = displayName?.charAt(0).toUpperCase() ?? "?";
-// INSERT THIS: Listen for login to refresh employee context
- // Watch 'employee' to know when it finally arrives
-  // Handle click outside and Escape key
   useEffect(() => {
     function handleGlobalEvents(e: MouseEvent | KeyboardEvent): void {
       if (e instanceof MouseEvent) {
@@ -56,96 +50,47 @@ const initials = displayName?.charAt(0).toUpperCase() ?? "?";
     router.refresh();
   }
 
-
- 
   return (
-    <div
-  ref={wrapperRef}
-  className="relative flex justify-center items-center mt-auto"
->
-
-      {/* Profile Toggle Button */}
+    <div ref={wrapperRef} className="relative">
       <button
-  type="button"
-  onClick={() => setOpen(o => !o)}
-  aria-haspopup="true"
-  aria-expanded={open}
-  className="
-    w-[40px] h-[40px]
-    rounded-full
-    bg-white
-    text-[#1e1e1e]
-    font-semibold text-[16px]
-    flex items-center justify-center
-    cursor-pointer
-    shadow-[0_2px_8px_rgba(0,0,0,0.4)]
-    transition-all duration-200
-    select-none
-    hover:scale-[1.06]
-  "
->
-  {initials}
-</button>
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-haspopup="true"
+        aria-expanded={open}
+        className="group flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-zinc-50"
+      >
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-sm font-semibold text-zinc-700 shadow-sm">
+          {initials}
+        </div>
+        <div className="flex min-w-0 flex-col text-sm">
+          <span className="truncate font-medium text-zinc-900">{displayName}</span>
+          <span className="truncate text-xs text-zinc-500">
+            {email || employee?.id || "User"}
+          </span>
+        </div>
+      </button>
 
-
-      {/* Dropdown Menu: 
-          We use the "show" class from your CSS to trigger the 
-          opacity/transform animations.
-      */}
       <div
-  role="menu"
-  className={`
-  absolute left-0 bottom-[calc(100%+16px)]
-  w-[280px] max-w-[90vw]
-  p-[20px_24px]
-  rounded-[14px]
-  bg-card
-  border border-border
-  shadow-lg
-  flex flex-col gap-[16px]
-  z-[99999]
-  transition-all duration-300
-  ${open ? "opacity-100 visible translate-y-0" : "opacity-0 invisible translate-y-[12px]"}
-  max-[768px]:left-[-20px]
-  max-[768px]:w-[260px]
-`}
->
-
-        <div className="profile-header">
-          <p className="font-semibold text-[16.5px] text-foreground m-0">
-  {employee?.full_name || metaName || "User"}
-</p>
-
-<p className="text-[13px] text-muted-foreground mt-[2px] mb-[12px] break-all">
-  {email}
-</p>
-
-<span className="text-[11px] font-bold uppercase tracking-[1px] text-muted-foreground bg-muted px-[10px] py-[4px] rounded-[12px] border border-border self-start">
-  ID: {employee?.id || "Loading..."}
-</span>
-
-
+        role="menu"
+        className={`absolute bottom-[calc(100%+16px)] left-0 z-[99999] flex w-[280px] max-w-[90vw] flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-lg transition-all duration-200 ${
+          open ? "visible translate-y-0 opacity-100" : "invisible translate-y-3 opacity-0"
+        }`}
+      >
+        <div className="space-y-1">
+          <p className="text-base font-semibold text-zinc-900">{displayName}</p>
+          <p className="break-all text-sm text-zinc-500">{email}</p>
+          <span className="inline-flex items-center rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-medium text-zinc-600">
+            ID: {employee?.id || "Loading..."}
+          </span>
         </div>
 
         <button
-  onClick={handleLogout}
-  role="menuitem"
-  className="
-    w-full
-    px-[16px] py-[12px]
-    rounded-[10px]
-    border border-red-500/25
-    bg-red-500
-    text-white
-    text-[14px] font-semibold
-    cursor-pointer
-    transition-all duration-200
-    hover:bg-red-600
-  "
->
-  Logout
-</button>
-
+          onClick={handleLogout}
+          role="menuitem"
+          className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-50"
+        >
+          Logout
+        </button>
       </div>
     </div>
   );
