@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { useAuthEmployee } from "@/components/providers/auth/AuthContext";
 
-export default function ProfileMenu() {
+type ProfileMenuProps = {
+  collapsed?: boolean;
+};
+
+export default function ProfileMenu({ collapsed = false }: ProfileMenuProps) {
   const [email, setEmail] = useState("");
   const { employee } = useAuthEmployee();
   const [open, setOpen] = useState(false);
@@ -57,22 +61,28 @@ export default function ProfileMenu() {
         onClick={() => setOpen((current) => !current)}
         aria-haspopup="true"
         aria-expanded={open}
-        className="group flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-zinc-50"
+        className={`group flex w-full rounded-lg p-2 text-left transition-colors hover:bg-zinc-50 ${
+          collapsed ? "justify-center" : "items-center gap-3"
+        }`}
       >
         <div className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-sm font-semibold text-zinc-700 shadow-sm">
           {initials}
         </div>
-        <div className="flex min-w-0 flex-col text-sm">
-          <span className="truncate font-medium text-zinc-900">{displayName}</span>
-          <span className="truncate text-xs text-zinc-500">
-            {email || employee?.id || "User"}
-          </span>
-        </div>
+        {!collapsed && (
+          <div className="flex min-w-0 flex-col text-sm">
+            <span className="truncate font-medium text-zinc-900">{displayName}</span>
+            <span className="truncate text-xs text-zinc-500">
+              {email || employee?.id || "User"}
+            </span>
+          </div>
+        )}
       </button>
 
       <div
         role="menu"
-        className={`absolute bottom-[calc(100%+16px)] left-0 z-[99999] flex w-[280px] max-w-[90vw] flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-lg transition-all duration-200 ${
+        className={`absolute bottom-[calc(100%+16px)] z-[99999] flex w-[280px] max-w-[90vw] flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-lg transition-all duration-200 ${
+          collapsed ? "left-0" : "left-0"
+        } ${
           open ? "visible translate-y-0 opacity-100" : "invisible translate-y-3 opacity-0"
         }`}
       >

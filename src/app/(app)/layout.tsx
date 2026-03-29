@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { DashboardProvider, useDashboard } from "@/components/providers/dashboard/DashboardContext";
 import LeftSideBar from "@/components/layout/LeftSideBar";
 import TopBar from "@/components/layout/TopBar";
@@ -14,6 +14,7 @@ interface DashboardShellProps {
 
 function DashboardShell({ children }: DashboardShellProps) {
   const { setCurrentUserId } = useDashboard();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     async function loadUser(): Promise<void> {
@@ -40,9 +41,15 @@ function DashboardShell({ children }: DashboardShellProps) {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-zinc-50 font-sans text-zinc-900">
-      <LeftSideBar />
+      <LeftSideBar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((current) => !current)}
+      />
       <div className="relative flex min-w-0 flex-1 flex-col">
-        <TopBar />
+        <TopBar
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={() => setSidebarCollapsed((current) => !current)}
+        />
         <main className="relative mx-auto flex-1 w-full max-w-5xl overflow-y-auto px-6 py-12 lg:px-12">
           {children}
         </main>

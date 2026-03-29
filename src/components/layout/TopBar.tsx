@@ -2,12 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import ComposeMessagePopup from "@/components/ComposeMessagePopup";
 
-export default function TopBar() {
+type TopBarProps = {
+  sidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
+};
+
+export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProps) {
   const pathname = usePathname();
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -44,9 +49,7 @@ export default function TopBar() {
 
   return (
     <header className="sticky top-0 z-10 flex h-16 w-full shrink-0 items-center justify-between border-b border-zinc-200/80 bg-white px-8 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]">
-      <button className="rounded-md p-2 text-zinc-600 hover:bg-zinc-100 md:hidden">
-        <Menu className="h-5 w-5" />
-      </button>
+      <div className="w-10" />
 
       <div className="flex flex-1 justify-center">
         {isEmployeesList && (

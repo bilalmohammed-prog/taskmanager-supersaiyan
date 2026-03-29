@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import { BarChart3, FolderKanban, Inbox, Users } from "lucide-react";
+import { BarChart3, ChevronLeft, FolderKanban, Inbox, Users } from "lucide-react";
 import ProfileMenu from "@/components/ProfileMenu";
 
 const NAV_ITEMS = [
@@ -12,15 +12,38 @@ const NAV_ITEMS = [
   { label: "Inbox", href: "inbox", icon: Inbox },
 ] as const;
 
-export default function LeftSideBar() {
+type LeftSideBarProps = {
+  collapsed: boolean;
+  onToggle: () => void;
+};
+
+export default function LeftSideBar({ collapsed, onToggle }: LeftSideBarProps) {
   const { orgId } = useParams<{ orgId: string }>();
   const pathname = usePathname();
 
   return (
-    <aside className="hidden h-full w-[280px] shrink-0 flex-col justify-between border-r border-zinc-200 bg-white py-6 md:flex">
-      <div className="space-y-8 px-6">
-        <div className="text-lg font-semibold tracking-tight text-zinc-800">
-          ResourceManager
+    <aside
+      className={`hidden h-full shrink-0 flex-col justify-between border-r border-zinc-200 bg-white py-6 transition-all duration-200 md:flex ${
+        collapsed ? "w-[92px]" : "w-[280px]"
+      }`}
+    >
+      <div className={`space-y-8 ${collapsed ? "px-4" : "px-6"}`}>
+        <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between gap-3"}`}>
+          {!collapsed && (
+            <div className="text-lg font-semibold tracking-tight text-zinc-800">
+              ResourceManager
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className={`flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 ${
+              collapsed ? "mx-auto" : ""
+            }`}
+          >
+            <ChevronLeft className={`h-4 w-4 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`} />
+          </button>
         </div>
 
         <nav className="mt-8 space-y-1">
@@ -32,22 +55,23 @@ export default function LeftSideBar() {
               <Link
                 key={href}
                 href={fullHref}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                title={collapsed ? label : undefined}
+                className={`flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-zinc-100 text-zinc-900 shadow-sm ring-1 ring-zinc-200/50"
                     : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
-                }`}
+                } ${collapsed ? "justify-center" : "gap-3"}`}
               >
                 <Icon className="h-4 w-4 shrink-0" strokeWidth={2.5} />
-                {label}
+                {!collapsed && label}
               </Link>
             );
           })}
         </nav>
       </div>
 
-      <div className="mt-auto border-t border-zinc-100 px-6 pt-6">
-        <ProfileMenu />
+      <div className={`mt-auto border-t border-zinc-100 pt-6 ${collapsed ? "px-4" : "px-6"}`}>
+        <ProfileMenu collapsed={collapsed} />
       </div>
     </aside>
   );
