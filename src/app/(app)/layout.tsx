@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { DashboardProvider, useDashboard } from "@/components/providers/dashboard/DashboardContext";
 import LeftSideBar from "@/components/layout/LeftSideBar";
 import TopBar from "@/components/layout/TopBar";
-import SupportWidget from "@/components/layout/SupportWidget";
 import { supabase } from "@/lib/supabase/client";
 import { ToastProvider, ToastContainer } from "@/components/providers/toast";
 
@@ -54,7 +53,6 @@ function DashboardShell({ children }: DashboardShellProps) {
           {children}
         </main>
       </div>
-      <SupportWidget />
       <ToastContainer />
     </div>
   );

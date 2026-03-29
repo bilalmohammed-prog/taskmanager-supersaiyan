@@ -330,36 +330,41 @@ export default function EmployeeDetailPage() {
       )}
 
       {showCreate && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-card border border-border p-6 rounded w-[420px] space-y-4 text-foreground">
-            <h2 className="text-lg font-semibold">Create Task</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-[420px] space-y-4 rounded-xl border border-zinc-200 bg-white p-6 text-zinc-900 shadow-sm">
+            <div className="space-y-1">
+              <h2 className="text-lg font-medium text-zinc-900">Add Task</h2>
+              <p className="text-sm text-zinc-500">
+                Create and assign a new task for this employee.
+              </p>
+            </div>
 
             <input
               autoFocus
               placeholder="Task title *"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              className="w-full bg-background border border-border p-2 rounded text-foreground"
+              className="w-full rounded-md border border-zinc-200 bg-white p-2 text-sm text-zinc-900 shadow-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
             />
 
             <input
               type="date"
               value={newDueDate}
               onChange={(e) => setNewDueDate(e.target.value)}
-              className="w-full bg-background border border-border p-2 rounded text-foreground"
+              className="w-full rounded-md border border-zinc-200 bg-white p-2 text-sm text-zinc-900 shadow-sm outline-none transition-colors focus:border-transparent focus:ring-2 focus:ring-indigo-500"
             />
 
             <textarea
               placeholder="Description (optional)"
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
-              className="w-full bg-background border border-border p-2 rounded text-foreground h-24 resize-none"
+              className="h-24 w-full resize-none rounded-md border border-zinc-200 bg-white p-2 text-sm text-zinc-900 shadow-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
             />
 
             <select
               value={newStatus}
               onChange={(e) => setNewStatus(e.target.value as TaskStatus)}
-              className="w-full bg-background border border-border p-2 rounded text-foreground"
+              className="w-full rounded-md border border-zinc-200 bg-white p-2 text-sm text-zinc-900 shadow-sm outline-none transition-colors focus:border-transparent focus:ring-2 focus:ring-indigo-500"
             >
               <option value="todo">Todo</option>
               <option value="in_progress">In Progress</option>
@@ -370,14 +375,14 @@ export default function EmployeeDetailPage() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowCreate(false)}
-                className="px-3 py-1 bg-muted rounded hover:bg-muted/80 text-foreground"
+                className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
               >
                 Cancel
               </button>
               <button
                 disabled={!newTitle.trim() || !newDueDate || creating}
                 onClick={handleCreate}
-                className="px-3 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-40"
+                className="rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-sm text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-40"
               >
                 {creating ? "Creating…" : "Create"}
               </button>
