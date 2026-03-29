@@ -210,39 +210,39 @@ export default function EmployeesPage() {
           employees.map((employee) => (
             <div
               key={employee.id}
-              className="group relative flex cursor-pointer flex-col justify-between gap-4 rounded-xl border border-zinc-200/80 bg-white p-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] transition-all hover:border-zinc-300 hover:shadow-md sm:flex-row sm:items-center sm:px-6 sm:py-5"
+              className="group relative flex cursor-pointer flex-col justify-between gap-4 rounded-lg border border-border/60 bg-card p-4 shadow-sm transition-all duration-200 hover:shadow-md sm:flex-row sm:items-center sm:px-6 sm:py-5"
               onClick={() => openEmployee(employee.id)}
             >
               <div className="flex min-w-0 items-center gap-4">
-                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-zinc-200/80 bg-zinc-100 shadow-inner">
-                  <span className="text-[15px] font-semibold text-zinc-700">
+                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted ring-1 ring-border transition-all duration-200">
+                  <span className="text-base font-medium text-foreground">
                     {employee.full_name.charAt(0).toUpperCase()}
                   </span>
                   <span
-                    className={`absolute right-0 bottom-0 h-3 w-3 rounded-full border-2 border-white ${
-                      employee.hasManager ? "bg-emerald-500" : "bg-amber-400"
+                    className={`absolute right-0 bottom-0 h-3 w-3 rounded-full border-2 border-card ${
+                      employee.hasManager ? "bg-foreground" : "bg-muted-foreground"
                     }`}
                   />
                 </div>
 
                 <div className="flex min-w-0 flex-col">
-                  <span className="truncate text-[15px] font-medium text-zinc-900">
+                  <span className="truncate text-base font-medium text-foreground">
                     {employee.full_name}
                   </span>
                   {employee.email && (
-                    <span className="mt-0.5 truncate text-sm text-zinc-500">
+                    <span className="mt-0.5 truncate text-sm text-muted-foreground">
                       {employee.email}
                     </span>
                   )}
-                  <span className="mt-0.5 truncate text-xs text-zinc-500">
+                  <span className="mt-0.5 truncate text-sm text-muted-foreground">
                     {employee.role}
                   </span>
                 </div>
               </div>
 
-              <div className="mt-2 flex w-full items-center justify-between gap-6 border-t border-zinc-100 pt-3 sm:mt-0 sm:w-auto sm:justify-end sm:border-0 sm:pt-0">
+              <div className="mt-2 flex w-full items-center justify-between gap-6 border-t border-border/60 pt-3 sm:mt-0 sm:w-auto sm:justify-end sm:border-0 sm:pt-0">
                 <div className="flex items-center gap-4">
-                  <span className="inline-flex items-center rounded-md border border-zinc-200/60 bg-zinc-50 px-2.5 py-1 text-xs font-medium text-zinc-600">
+                  <span className="inline-flex items-center rounded-md border border-border/60 bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground transition-all duration-200">
                     {employee.role}
                   </span>
                 </div>
@@ -255,16 +255,16 @@ export default function EmployeesPage() {
                       e.stopPropagation();
                       setDropdownOpen(dropdownOpen === employee.id ? null : employee.id);
                     }}
-                    className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900"
+                    className="rounded-lg p-1.5 text-muted-foreground transition-all duration-200 hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-border"
                   >
                     <MoreVertical className="h-5 w-5" />
                   </button>
 
                   {dropdownOpen === employee.id && (
-                    <div className="absolute right-0 top-full z-10 mt-2 min-w-[160px] rounded-lg border border-zinc-200 bg-white p-1 shadow-md">
+                    <div className="absolute right-0 top-full z-10 mt-2 min-w-[160px] rounded-lg border border-border/60 bg-card p-1 shadow-sm">
                       {canManage && employee.hasManager ? (
                         <button
-                          className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                          className="w-full rounded-md px-3 py-2 text-left text-sm text-foreground transition-all duration-200 hover:bg-muted disabled:opacity-50"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDropInvite(employee);
@@ -275,7 +275,7 @@ export default function EmployeesPage() {
                           {actionLoading === employee.id ? "Removing..." : "Unlink Employee"}
                         </button>
                       ) : (
-                        <div className="px-3 py-2 text-sm text-zinc-500">
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
                           No actions available
                         </div>
                       )}
