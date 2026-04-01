@@ -2,12 +2,20 @@
 
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import { BarChart3, ChevronLeft, FolderKanban, Inbox, Users } from "lucide-react";
+import {
+  BarChart3,
+  ChevronLeft,
+  ClipboardList,
+  FolderKanban,
+  Inbox,
+  Users,
+} from "lucide-react";
 import ProfileMenu from "@/components/ProfileMenu";
 
 const NAV_ITEMS = [
   { label: "Employees", href: "employees", icon: Users },
   { label: "Projects", href: "projects", icon: FolderKanban },
+  { label: "My Tasks", href: "my-tasks", icon: ClipboardList },
   { label: "Analytics", href: "analytics", icon: BarChart3 },
   { label: "Inbox", href: "inbox", icon: Inbox },
 ] as const;
