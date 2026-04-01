@@ -87,6 +87,7 @@ export default function ProjectWorkspacePage() {
 
   useEffect(() => {
     async function load() {
+      setProjectMembers([]);  // reset on project change
       const humansResult = await listOrgMembers(orgId);
       if (!humansResult.error && humansResult.data) {
         setEmployees(
