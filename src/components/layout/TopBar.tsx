@@ -59,7 +59,7 @@ export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProp
             onClick={() => setComposeMode("invite")}
           >
             <UserPlus className="mr-2 h-4 w-4 opacity-80" strokeWidth={2.5} />
-            Invite Employee
+            Send Message
           </Button>
         )}
         {!isEmployeesList && isInbox && (

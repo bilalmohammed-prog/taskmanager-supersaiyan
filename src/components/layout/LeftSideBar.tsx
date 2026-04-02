@@ -8,6 +8,7 @@ import {
   ClipboardList,
   FolderKanban,
   Inbox,
+  Settings,
   Users,
 } from "lucide-react";
 import ProfileMenu from "@/components/ProfileMenu";
@@ -15,6 +16,7 @@ import ProfileMenu from "@/components/ProfileMenu";
 const NAV_ITEMS = [
   { label: "Employees", href: "employees", icon: Users },
   { label: "Projects", href: "projects", icon: FolderKanban },
+  { label: "Members", href: "settings", icon: Settings },
   { label: "My Tasks", href: "my-tasks", icon: ClipboardList },
   { label: "Analytics", href: "analytics", icon: BarChart3 },
   { label: "Inbox", href: "inbox", icon: Inbox },
