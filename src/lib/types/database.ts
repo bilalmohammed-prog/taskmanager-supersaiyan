@@ -148,6 +148,63 @@ export type Database = {
           },
         ]
       }
+      invites: {
+        Row: {
+          accepted_at: string | null
+          content: string
+          created_at: string | null
+          declined_at: string | null
+          expires_at: string
+          id: string
+          invite_email: string
+          inviter_id: string
+          organization_id: string
+          status: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          content: string
+          created_at?: string | null
+          declined_at?: string | null
+          expires_at: string
+          id?: string
+          invite_email: string
+          inviter_id: string
+          organization_id: string
+          status?: string
+          token: string
+        }
+        Update: {
+          accepted_at?: string | null
+          content?: string
+          created_at?: string | null
+          declined_at?: string | null
+          expires_at?: string
+          id?: string
+          invite_email?: string
+          inviter_id?: string
+          organization_id?: string
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invites_inviter_id_fkey"
+            columns: ["inviter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -473,6 +530,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invite: { Args: { invite_id: string }; Returns: undefined }
       is_manager: { Args: { org: string }; Returns: boolean }
       is_org_member: { Args: { org: string }; Returns: boolean }
     }

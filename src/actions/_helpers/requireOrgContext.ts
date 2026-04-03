@@ -36,14 +36,14 @@ export async function requireActionUser(
 export async function requireOrgContext(options?: {
   organizationId?: string | null;
 }): Promise<OrgActionContext> {
-  const { supabase, user, userId } = await requireActionUser();
+  const { supabase, user } = await requireActionUser();
 
   const tenant = await getTenantContext(supabase, user, {
     organizationId: options?.organizationId,
   });
 
   if (!tenant.organizationId || !tenant.databaseRole || !tenant.role) {
-    redirect("/onboarding");
+    redirect("/no-organization");
   }
 
   return {

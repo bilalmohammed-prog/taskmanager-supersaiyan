@@ -2,9 +2,62 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { supabase } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/types/database";
 
 type Message = Tables<"messages">;
+type Invite = Tables<"invites">;
+type InviteStatus = "pending" | "accepted" | "declined" | "expired" | "revoked";
+
+type MessageUI = {
+  id: string;
+  content: string;
+  created_at: string;
+  sender_id: string;
+};
+
+type ExtendedMessageUI = MessageUI & {
+  recipient_id?: string | null;
+  _type?: "invite";
+  invite_id?: string;
+  status?: InviteStatus;
+  invite_email?: string;
+  canAccept?: boolean;
+};
+
+function toMessageUI(message: Message): ExtendedMessageUI {
+  return {
+    id: message.id,
+    content: message.content,
+    created_at: message.created_at,
+    sender_id: message.sender_id,
+    recipient_id: message.recipient_id,
+  };
+}
+
+function toInviteMessageUI(invite: Invite, normalizedEmail: string): ExtendedMessageUI {
+  const inviteStatus =
+    invite.status === "pending" ||
+    invite.status === "accepted" ||
+    invite.status === "declined" ||
+    invite.status === "expired" ||
+    invite.status === "revoked"
+      ? invite.status
+      : "pending";
+
+  return {
+    id: `invite-${invite.id}`,
+    content: invite.content?.trim() ? invite.content : "You've been invited",
+    created_at: invite.created_at ?? new Date().toISOString(),
+    sender_id: invite.inviter_id,
+    recipient_id: null,
+    _type: "invite",
+    invite_id: invite.id,
+    status: inviteStatus,
+    invite_email: invite.invite_email,
+    canAccept: invite.invite_email.toLowerCase().trim() === normalizedEmail,
+  };
+}
 
 export default function InboxMessagesView({
   initialMessages,
@@ -12,30 +65,59 @@ export default function InboxMessagesView({
   initialMessages: Message[];
 }) {
   const { orgId } = useParams<{ orgId: string }>();
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [selected, setSelected] = useState<Message | null>(null);
+  const [messages, setMessages] = useState<ExtendedMessageUI[]>(
+    initialMessages.map(toMessageUI)
+  );
+  const [selected, setSelected] = useState<ExtendedMessageUI | null>(null);
+  const [acceptError, setAcceptError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     async function refreshMessages() {
       try {
-        const response = await fetch(`/api/messages?organizationId=${encodeURIComponent(orgId)}`, {
-          method: "GET",
-          cache: "no-store",
-          credentials: "include",
+        const [response, authResult] = await Promise.all([
+          fetch(`/api/messages?organizationId=${encodeURIComponent(orgId)}`, {
+            method: "GET",
+            cache: "no-store",
+            credentials: "include",
+          }),
+          supabase.auth.getUser(),
+        ]);
+
+        const apiMessages: Message[] = response.ok
+          ? (((await response.json()) as { data?: { messages?: Message[] } }).data?.messages ?? [])
+          : [];
+
+        const normalizedEmail = authResult.data.user?.email?.toLowerCase().trim() ?? "";
+        const currentUserId = authResult.data.user?.id ?? "";
+        const inviteRows: Invite[] = normalizedEmail
+          ? await (async () => {
+              const { data, error } = await supabase
+                .from("invites")
+                .select("*")
+                .or(`inviter_id.eq.${currentUserId},invite_email.eq.${normalizedEmail}`)
+                .order("created_at", { ascending: false });
+
+              if (error) {
+                return [];
+              }
+
+              return data ?? [];
+            })()
+          : [];
+
+        const mergedMessages = [
+          ...apiMessages.map(toMessageUI),
+          ...inviteRows.map((invite) => toInviteMessageUI(invite, normalizedEmail)),
+        ];
+
+        const byId = new Map<string, ExtendedMessageUI>();
+        mergedMessages.forEach((item) => {
+          byId.set(item.id, item);
         });
 
-        if (!response.ok) {
-          return;
-        }
-
-        const payload = (await response.json()) as {
-          ok?: boolean;
-          data?: { messages?: Message[] };
-        };
-
-        const nextMessages = payload.data?.messages ?? [];
+        const nextMessages = Array.from(byId.values());
         if (cancelled) {
           return;
         }
@@ -62,6 +144,50 @@ export default function InboxMessagesView({
     };
   }, [orgId]);
 
+  async function acceptInvite(message: ExtendedMessageUI): Promise<void> {
+    if (message._type !== "invite" || message.status !== "pending" || !message.invite_id) {
+      return;
+    }
+
+    setAcceptError(null);
+
+    const response = await fetch("/api/invites/accept", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        invite_id: message.invite_id,
+      }),
+    });
+
+    if (!response.ok) {
+      const result = (await response.json().catch(() => null)) as { error?: string } | null;
+      setAcceptError(result?.error ?? "Could not accept invite. Please try again.");
+      return;
+    }
+
+    setMessages((prev) =>
+      prev.map((item) =>
+        item.id === message.id
+          ? {
+              ...item,
+              status: "accepted",
+            }
+          : item
+      )
+    );
+    setSelected((prev) =>
+      prev && prev.id === message.id
+        ? {
+            ...prev,
+            status: "accepted",
+          }
+        : prev
+    );
+  }
+
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleString(undefined, {
       day: "2-digit",
@@ -84,6 +210,12 @@ export default function InboxMessagesView({
           <p className="p-4 text-sm text-muted-foreground">No messages yet.</p>
         )}
 
+        {acceptError && (
+          <p className="mx-4 mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+            {acceptError}
+          </p>
+        )}
+
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -101,6 +233,18 @@ export default function InboxMessagesView({
             <p className="text-xs text-muted-foreground mt-1">
               {formatDate(msg.created_at)}
             </p>
+            {msg._type === "invite" && msg.status === "pending" && msg.canAccept && (
+              <button
+                type="button"
+                className="mt-2 inline-flex h-7 items-center rounded-md bg-zinc-900 px-2.5 text-xs font-medium text-zinc-50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void acceptInvite(msg);
+                }}
+              >
+                Accept
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -125,6 +269,17 @@ export default function InboxMessagesView({
               <p className="text-sm text-foreground whitespace-pre-wrap">
                 {selected.content}
               </p>
+              {selected._type === "invite" && selected.status === "pending" && selected.canAccept && (
+                <button
+                  type="button"
+                  className="mt-3 inline-flex h-8 items-center rounded-md bg-zinc-900 px-3 text-xs font-medium text-zinc-50"
+                  onClick={() => {
+                    void acceptInvite(selected);
+                  }}
+                >
+                  Accept
+                </button>
+              )}
             </div>
           </div>
         ) : (

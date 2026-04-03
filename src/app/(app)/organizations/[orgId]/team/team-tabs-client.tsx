@@ -116,33 +116,28 @@ export default function TeamTabsClient({
         <TabsContent value="members" className="space-y-6 pt-2">
           {canManageMembers && (
             <div className="rounded-xl border border-border bg-card p-4">
-              <h2 className="text-base font-semibold text-foreground">Add Member</h2>
+              <h2 className="text-base font-semibold text-foreground">Send Invite</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Add an existing account by user ID and assign a role.
+                Invite a teammate by email and include an invite message.
               </p>
               <form action={addMemberAction} className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
                 <input type="hidden" name="organizationId" value={organizationId} />
                 <div className="md:col-span-2">
                   <Input
-                    name="userId"
-                    placeholder="User UUID"
+                    name="inviteEmail"
+                    type="email"
+                    placeholder="teammate@company.com"
                     required
-                    pattern="^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                   />
                 </div>
-                <select
-                  name="role"
-                  defaultValue="employee"
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  {roleOptions.map((role) => (
-                    <option key={role} value={role}>
-                      {role}
-                    </option>
-                  ))}
-                </select>
+                <Input
+                  name="content"
+                  placeholder="Write the invite message"
+                  required
+                  className="md:col-span-2"
+                />
                 <Button type="submit" className="md:justify-self-start">
-                  Add
+                  Send Invite
                 </Button>
               </form>
             </div>

@@ -44,7 +44,7 @@ export type EmployeeSwitchResponse = z.infer<typeof EmployeeSwitchResponseSchema
 
 // Invites
 export const AcceptInviteRequestSchema = z.object({
-  manager_id: z.string(),
+  invite_id: z.string(),
 });
 
 export type AcceptInviteRequest = z.infer<typeof AcceptInviteRequestSchema>;

@@ -1,12 +1,13 @@
+import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
-import { addMember } from "@/actions/organization/addMember";
 import { listOrgMembers } from "@/actions/organization/listOrgMembers";
 import { authorize } from "@/lib/auth/authorization";
 import { uuidSchema } from "@/lib/validation/common";
 import type { Database } from "@/lib/types/database";
 import TeamTabsClient, { TeamMemberRow, TeamWorkloadRow } from "./team-tabs-client";
+import { z } from "zod";
 
 type RoleType = Database["public"]["Enums"]["role_type"];
 
@@ -21,6 +22,12 @@ type TeamSearchParams = {
 function encodeQueryMessage(message: string): string {
   return encodeURIComponent(message);
 }
+
+const inviteInputSchema = z.object({
+  organizationId: uuidSchema,
+  inviteEmail: z.string().trim().email(),
+  content: z.string().trim().min(1).max(4000),
+});
 
 export default async function TeamPage({
   params,
@@ -119,37 +126,47 @@ export default async function TeamPage({
 
   async function addMemberMutation(formData: FormData) {
     "use server";
-    const organizationId = String(formData.get("organizationId") ?? "").trim();
-    const userId = String(formData.get("userId") ?? "").trim();
-    const role = String(formData.get("role") ?? "employee") as RoleType;
+    const parsed = inviteInputSchema.safeParse({
+      organizationId: String(formData.get("organizationId") ?? "").trim(),
+      inviteEmail: String(formData.get("inviteEmail") ?? "").trim(),
+      content: String(formData.get("content") ?? "").trim(),
+    });
 
-    const validOrgId = uuidSchema.safeParse(organizationId);
-    const validUserId = uuidSchema.safeParse(userId);
-
-    if (!validOrgId.success || !validUserId.success) {
+    if (!parsed.success) {
+      const organizationId = String(formData.get("organizationId") ?? "").trim();
       redirect(
-        `/organizations/${organizationId}/team?tab=members&status=error&message=${encodeQueryMessage("Please enter valid UUIDs for organization and user")}`
+        `/organizations/${organizationId}/team?tab=members&status=error&message=${encodeQueryMessage("Please enter a valid email and invite message")}`
       );
     }
 
-    const result = await addMember({
-      organizationId,
-      userId,
-      role,
+    const { organizationId, inviteEmail, content } = parsed.data;
+
+    const orgCtx = await requireOrgContext({ organizationId });
+    authorize("manage_members", "organization", { role: orgCtx.role });
+
+    const token = randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { error: inviteError } = await orgCtx.supabase.from("invites").insert({
+      organization_id: orgCtx.organizationId,
+      inviter_id: orgCtx.userId,
+      invite_email: inviteEmail.toLowerCase().trim(),
+      content,
+      token,
+      status: "pending",
+      expires_at: expiresAt,
     });
 
-    if (result.error) {
+    if (inviteError) {
       redirect(
-        `/organizations/${organizationId}/team?tab=members&status=error&message=${encodeQueryMessage(result.error.message)}`
+        `/organizations/${organizationId}/team?tab=members&status=error&message=${encodeQueryMessage(inviteError.message)}`
       );
     }
 
     revalidatePath(`/organizations/${organizationId}/team`);
     redirect(
       `/organizations/${organizationId}/team?tab=members&status=success&message=${encodeQueryMessage(
-        result.data.created
-          ? "Member added successfully"
-          : "User is already a member of this organization"
+        `Invite sent to ${inviteEmail}`
       )}`
     );
   }

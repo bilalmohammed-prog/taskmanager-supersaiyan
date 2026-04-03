@@ -1,52 +1,106 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { fail } from "@/lib/api/response";
-import { authorize } from "@/lib/auth/authorization";
-import { requireTenantContext } from "@/lib/auth/tenant-context";
-import { listOrganizationMembers } from "@/services/organization/organization.service";
+import { requireActionUser } from "@/actions/_helpers/requireOrgContext";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { uuidSchema } from "@/lib/validation/common";
 
 const acceptInviteBodySchema = z.object({
-  manager_id: uuidSchema,
+  invite_id: uuidSchema,
 }).strict();
 
 export async function POST(req: Request) {
   try {
-    const tenant = await requireTenantContext(req);
-    authorize("read", "organization", tenant);
-    const { supabase, userId, organizationId } = tenant;
+    const { user, userId } = await requireActionUser();
 
-    const body = acceptInviteBodySchema.parse(await req.json());
-    const { manager_id: managerId } = body;
-
-    const orgMembers = await listOrganizationMembers(supabase, { organizationId });
-    const memberSet = new Set(orgMembers.map((member) => member.userId));
-
-    if (!memberSet.has(userId) || !memberSet.has(managerId)) {
-      return NextResponse.json(
-        { error: "Manager and employee must belong to the same organization" },
-        { status: 400 }
-      );
+    const email = user.email?.toLowerCase().trim();
+    if (!email) {
+      return NextResponse.json({ error: "Account email is required to accept invites" }, { status: 400 });
     }
 
-    const { error: upsertError } = await supabase
-      .from("manager_employees")
+    const body = acceptInviteBodySchema.parse(await req.json());
+    const { invite_id: inviteId } = body;
+
+    const { data: invite, error: inviteError } = await supabaseAdmin
+      .from("invites")
+      .select("id, invite_email, organization_id, status, expires_at")
+      .eq("id", inviteId)
+      .maybeSingle();
+
+    if (inviteError) {
+      return NextResponse.json({ error: inviteError.message }, { status: 500 });
+    }
+
+    if (!invite) {
+      return NextResponse.json({ error: "Invite not found" }, { status: 404 });
+    }
+
+    if (invite.invite_email.toLowerCase().trim() !== email) {
+      return NextResponse.json({ error: "This invite does not belong to your account" }, { status: 403 });
+    }
+
+    if (invite.status !== "pending") {
+      return NextResponse.json({ error: `Invite is already ${invite.status}` }, { status: 400 });
+    }
+
+    if (new Date(invite.expires_at).getTime() <= Date.now()) {
+      return NextResponse.json({ error: "Invite has expired" }, { status: 400 });
+    }
+
+    const { error: memberUpsertError } = await supabaseAdmin
+      .from("org_members")
       .upsert(
         {
-          manager_id: managerId,
-          employee_id: userId,
-          organization_id: organizationId,
+          organization_id: invite.organization_id,
+          user_id: userId,
+          role: "employee",
         },
-        { onConflict: "organization_id,employee_id" }
+        { onConflict: "organization_id,user_id" }
       );
 
-    if (upsertError) {
-      return NextResponse.json({ error: upsertError.message }, { status: 500 });
+    if (memberUpsertError) {
+      return NextResponse.json({ error: memberUpsertError.message }, { status: 500 });
+    }
+
+    const now = new Date().toISOString();
+    const { error: inviteUpdateError } = await supabaseAdmin
+      .from("invites")
+      .update({
+        status: "accepted",
+        accepted_at: now,
+      })
+      .eq("id", invite.id)
+      .eq("status", "pending");
+
+    if (inviteUpdateError) {
+      return NextResponse.json({ error: inviteUpdateError.message }, { status: 500 });
+    }
+
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("active_organization_id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (!profile?.active_organization_id) {
+      await supabaseAdmin
+        .from("profiles")
+        .upsert(
+          {
+            id: userId,
+            active_organization_id: invite.organization_id,
+          },
+          { onConflict: "id" }
+        );
     }
 
     return NextResponse.json({
       success: true,
-      data: { message: "Invitation accepted and manager linked." },
+      message: "Invite accepted",
+      data: {
+        inviteId: invite.id,
+        organizationId: invite.organization_id,
+      },
     });
   } catch (err) {
     console.error("Accept Invite Error:", err);

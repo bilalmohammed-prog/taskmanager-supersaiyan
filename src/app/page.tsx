@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { resolveActiveOrganizationId } from "@/lib/auth/tenant-context";
 import { getSupabaseServer } from "@/lib/supabase/server";
 
 export default async function Page() {
@@ -11,14 +12,10 @@ export default async function Page() {
     redirect("/auth/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("active_organization_id")
-    .eq("id", user.id)
-    .maybeSingle();
+  const organizationId = await resolveActiveOrganizationId(supabase, user.id);
 
-  if (!profile?.active_organization_id) {
-    redirect("/onboarding");
+  if (!organizationId) {
+    redirect("/no-organization");
   }
 
   redirect("/dashboard");

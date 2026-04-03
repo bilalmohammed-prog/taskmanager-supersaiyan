@@ -24,6 +24,45 @@ export async function getActiveOrganizationIdFromCookie(): Promise<string | unde
   return cookieStore.get("activeOrg")?.value;
 }
 
+async function isUserInOrganization(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  orgId: string
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("org_members")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("organization_id", orgId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new ValidationError({ message: error.message, details: error });
+  }
+
+  return Boolean(data?.id);
+}
+
+async function getFirstMembershipOrganizationId(
+  supabase: SupabaseClient<Database>,
+  userId: string
+): Promise<string | null> {
+  const { data: membership, error: membershipError } = await supabase
+    .from("org_members")
+    .select("organization_id")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (membershipError) {
+    throw new ValidationError({ message: membershipError.message, details: membershipError });
+  }
+
+  return membership?.organization_id ?? null;
+}
+
 export async function resolveActiveOrganizationId(
   supabase: SupabaseClient<Database>,
   userId: string,
@@ -34,7 +73,7 @@ export async function resolveActiveOrganizationId(
   }
 
   const cookieOrgId = await getActiveOrganizationIdFromCookie();
-  if (cookieOrgId) {
+  if (cookieOrgId && (await isUserInOrganization(supabase, userId, cookieOrgId))) {
     return cookieOrgId;
   }
 
@@ -48,27 +87,33 @@ export async function resolveActiveOrganizationId(
     throw new ValidationError({ message: profileError.message, details: profileError });
   }
 
-  if (profile?.active_organization_id) {
+  if (
+    profile?.active_organization_id &&
+    (await isUserInOrganization(supabase, userId, profile.active_organization_id))
+  ) {
     return profile.active_organization_id;
   }
 
-  const { data: membership, error: membershipError } = await supabase
-    .from("org_members")
-    .select("organization_id")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: true }) 
-    .limit(1)
-    .maybeSingle();
-
-  if (membershipError) {
-    throw new ValidationError({ message: membershipError.message, details: membershipError });
-  }
-
-  if (!membership?.organization_id) {
+  const fallbackOrgId = await getFirstMembershipOrganizationId(supabase, userId);
+  if (!fallbackOrgId) {
     return null;
   }
 
-  return membership.organization_id;
+  const { error: updateProfileError } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: userId,
+        active_organization_id: fallbackOrgId,
+      },
+      { onConflict: "id" }
+    );
+
+  if (updateProfileError) {
+    throw new ValidationError({ message: updateProfileError.message, details: updateProfileError });
+  }
+
+  return fallbackOrgId;
 }
 
 export async function getTenantContext(

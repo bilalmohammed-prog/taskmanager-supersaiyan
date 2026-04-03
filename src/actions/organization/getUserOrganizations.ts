@@ -1,6 +1,6 @@
 "use server";
 
-import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { requireActionUser } from "@/actions/_helpers/requireOrgContext";
 import type { Tables } from "@/lib/types/database";
 import { ValidationError } from "@/lib/api/errors";
 
@@ -16,7 +16,7 @@ type OrgJoinRow = {
 };
 
 export async function getUserOrganizations(): Promise<UserOrganization[]> {
-  const ctx = await requireOrgContext();
+  const ctx = await requireActionUser();
 
   const { data, error } = await ctx.supabase
     .from("org_members")

@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { requireOrgContext } from "@/actions/_helpers/requireOrgContext";
+import { requireActionUser } from "@/actions/_helpers/requireOrgContext";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { UUID } from "@/lib/types/database";
 import { ForbiddenError, ValidationError } from "@/lib/api/errors";
@@ -13,7 +13,7 @@ export async function switchOrganization(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const validatedOrgId = uuidSchema.parse(orgId) as UUID;
-    const ctx = await requireOrgContext();
+    const ctx = await requireActionUser();
 
     const { data: membership, error: membershipError } = await ctx.supabase
       .from("org_members")
