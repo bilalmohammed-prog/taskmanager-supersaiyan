@@ -9,8 +9,9 @@ export default async function InboxPage({
 }) {
   const { orgId } = await params;
   const tenant = await requireOrgContext({
-  organizationId: orgId
-});
+    organizationId: orgId,
+  });
+  
   const messages = await listMessages(tenant.supabase, {
     organizationId: tenant.organizationId,
     userId: tenant.userId,

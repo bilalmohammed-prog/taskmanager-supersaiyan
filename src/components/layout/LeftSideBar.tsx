@@ -12,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import ProfileMenu from "@/components/ProfileMenu";
+import OrgSwitcher from "@/components/layout/OrgSwitcher";
 
 const NAV_ITEMS = [
   { label: "Employees", href: "employees", icon: Users },
@@ -55,6 +56,8 @@ export default function LeftSideBar({ collapsed, onToggle }: LeftSideBarProps) {
             <ChevronLeft className={`h-4 w-4 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`} />
           </button>
         </div>
+
+        <OrgSwitcher collapsed={collapsed} />
 
         <nav className="mt-8 space-y-1">
           {NAV_ITEMS.map(({ label, href, icon: Icon }) => {

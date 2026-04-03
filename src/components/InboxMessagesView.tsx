@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import type { Tables } from "@/lib/types/database";
 
 type Message = Tables<"messages">;
@@ -10,8 +11,56 @@ export default function InboxMessagesView({
 }: {
   initialMessages: Message[];
 }) {
-  const [messages] = useState<Message[]>(initialMessages);
+  const { orgId } = useParams<{ orgId: string }>();
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [selected, setSelected] = useState<Message | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshMessages() {
+      try {
+        const response = await fetch(`/api/messages?organizationId=${encodeURIComponent(orgId)}`, {
+          method: "GET",
+          cache: "no-store",
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = (await response.json()) as {
+          ok?: boolean;
+          data?: { messages?: Message[] };
+        };
+
+        const nextMessages = payload.data?.messages ?? [];
+        if (cancelled) {
+          return;
+        }
+
+        const ordered = [...nextMessages].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        setMessages(ordered);
+        setSelected((prev) => {
+          if (!prev) return null;
+          return ordered.find((message) => message.id === prev.id) ?? null;
+        });
+      } catch {
+        // Keep existing inbox content if polling fails.
+      }
+    }
+
+    refreshMessages();
+    const pollTimer = setInterval(refreshMessages, 5000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(pollTimer);
+    };
+  }, [orgId]);
 
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleString(undefined, {

@@ -35,22 +35,25 @@ export async function createMessage(
     organizationId: string;
     senderId: string;
     content: string;
-    recipientId?: string | null;
+    recipientId?: string;
     projectId?: string | null;
   }
 ): Promise<MessageRow> {
   const content = params.content.trim();
+  const recipientId = params.recipientId?.trim() || undefined;
+  const projectId = params.projectId?.trim() || undefined;
+
   if (!content) {
     throw new ValidationError({ message: "Message content is required" });
   }
 
-  if (!params.recipientId && !params.projectId) {
+  if (!recipientId && !projectId) {
     throw new ValidationError({
       message: "Either recipientId or projectId is required",
     });
   }
 
-  if (params.recipientId && params.projectId) {
+  if (recipientId && projectId) {
     throw new ValidationError({
       message: "Provide recipientId or projectId, not both",
     });
@@ -58,15 +61,15 @@ export async function createMessage(
 
   await assertOrgMember(supabase, params.organizationId, params.senderId);
 
-  if (params.recipientId) {
-    await assertOrgMember(supabase, params.organizationId, params.recipientId);
+  if (recipientId) {
+    await assertOrgMember(supabase, params.organizationId, recipientId);
   }
 
-  if (params.projectId) {
+  if (projectId) {
     const { data: project, error: projectError } = await supabase
       .from("projects")
       .select("id")
-      .eq("id", params.projectId)
+      .eq("id", projectId)
       .eq("organization_id", params.organizationId)
       .is("deleted_at", null)
       .maybeSingle();
@@ -83,8 +86,8 @@ export async function createMessage(
   const insertPayload: TablesInsert<"messages"> = {
     organization_id: params.organizationId,
     sender_id: params.senderId,
-    recipient_id: params.recipientId ?? null,
-    project_id: params.projectId ?? null,
+    recipient_id: recipientId ?? null,
+    project_id: projectId ?? null,
     content,
   };
 
@@ -115,13 +118,16 @@ export async function listMessages(
 ): Promise<MessageRow[]> {
   await assertOrgMember(supabase, params.organizationId, params.userId);
 
+  const recipientId = params.recipientId?.trim() || undefined;
+  const projectId = params.projectId?.trim() || undefined;
+
   // Project messages (safe)
-  if (params.projectId) {
+  if (projectId) {
     const { data, error } = await supabase
       .from("messages")
       .select("*")
       .eq("organization_id", params.organizationId)
-      .eq("project_id", params.projectId)
+      .eq("project_id", projectId)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
 
@@ -134,21 +140,22 @@ export async function listMessages(
   }
 
   // Direct conversation (NO string interpolation)
-  if (params.recipientId) {
+  if (recipientId) {
+    
     const [sent, received] = await Promise.all([
       supabase
         .from("messages")
         .select("*")
         .eq("organization_id", params.organizationId)
         .eq("sender_id", params.userId)
-        .eq("recipient_id", params.recipientId)
+        .eq("recipient_id", recipientId)
         .is("deleted_at", null),
 
       supabase
         .from("messages")
         .select("*")
         .eq("organization_id", params.organizationId)
-        .eq("sender_id", params.recipientId)
+        .eq("sender_id", recipientId)
         .eq("recipient_id", params.userId)
         .is("deleted_at", null),
     ]);

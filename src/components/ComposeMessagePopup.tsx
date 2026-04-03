@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import { apiFetch } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +12,7 @@ type Props = {
 };
 
 export default function ComposeMessagePopup({ onClose }: Props) {
+  const { orgId } = useParams<{ orgId: string }>();
   const [recipientId, setRecipientId] = useState("");
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
@@ -27,6 +29,7 @@ export default function ComposeMessagePopup({ onClose }: Props) {
       await apiFetch("/api/messages/send", {
         method: "POST",
         body: JSON.stringify({
+          organizationId: orgId,
           recipientId: recipientId.trim(),
           content: content.trim(),
         }),
