@@ -13,6 +13,8 @@ type TopBarProps = {
 };
 
 export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProps) {
+  void sidebarCollapsed;
+  void onToggleSidebar;
   const pathname = usePathname();
 
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -39,8 +41,7 @@ export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProp
   }, []);
 
   const isOrgRoute = pathname.includes("/organizations/");
-  const isEmployeesList =
-    isOrgRoute && pathname.includes("/employees") && !pathname.match(/\/employees\/[^/]+$/);
+  const isTeamPage = isOrgRoute && pathname.includes("/team");
   const isInbox = isOrgRoute && pathname.includes("/inbox");
 
   if (!isOrgRoute) {
@@ -52,7 +53,7 @@ export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProp
       <div className="w-10" />
 
       <div className="flex flex-1 justify-center">
-        {isEmployeesList && (
+        {isTeamPage && (
           <Button
             type="button"
             className="h-9 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-50 shadow-sm hover:bg-zinc-800"
@@ -62,7 +63,7 @@ export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProp
             Send Message
           </Button>
         )}
-        {!isEmployeesList && isInbox && (
+        {!isTeamPage && isInbox && (
           <Button
             type="button"
             className="h-9 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-50 shadow-sm hover:bg-zinc-800"

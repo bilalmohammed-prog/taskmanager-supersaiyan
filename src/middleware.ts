@@ -33,6 +33,15 @@ export async function middleware(req: NextRequest) {
 
   const pathname = req.nextUrl.pathname;
 
+  const employeeRouteMatch = pathname.match(/^\/organizations\/([^/]+)\/employees(?:\/.*)?$/);
+  if (employeeRouteMatch) {
+    const target = new URL(`/organizations/${employeeRouteMatch[1]}/team`, req.url);
+    req.nextUrl.searchParams.forEach((value, key) => {
+      target.searchParams.set(key, value);
+    });
+    return NextResponse.redirect(target);
+  }
+
   const protectedPrefixes = [
     "/organizations",
     "/dashboard",

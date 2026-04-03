@@ -18,5 +18,5 @@ export async function onboardingAction(
 
   if (result.error) return { error: result.error.message };
 
-  redirect(`/organizations/${result.data.organization.id}/employees`);
+  redirect(`/organizations/${result.data.organization.id}/team`);
 }
