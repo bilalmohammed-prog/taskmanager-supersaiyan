@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -58,8 +57,7 @@ export default function TeamTabsClient({
   updateRoleAction,
   removeMemberAction,
 }: TeamTabsClientProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<"members" | "workload">(selectedTab);
   void addMemberAction;
 
   const canManageMembers = currentRole === "owner" || currentRole === "admin";
@@ -73,12 +71,6 @@ export default function TeamTabsClient({
     () => [...workload].sort((a, b) => b.totalTasks - a.totalTasks),
     [workload]
   );
-
-  function onTabChange(nextTab: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", nextTab);
-    router.replace(`?${params.toString()}`);
-  }
 
   return (
     <div className="space-y-6">
@@ -101,7 +93,7 @@ export default function TeamTabsClient({
         </p>
       )}
 
-      <Tabs value={selectedTab} onValueChange={onTabChange}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "members" | "workload")}>
         <TabsList variant="line" className="w-full justify-start">
           <TabsTrigger value="members" className="flex-none px-4">
             Members
