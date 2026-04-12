@@ -23,7 +23,7 @@ export async function createTask(
   const validatedDescription = optionalTextSchema.optional().parse(description);
   const validatedDueDate = isoDateStringSchema.nullable().optional().parse(dueDate);
   const validatedOrgId = uuidSchema.parse(orgId);
-  const validatedProjectId = uuidSchema.parse(project_id);
+  const validatedProjectId = project_id != null ? uuidSchema.parse(project_id) : null;
 
   const ctx = await requireOrgContext({ organizationId: validatedOrgId });
   authorize("create", "task", { role: ctx.role });

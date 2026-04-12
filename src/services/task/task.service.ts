@@ -5,7 +5,7 @@ import type { Database, Tables, TablesInsert } from "@/lib/types/database";
 export async function createTask(
   supabase: SupabaseClient<Database>,
   params: {
-    projectId: string;
+    projectId: string | null;
     organizationId: string;
     createdBy: string;
     title: string;
@@ -13,20 +13,22 @@ export async function createTask(
     dueDate?: string;
   }
 ): Promise<Tables<"tasks">> {
-  const { data: project, error: projectError } = await supabase
-    .from("projects")
-    .select("id")
-    .eq("id", params.projectId)
-    .eq("organization_id", params.organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
+  if (params.projectId) {
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("id", params.projectId)
+      .eq("organization_id", params.organizationId)
+      .is("deleted_at", null)
+      .maybeSingle();
 
-  if (projectError) {
-    throw new ValidationError({ message: projectError.message, details: projectError });
-  }
+    if (projectError) {
+      throw new ValidationError({ message: projectError.message, details: projectError });
+    }
 
-  if (!project) {
-    throw new NotFoundError({ message: "Project not found in this organization" });
+    if (!project) {
+      throw new NotFoundError({ message: "Project not found in this organization" });
+    }
   }
 
   const insert: TablesInsert<"tasks"> = {

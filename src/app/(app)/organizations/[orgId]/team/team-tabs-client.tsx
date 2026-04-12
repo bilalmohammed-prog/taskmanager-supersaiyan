@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -114,10 +115,13 @@ export default function TeamTabsClient({
                 key={member.user_id}
                 className="grid grid-cols-1 items-center gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-5"
               >
-                <div className="md:col-span-2">
+                <Link
+                  href={`/organizations/${organizationId}/employees/${member.user_id}`}
+                  className="block rounded-md transition-colors hover:text-zinc-700 md:col-span-2"
+                >
                   <p className="font-medium text-foreground">{member.name}</p>
                   <p className="text-sm text-muted-foreground">{member.email ?? member.user_id}</p>
-                </div>
+                </Link>
 
                 <Badge variant="outline" className="w-fit">
                   {member.role}
@@ -171,9 +175,10 @@ export default function TeamTabsClient({
               pct >= 80 ? "bg-green-500" : pct >= 40 ? "bg-blue-500" : "bg-amber-500";
 
             return (
-              <div
+              <Link
                 key={member.user_id}
-                className="grid grid-cols-1 items-center gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-6"
+                href={`/organizations/${organizationId}/employees/${member.user_id}`}
+                className="grid grid-cols-1 items-center gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-zinc-300 md:grid-cols-6"
               >
                 <div className="md:col-span-2">
                   <p className="font-medium text-foreground">{member.name}</p>
@@ -200,7 +205,7 @@ export default function TeamTabsClient({
                     />
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </TabsContent>
