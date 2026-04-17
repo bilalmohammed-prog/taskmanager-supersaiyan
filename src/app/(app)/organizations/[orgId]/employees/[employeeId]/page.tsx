@@ -11,12 +11,21 @@ import { listOrgMembers } from "@/actions/organization/listOrgMembers";
 import { supabase } from "@/lib/supabase/client";
 import { useOrgRole } from "@/hooks/useOrgRole";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/components/providers/toast";
 import type { Enums } from "@/lib/types/database";
 
 type EmployeeTask = {
   task_id: string;
   title: string;
-  status: string | null;
+  status: TaskStatus | null;
+  description: string | null;
   due_date: string | null;
   project_id: string | null;
   allocated_hours: number | null;
@@ -33,6 +42,7 @@ type TaskJoinRow = {
   id: string;
   title: string;
   status: TaskStatus | null;
+  description: string | null;
   due_date: string | null;
   project_id: string | null;
   deleted_at: string | null;
@@ -56,6 +66,7 @@ function mapAssignmentRowsToEmployeeTasks(rows: AssignmentTaskRow[]): EmployeeTa
         task_id: row.task_id,
         title: joinedTask.title,
         status: joinedTask.status,
+        description: joinedTask.description,
         due_date: joinedTask.due_date,
         project_id: joinedTask.project_id,
         allocated_hours: row.allocated_hours,
@@ -75,6 +86,7 @@ function toTaskJoin(row: AssignmentTaskRow): TaskJoinRow | null {
 export default function EmployeeTasksPage() {
   const role = useOrgRole();
   const canManage = role === "owner" || role === "admin" || role === "manager";
+  const { addToast } = useToast();
 
   const { orgId, employeeId } = useParams<{ orgId: string; employeeId: string }>();
   const [tasks, setTasks] = useState<EmployeeTask[]>([]);
@@ -84,6 +96,7 @@ export default function EmployeeTasksPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState("");
 
@@ -94,7 +107,7 @@ export default function EmployeeTasksPage() {
         `
           task_id,
           allocated_hours,
-          tasks!inner(id, title, status, due_date, project_id, deleted_at)
+            tasks!inner(id, title, status, description, due_date, project_id, deleted_at)
         `
       )
       .eq("user_id", employeeId)
@@ -146,7 +159,7 @@ export default function EmployeeTasksPage() {
       setCreating(true);
       const created = await createTask(
         title.trim(),
-        "",
+        description.trim() || undefined,
         dueDate,
         orgId,
         selectedProjectId || null
@@ -159,6 +172,7 @@ export default function EmployeeTasksPage() {
           task_id: created.id,
           title: created.title,
           status: created.status,
+          description: created.description,
           due_date: created.due_date,
           project_id: created.project_id,
           allocated_hours: null,
@@ -167,11 +181,33 @@ export default function EmployeeTasksPage() {
       ]);
 
       setTitle("");
+      setDescription("");
       setDueDate("");
       setSelectedProjectId("");
       setShowCreate(false);
+      addToast("Task created", "success");
+    } catch {
+      addToast("Failed to create task", "error");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleTitleCommit(taskId: string, nextTitle: string) {
+    try {
+      await updateTask(taskId, { title: nextTitle }, orgId);
+    } catch {
+      setTasks(await fetchEmployeeTasks());
+      addToast("Failed to update title", "error");
+    }
+  }
+
+  async function handleDescriptionCommit(taskId: string, nextDescription: string) {
+    try {
+      await updateTask(taskId, { description: nextDescription || null }, orgId);
+    } catch {
+      setTasks(await fetchEmployeeTasks());
+      addToast("Failed to update description", "error");
     }
   }
 
@@ -184,6 +220,7 @@ export default function EmployeeTasksPage() {
       await updateTask(taskId, { status }, orgId);
     } catch {
       setTasks(await fetchEmployeeTasks());
+      addToast("Failed to update status", "error");
     }
   }
 
@@ -203,6 +240,7 @@ export default function EmployeeTasksPage() {
       await updateTask(taskId, { due_date: nextDueDate || null }, orgId);
     } catch {
       setTasks(await fetchEmployeeTasks());
+      addToast("Failed to update due date", "error");
     }
   }
 
@@ -222,6 +260,7 @@ export default function EmployeeTasksPage() {
       await updateTask(taskId, { project_id: projectId }, orgId);
     } catch {
       setTasks(await fetchEmployeeTasks());
+      addToast("Failed to update project", "error");
     }
   }
 
@@ -268,7 +307,7 @@ export default function EmployeeTasksPage() {
               key={task.task_id}
               className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-6 md:items-center"
             >
-              <div className="md:col-span-2">
+              <div className="space-y-1 md:col-span-2">
                 <input
                   value={task.title}
                   onChange={(e) =>
@@ -283,7 +322,9 @@ export default function EmployeeTasksPage() {
                       )
                     )
                   }
-                  onBlur={(e) => updateTask(task.task_id, { title: e.target.value }, orgId)}
+                  onBlur={(e) => {
+                    void handleTitleCommit(task.task_id, e.target.value);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.currentTarget.blur();
@@ -292,31 +333,67 @@ export default function EmployeeTasksPage() {
                   disabled={!canManage}
                   className="w-full bg-transparent text-[15px] font-medium text-foreground outline-none disabled:cursor-default"
                 />
-                <select
-                  value={task.project_id ?? ""}
-                  onChange={(e) => handleProjectChange(task.task_id, e.target.value || null)}
+                <Select
+                  value={task.project_id ?? "__none__"}
+                  onValueChange={(value) => {
+                    void handleProjectChange(task.task_id, value === "__none__" ? null : value);
+                  }}
                   disabled={!canManage}
-                  className="mt-0.5 bg-transparent text-sm text-muted-foreground outline-none disabled:cursor-default"
                 >
-                  <option value="">No project</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-8 w-fit min-w-44 border-none bg-transparent px-0 text-sm text-muted-foreground shadow-none focus-visible:ring-0">
+                    <SelectValue placeholder="No project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No project</SelectItem>
+                    {projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <textarea
+                  value={task.description ?? ""}
+                  onChange={(e) =>
+                    setTasks((prev) =>
+                      prev.map((t) =>
+                        t.task_id === task.task_id
+                          ? {
+                              ...t,
+                              description: e.target.value,
+                            }
+                          : t
+                      )
+                    )
+                  }
+                  onBlur={(e) => {
+                    void handleDescriptionCommit(task.task_id, e.target.value);
+                  }}
+                  rows={2}
+                  disabled={!canManage}
+                  placeholder="Add description"
+                  className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground outline-none disabled:cursor-default"
+                />
               </div>
 
               <div>
-                <select
+                <Select
                   value={(task.status ?? "todo") as TaskStatus}
-                  onChange={(e) => handleStatusChange(task.task_id, e.target.value as TaskStatus)}
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  onValueChange={(value) => {
+                    void handleStatusChange(task.task_id, value as TaskStatus);
+                  }}
                   disabled={!canManage}
                 >
-                  <option value="todo">To Do</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="blocked">Blocked</option>
-                  <option value="done">Completed</option>
-                </select>
+                  <SelectTrigger className="h-9 w-full bg-background text-sm">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todo">To Do</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="blocked">Blocked</SelectItem>
+                    <SelectItem value="done">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
@@ -355,6 +432,16 @@ export default function EmployeeTasksPage() {
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Description</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+                placeholder="Add task details"
+              />
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Due date</label>
               <input
                 type="date"
@@ -366,18 +453,22 @@ export default function EmployeeTasksPage() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Project (optional)</label>
-              <select
-                value={selectedProjectId}
-                onChange={(e) => setSelectedProjectId(e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              <Select
+                value={selectedProjectId || "__none__"}
+                onValueChange={(value) => setSelectedProjectId(value === "__none__" ? "" : value)}
               >
-                <option value="">No project</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-9 w-full bg-background text-sm">
+                  <SelectValue placeholder="No project" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No project</SelectItem>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
