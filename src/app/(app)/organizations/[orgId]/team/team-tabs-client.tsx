@@ -63,6 +63,10 @@ export default function TeamTabsClient({
   const [roleFilter, setRoleFilter] = useState<"all" | RoleType>("all");
   const [membersPage, setMembersPage] = useState(1);
   const [membersPageSize, setMembersPageSize] = useState(10);
+  const [workloadQuery, setWorkloadQuery] = useState("");
+  const [workloadRoleFilter, setWorkloadRoleFilter] = useState<"all" | RoleType>("all");
+  const [workloadPage, setWorkloadPage] = useState(1);
+  const [workloadPageSize, setWorkloadPageSize] = useState(10);
   void addMemberAction;
 
   const canManageMembers = currentRole === "owner" || currentRole === "admin";
@@ -99,6 +103,29 @@ export default function TeamTabsClient({
     () => [...workload].sort((a, b) => b.totalTasks - a.totalTasks),
     [workload]
   );
+
+  const filteredWorkload = useMemo(() => {
+    const normalizedQuery = workloadQuery.trim().toLowerCase();
+
+    return sortedWorkload.filter((member) => {
+      const matchesRole = workloadRoleFilter === "all" || member.role === workloadRoleFilter;
+
+      if (!normalizedQuery) {
+        return matchesRole;
+      }
+
+      const haystack = `${member.name} ${member.email ?? ""}`.toLowerCase();
+      return matchesRole && haystack.includes(normalizedQuery);
+    });
+  }, [sortedWorkload, workloadQuery, workloadRoleFilter]);
+
+  const totalWorkloadPages = Math.max(1, Math.ceil(filteredWorkload.length / workloadPageSize));
+  const safeWorkloadPage = Math.min(workloadPage, totalWorkloadPages);
+
+  const pagedWorkload = useMemo(() => {
+    const start = (safeWorkloadPage - 1) * workloadPageSize;
+    return filteredWorkload.slice(start, start + workloadPageSize);
+  }, [filteredWorkload, safeWorkloadPage, workloadPageSize]);
 
   return (
     <div className="space-y-6">
@@ -278,50 +305,142 @@ export default function TeamTabsClient({
           </div>
         </TabsContent>
 
-        <TabsContent value="workload" className="space-y-3 pt-2">
-          {sortedWorkload.length === 0 && (
-            <p className="text-sm text-muted-foreground">No workload data found.</p>
-          )}
+        <TabsContent value="workload" className="space-y-4 pt-2">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <input
+              value={workloadQuery}
+              onChange={(e) => {
+                setWorkloadQuery(e.target.value);
+                setWorkloadPage(1);
+              }}
+              placeholder="Search by name or email..."
+              className="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            />
+            <select
+              value={workloadRoleFilter}
+              onChange={(e) => {
+                setWorkloadRoleFilter(e.target.value as "all" | RoleType);
+                setWorkloadPage(1);
+              }}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            >
+              <option value="all">All roles</option>
+              {roleOptions.map((role) => (
+                <option key={`workload-filter-${role}`} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+            <select
+              value={String(workloadPageSize)}
+              onChange={(e) => {
+                setWorkloadPageSize(Number(e.target.value));
+                setWorkloadPage(1);
+              }}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            >
+              <option value="10">10 / page</option>
+              <option value="25">25 / page</option>
+              <option value="50">50 / page</option>
+            </select>
+          </div>
 
-          {sortedWorkload.map((member) => {
-            const pct = completionPct(member.completedTasks, member.totalTasks);
-            const barColor =
-              pct >= 80 ? "bg-green-500" : pct >= 40 ? "bg-blue-500" : "bg-amber-500";
+          <div className="overflow-hidden rounded-xl border border-border bg-card">
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="px-4 py-3 font-medium">Member</th>
+                    <th className="px-4 py-3 font-medium">Role</th>
+                    <th className="px-4 py-3 font-medium">Tasks</th>
+                    <th className="px-4 py-3 font-medium">Hours</th>
+                    <th className="px-4 py-3 font-medium">Completion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagedWorkload.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        No workload data found.
+                      </td>
+                    </tr>
+                  )}
 
-            return (
-              <Link
-                key={member.user_id}
-                href={`/organizations/${organizationId}/employees/${member.user_id}`}
-                className="grid grid-cols-1 items-center gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-zinc-300 md:grid-cols-6"
+                  {pagedWorkload.map((member) => {
+                    const pct = completionPct(member.completedTasks, member.totalTasks);
+                    const barColor =
+                      pct >= 80 ? "bg-green-500" : pct >= 40 ? "bg-blue-500" : "bg-amber-500";
+
+                    return (
+                      <tr key={member.user_id} className="border-b border-border last:border-0">
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/organizations/${organizationId}/employees/${member.user_id}`}
+                            className="block rounded-md transition-colors hover:text-zinc-700"
+                          >
+                            <p className="font-medium text-foreground">{member.name}</p>
+                            <p className="text-sm text-muted-foreground">{member.email ?? member.user_id}</p>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className="w-fit">
+                            {member.role}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                          <span className="font-medium text-foreground">{member.completedTasks}</span> / {member.totalTasks}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">{member.allocatedHours}</td>
+                        <td className="px-4 py-3">
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>Progress</span>
+                              <span>{pct}%</span>
+                            </div>
+                            <div className="h-2 w-36 overflow-hidden rounded-full bg-muted">
+                              <div
+                                className={`h-2 rounded-full transition-all duration-500 ${barColor}`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <p>
+              Showing {pagedWorkload.length} of {filteredWorkload.length} members
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={safeWorkloadPage <= 1}
+                onClick={() => setWorkloadPage((prev) => Math.max(1, prev - 1))}
               >
-                <div className="md:col-span-2">
-                  <p className="font-medium text-foreground">{member.name}</p>
-                  <p className="text-sm text-muted-foreground">{member.email ?? member.user_id}</p>
-                  <p className="text-sm text-muted-foreground">empID: {member.user_id}</p>
-                </div>
-
-                <div className="text-sm text-muted-foreground">
-                  <p>Total: {member.totalTasks}</p>
-                  <p>Done: {member.completedTasks}</p>
-                </div>
-
-                <div className="text-sm text-muted-foreground">Hours: {member.allocatedHours}</div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Completion</span>
-                    <span>{pct}%</span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={`h-2 rounded-full transition-all duration-500 ${barColor}`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
+                Prev
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Page {safeWorkloadPage} of {totalWorkloadPages}
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={safeWorkloadPage >= totalWorkloadPages}
+                onClick={() => setWorkloadPage((prev) => Math.min(totalWorkloadPages, prev + 1))}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
