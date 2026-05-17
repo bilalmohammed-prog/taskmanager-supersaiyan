@@ -1,42 +1,87 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import { Search } from "lucide-react";
+import { listOrgMembers } from "@/actions/organization/listOrgMembers";
 import { apiFetch } from "@/lib/api/client";
 import { ApiException } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { AppModal } from "@/components/ui/app-modal";
 
 type Props = {
-  userEmail: string;
   onClose: () => void;
   fixedType: "message" | "invite";
 };
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+type OrgMember = {
+  user_id: string;
+  name: string;
+};
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function ComposeMessagePopup({ userEmail, onClose, fixedType }: Props) {
-  void userEmail;
+export default function ComposeMessagePopup({ onClose, fixedType }: Props) {
   const { orgId } = useParams<{ orgId: string }>();
-  const [recipient, setRecipient] = useState("");
+  const isInvite = fixedType === "invite";
+
+  const [members, setMembers] = useState<OrgMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [recipientQuery, setRecipientQuery] = useState("");
+  const [selectedRecipient, setSelectedRecipient] = useState<OrgMember | null>(null);
+  const [inviteEmail, setInviteEmail] = useState("");
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const isInvite = fixedType === "invite";
 
-  async function handleSend() {
-    if (!recipient.trim() || !content.trim()) return;
+  useEffect(() => {
+    if (isInvite || !orgId) return;
 
-    if (isInvite && !EMAIL_PATTERN.test(recipient.trim())) {
-      setError("Enter a valid invite email.");
-      return;
+    let cancelled = false;
+
+    async function loadMembers() {
+      try {
+        setMembersLoading(true);
+        const result = await listOrgMembers(orgId);
+        if (!cancelled) {
+          setMembers(result.data ?? []);
+        }
+      } catch {
+        if (!cancelled) {
+          setMembers([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setMembersLoading(false);
+        }
+      }
     }
 
-    if (!isInvite && !UUID_PATTERN.test(recipient.trim())) {
-      setError("Recipient User ID must be a valid UUID.");
+    void loadMembers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isInvite, orgId]);
+
+  const filteredMembers = useMemo(() => {
+    const query = recipientQuery.trim().toLowerCase();
+    if (!query) return members.slice(0, 8);
+    return members.filter((member) => member.name.toLowerCase().includes(query)).slice(0, 8);
+  }, [members, recipientQuery]);
+
+  async function handleSend() {
+    if (!content.trim()) return;
+
+    if (isInvite) {
+      if (!EMAIL_PATTERN.test(inviteEmail.trim())) {
+        setError("Enter a valid invite email.");
+        return;
+      }
+    } else if (!selectedRecipient) {
+      setError("Select a teammate to message.");
       return;
     }
 
@@ -53,12 +98,12 @@ export default function ComposeMessagePopup({ userEmail, onClose, fixedType }: P
       const body = isInvite
         ? {
             organizationId: orgId,
-            inviteEmail: recipient.trim(),
+            inviteEmail: inviteEmail.trim(),
             content: content.trim(),
           }
         : {
             organizationId: orgId,
-            recipientId: recipient.trim(),
+            recipientId: selectedRecipient?.user_id,
             content: content.trim(),
           };
 
@@ -68,7 +113,7 @@ export default function ComposeMessagePopup({ userEmail, onClose, fixedType }: P
       });
 
       setSuccess(true);
-      setTimeout(() => onClose(), 1000);
+      setTimeout(() => onClose(), 900);
     } catch (err) {
       if (err instanceof ApiException) {
         setError(err.message);
@@ -80,62 +125,98 @@ export default function ComposeMessagePopup({ userEmail, onClose, fixedType }: P
     }
   }
 
+  const footer = (
+    <>
+      <Button variant="outline" onClick={onClose} disabled={sending} className="h-8 px-3 text-sm text-zinc-600">
+        Cancel
+      </Button>
+      <Button
+        onClick={() => {
+          void handleSend();
+        }}
+        disabled={(isInvite ? !inviteEmail.trim() : !selectedRecipient) || !content.trim() || sending}
+        className="h-8 bg-indigo-600 px-3 text-sm text-white hover:bg-indigo-700"
+      >
+        {sending ? "Sending..." : isInvite ? "Send Invite" : "Send Message"}
+      </Button>
+    </>
+  );
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+    <AppModal
+      title={isInvite ? "Send Invite" : "Send Message"}
+      description={isInvite ? "Invite a teammate by email." : "Start a direct conversation with a teammate."}
+      onClose={onClose}
+      widthClassName="w-[420px]"
+      footer={footer}
     >
-      <div className="w-[440px] space-y-4 rounded-xl border border-border bg-card p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-foreground">
-          {isInvite ? "Send Invite" : "New Message"}
-        </h3>
-
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">
-            {isInvite ? "Invite Email" : "Recipient User ID"}
-          </label>
-          <input
-            placeholder={isInvite ? "teammate@company.com" : "Paste recipient UUID"}
-            value={recipient}
-            onChange={(e) => setRecipient(e.target.value)}
-            type={isInvite ? "email" : "text"}
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+      {isInvite ? (
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-zinc-600">Invite email</label>
+          <Input
+            type="email"
+            placeholder="teammate@company.com"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            className="h-9 border-zinc-200 text-sm placeholder:text-zinc-400 hover:border-zinc-300 focus-visible:ring-2 focus-visible:ring-indigo-500"
           />
         </div>
-
+      ) : (
         <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground">
-            Message
-          </label>
-          <textarea
-            placeholder="Write your message…"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={4}
-            className="min-h-24 w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-          />
+          <label className="text-xs font-medium text-zinc-600">Recipient</label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <Input
+              placeholder="Search teammates"
+              value={selectedRecipient ? selectedRecipient.name : recipientQuery}
+              onChange={(e) => {
+                setSelectedRecipient(null);
+                setRecipientQuery(e.target.value);
+              }}
+              className="h-9 border-zinc-200 pl-9 text-sm placeholder:text-zinc-400 hover:border-zinc-300 focus-visible:ring-2 focus-visible:ring-indigo-500"
+            />
+          </div>
+          <div className="max-h-44 overflow-auto rounded-md border border-zinc-100 bg-zinc-50/40">
+            {membersLoading ? (
+              <div className="px-3 py-3 text-sm text-zinc-500">Loading teammates...</div>
+            ) : filteredMembers.length === 0 ? (
+              <div className="px-3 py-3 text-sm text-zinc-500">No teammates found.</div>
+            ) : (
+              filteredMembers.map((member) => {
+                const active = selectedRecipient?.user_id === member.user_id;
+                return (
+                  <button
+                    key={member.user_id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedRecipient(member);
+                      setRecipientQuery(member.name);
+                    }}
+                    className={`flex w-full items-center justify-between border-b border-zinc-100 px-3 py-2.5 text-left text-sm last:border-b-0 ${active ? "bg-indigo-50 text-indigo-700" : "text-zinc-700 hover:bg-zinc-100/80"}`}
+                  >
+                    <span className="truncate font-medium">{member.name}</span>
+                    {active ? <span className="text-xs font-medium">Selected</span> : null}
+                  </button>
+                );
+              })
+            )}
+          </div>
         </div>
+      )}
 
-        {error && (
-          <p className="text-xs text-destructive">{error}</p>
-        )}
-
-        {success && (
-          <p className="text-xs text-green-600">{isInvite ? "Invite sent!" : "Message sent!"}</p>
-        )}
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose} disabled={sending}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSend}
-            disabled={!recipient.trim() || !content.trim() || sending}
-          >
-            {sending ? "Sending..." : "Send"}
-          </Button>
-        </div>
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-zinc-600">Message</label>
+        <textarea
+          placeholder={isInvite ? "Write a short invite note..." : "Write your message..."}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          rows={4}
+          className="min-h-24 w-full resize-none rounded-md border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-zinc-400 hover:border-zinc-300 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+        />
       </div>
-    </div>
+
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      {success ? <p className="text-xs text-emerald-600">{isInvite ? "Invite sent!" : "Message sent!"}</p> : null}
+    </AppModal>
   );
 }

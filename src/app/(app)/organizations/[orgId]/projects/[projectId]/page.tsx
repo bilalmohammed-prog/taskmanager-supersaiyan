@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { AlertCircle, Calendar, CheckSquare, Plus, Search, Square, Users, X } from "lucide-react";
+import { AlertCircle, Calendar, CheckSquare, Plus, Search, Square, Users } from "lucide-react";
 import { listTasksByProject } from "@/actions/task/listByProject";
 import { updateTask } from "@/actions/task/update";
 import { createTask } from "@/actions/task/create";
@@ -17,6 +17,7 @@ import { useOrgRole } from "@/hooks/useOrgRole";
 import { usePageHeader } from "@/components/layout/PageHeaderContext";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { AppModal } from "@/components/ui/app-modal";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/providers/toast";
 
@@ -458,85 +459,67 @@ export default function ProjectWorkspacePage() {
       </section>
 
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/28 backdrop-blur-[1.5px]">
-          <div className="animate-in fade-in zoom-in-95 w-[380px] rounded-lg border border-zinc-200/90 bg-white p-4 text-zinc-900 shadow-lg shadow-zinc-900/8 duration-150">
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div className="space-y-0.5">
-                <h2 className="text-base font-semibold text-zinc-900">Add Task</h2>
-                <p className="text-xs text-zinc-500">Create a task and optionally assign it right away.</p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowCreate(false)}
-                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 focus-visible:bg-zinc-100 focus-visible:text-zinc-700 focus-visible:outline-none"
-                aria-label="Close add task modal"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-600">Task title</label>
-                <input
-                  placeholder="Task title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-zinc-400 hover:border-zinc-300 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-600">Due date</label>
-                <div className="relative">
-                  <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                  <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    className="h-9 w-full rounded-md border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 shadow-sm outline-none transition-[border-color,box-shadow] hover:border-zinc-300 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-600">Assignee</label>
-                <select
-                  value={selectedEmployee}
-                  onChange={(e) => setSelectedEmployee(e.target.value)}
-                  className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition-[border-color,box-shadow] hover:border-zinc-300 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">Unassigned</option>
-                  {projectMembers.map((employee) => (
-                    <option key={employee.user_id} value={employee.user_id}>
-                      {employee.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center justify-end gap-2">
-              <button
-                className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:bg-zinc-50"
-                onClick={() => setShowCreate(false)}
-              >
+        <AppModal
+          title="Add Task"
+          description="Create a task and optionally assign it right away."
+          onClose={() => setShowCreate(false)}
+          widthClassName="w-[380px]"
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setShowCreate(false)} disabled={creating} className="h-8 px-3 text-sm text-zinc-600">
                 Cancel
-              </button>
-
-              <button
+              </Button>
+              <Button
                 disabled={creating}
                 onClick={() => {
                   void handleCreate();
                 }}
-                className="rounded-md border border-transparent bg-indigo-600 px-3 py-1.5 text-sm text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:opacity-40"
+                className="h-8 bg-indigo-600 px-3 text-sm text-white hover:bg-indigo-700"
               >
                 {creating ? "Creating..." : "Create"}
-              </button>
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-zinc-600">Task title</label>
+            <input
+              placeholder="Task title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-zinc-400 hover:border-zinc-300 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-zinc-600">Due date</label>
+            <div className="relative">
+              <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="h-9 w-full rounded-md border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 shadow-sm outline-none transition-[border-color,box-shadow] hover:border-zinc-300 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+              />
             </div>
           </div>
-        </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-zinc-600">Assignee</label>
+            <select
+              value={selectedEmployee}
+              onChange={(e) => setSelectedEmployee(e.target.value)}
+              className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition-[border-color,box-shadow] hover:border-zinc-300 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Unassigned</option>
+              {projectMembers.map((employee) => (
+                <option key={employee.user_id} value={employee.user_id}>
+                  {employee.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </AppModal>
       )}
 
       {showAddMembers && (

@@ -19,7 +19,6 @@ export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProp
   const pathname = usePathname();
   const { pageHeader } = usePageHeader();
 
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [composeMode, setComposeMode] = useState<"message" | "invite" | null>(null);
 
   useEffect(() => {
@@ -33,10 +32,7 @@ export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProp
         console.error("Failed to load session:", error.message);
         return;
       }
-
-      if (session?.user?.email) {
-        setUserEmail(session.user.email);
-      }
+      void session;
     }
 
     loadUser();
@@ -59,18 +55,20 @@ export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProp
           <div className="flex items-center gap-2">
             <Button
               type="button"
-              className="h-9 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-50 shadow-sm hover:bg-zinc-800"
+              variant="outline"
+              className="h-9 rounded-lg border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
               onClick={() => setComposeMode("message")}
             >
-              <MessageSquare className="mr-2 h-4 w-4 opacity-80" strokeWidth={2.5} />
+              <MessageSquare className="mr-2 h-4 w-4 text-zinc-500" strokeWidth={2.2} />
               Send Message
             </Button>
             <Button
               type="button"
-              className="h-9 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-50 shadow-sm hover:bg-zinc-800"
+              variant="outline"
+              className="h-9 rounded-lg border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
               onClick={() => setComposeMode("invite")}
             >
-              <UserPlus className="mr-2 h-4 w-4 opacity-80" strokeWidth={2.5} />
+              <UserPlus className="mr-2 h-4 w-4 text-zinc-500" strokeWidth={2.2} />
               Send Invite
             </Button>
           </div>
@@ -78,7 +76,8 @@ export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProp
         {!isTeamPage && isInbox && (
           <Button
             type="button"
-            className="h-9 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-50 shadow-sm hover:bg-zinc-800"
+            variant="outline"
+            className="h-9 rounded-lg border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
             onClick={() => setComposeMode("message")}
           >
             Draft
@@ -98,7 +97,6 @@ export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProp
 
       {composeMode && (
         <ComposeMessagePopup
-          userEmail={userEmail ?? ""}
           fixedType={composeMode}
           onClose={() => setComposeMode(null)}
         />
