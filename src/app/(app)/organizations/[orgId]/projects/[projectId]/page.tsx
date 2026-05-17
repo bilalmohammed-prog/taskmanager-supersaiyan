@@ -259,75 +259,52 @@ export default function ProjectWorkspacePage() {
   }
 
   return (
-    <div className="flex w-full max-w-5xl flex-col gap-8 pb-16">
-      <section className="flex flex-col gap-5 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{projectName}</h1>
-            <p className="mt-1.5 text-sm text-zinc-500">Manage tasks, assignments, and collaborators for this project.</p>
+    <div className="flex w-full max-w-5xl flex-col gap-3 pb-10">
+      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">{projectName}</h1>
+        </div>
+
+        {canManage && (
+          <div className="flex flex-wrap items-center gap-2 self-start sm:justify-end">
+            <Button
+              variant="outline"
+              className="h-8 border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
+              onClick={() => {
+                setMemberSearch("");
+                setSelectedMembersToAdd([]);
+                setShowAddMembers(true);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4 text-zinc-500" />
+              Add Member
+            </Button>
+            <Button
+              variant="outline"
+              className="h-8 border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
+              onClick={() => {
+                setMemberSearch("");
+                setSelectedMembersToRemove([]);
+                setShowManageMembers(true);
+              }}
+            >
+              <Users className="mr-2 h-4 w-4 text-zinc-500" />
+              Manage Members
+            </Button>
+            <Button
+              className="h-8 border-transparent bg-indigo-600 px-3.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+              onClick={() => setShowCreate(true)}
+            >
+              <Plus className="mr-2 h-4 w-4 opacity-90" />
+              Add Task
+            </Button>
           </div>
+        )}
+      </div>
 
-          {canManage && (
-            <div className="flex flex-wrap items-center gap-2 self-start lg:justify-end">
-              <Button
-                variant="outline"
-                className="h-9 border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
-                onClick={() => {
-                  setMemberSearch("");
-                  setSelectedMembersToAdd([]);
-                  setShowAddMembers(true);
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4 text-zinc-500" />
-                Add Member
-              </Button>
-              <Button
-                variant="outline"
-                className="h-9 border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
-                onClick={() => {
-                  setMemberSearch("");
-                  setSelectedMembersToRemove([]);
-                  setShowManageMembers(true);
-                }}
-              >
-                <Users className="mr-2 h-4 w-4 text-zinc-500" />
-                Manage Members
-              </Button>
-              <Button
-                className="h-9 border-transparent bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-                onClick={() => setShowCreate(true)}
-              >
-                <Plus className="mr-2 h-4 w-4 opacity-90" />
-                Add Task
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          {projectMembers.length > 0 ? (
-            projectMembers.map((member) => (
-              <div key={member.user_id} className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-sm text-zinc-700">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-semibold text-indigo-700">
-                  {member.name.charAt(0)}
-                </div>
-                <span className="max-w-[180px] truncate">{member.name}</span>
-              </div>
-            ))
-          ) : (
-            <div className="text-sm text-zinc-500">No members assigned yet.</div>
-          )}
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-5">
-        <div>
-          <h2 className="text-lg font-semibold text-zinc-900">Tasks</h2>
-          <p className="mt-1 text-sm text-zinc-500">Track progress, assignees, and due dates in one place.</p>
-        </div>
-
+      <section>
         <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <div className="hidden grid-cols-[56px_minmax(0,1.8fr)_220px_160px_140px] items-center gap-4 border-b border-zinc-200/80 bg-zinc-50/80 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:grid">
+          <div className="hidden grid-cols-[48px_minmax(0,1.8fr)_220px_152px_132px] items-center gap-4 border-b border-zinc-200/80 bg-zinc-50/80 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:grid">
             <div className="flex justify-center">
               <span className="sr-only">Select Task</span>
             </div>
@@ -339,12 +316,12 @@ export default function ProjectWorkspacePage() {
 
           <div className="flex flex-col">
             {loading ? (
-              <div className="px-5 py-4 text-sm text-zinc-500">Loading...</div>
+              <div className="px-4 py-4 text-sm text-zinc-500">Loading...</div>
             ) : (
               tasks.map((task) => (
                 <div
                   key={task.id}
-                  className="group flex flex-col items-start gap-3 border-t border-zinc-100 px-4 py-4 transition-colors hover:bg-zinc-50/50 first:border-t-0 md:grid md:grid-cols-[56px_minmax(0,1.8fr)_220px_160px_140px] md:items-center md:gap-4 md:px-5 md:py-3.5"
+                  className="group flex flex-col items-start gap-2.5 border-t border-zinc-100 px-4 py-3.5 transition-colors hover:bg-zinc-50/50 first:border-t-0 md:grid md:grid-cols-[48px_minmax(0,1.8fr)_220px_152px_132px] md:items-center md:gap-4 md:py-3"
                 >
                   <div className="hidden cursor-pointer justify-center text-zinc-300 transition-colors group-hover:text-indigo-500 md:flex">
                     {task.status === "done" ? (
@@ -364,7 +341,7 @@ export default function ProjectWorkspacePage() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") e.currentTarget.blur();
                       }}
-                      className={`w-full truncate bg-transparent text-[15px] font-medium outline-none ${task.status === "done" ? "text-zinc-500 line-through" : "text-zinc-900"}`}
+                      className={`w-full truncate bg-transparent text-[15px] font-medium outline-none ${task.status === "done" ? "text-zinc-500" : "text-zinc-900"}`}
                     />
                     <div className="mt-1.5 flex items-center gap-3 text-xs text-zinc-500 md:hidden">
                       <span className={`rounded px-2 py-0.5 text-xs font-medium ${getTaskStatusBadgeClass(task.status)}`}>
@@ -377,25 +354,20 @@ export default function ProjectWorkspacePage() {
 
                   <div className="flex w-full items-center gap-2.5">
                     {task.assignee_name ? (
-                      <>
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-indigo-200 bg-indigo-100 text-[10px] font-semibold text-indigo-700">
-                          {task.assignee_name.charAt(0)}
-                        </div>
-                        <select
-                          value={task.assignee_id || ""}
-                          onChange={(e) => {
-                            void handleTaskAssignment(task.id, e.target.value);
-                          }}
-                          className="min-w-0 flex-1 appearance-none bg-transparent text-sm font-medium text-zinc-900 outline-none"
-                        >
-                          <option value="">Unassigned</option>
-                          {projectMembers.map((employee) => (
-                            <option key={employee.user_id} value={employee.user_id}>
-                              {employee.name}
-                            </option>
-                          ))}
-                        </select>
-                      </>
+                      <select
+                        value={task.assignee_id || ""}
+                        onChange={(e) => {
+                          void handleTaskAssignment(task.id, e.target.value);
+                        }}
+                        className="min-w-0 flex-1 appearance-none bg-transparent text-sm font-medium text-zinc-900 outline-none"
+                      >
+                        <option value="">Unassigned</option>
+                        {projectMembers.map((employee) => (
+                          <option key={employee.user_id} value={employee.user_id}>
+                            {employee.name}
+                          </option>
+                        ))}
+                      </select>
                     ) : (
                       <div className="flex w-full items-center gap-2.5">
                         <span className="flex items-center gap-1.5 text-sm font-medium italic text-zinc-400">
