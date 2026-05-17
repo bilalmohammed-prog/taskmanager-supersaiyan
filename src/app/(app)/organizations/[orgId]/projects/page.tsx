@@ -261,94 +261,79 @@ export default function ProjectsPage() {
   }, [loadProjects]);
 
   return (
-    <div className="flex w-full max-w-5xl flex-col space-y-8 pb-16">
-      <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <span className="rounded-md border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-xs font-semibold tracking-wide uppercase text-indigo-700">
-              Project Workspace
-            </span>
-          </div>
-          <h1 className="mt-2 text-[2rem] leading-none font-medium tracking-tight text-zinc-900">
-            Projects
-          </h1>
-          <p className="max-w-lg text-[15px] text-zinc-500">
-            Manage timelines, track progress, and coordinate delivery across your team.
-          </p>
-        </div>
-
-        {canManage && (
-          <div className="flex shrink-0">
-            <Button
-              onClick={() => setShowCreate(true)}
-              className="h-9 border-transparent bg-indigo-500 text-white px-3.5 font-medium shadow-sm hover:bg-indigo-600"
-            >
-              <Plus className="mr-2 h-4 w-4 opacity-90" />
-              New Project
-            </Button>
-          </div>
-        )}
-      </div>
-      {/* Project Portfolio summary intentionally removed for a cleaner, production-grade layout */}
-
-      {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]"
-            >
-              <div className="space-y-3">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-1/3" />
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-4 w-2/5" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {projects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/60 p-10 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50">
-                <Calendar className="h-7 w-7 text-indigo-600" />
-              </div>
-              <h2 className="text-lg font-semibold text-zinc-900">No projects yet</h2>
-              <p className="max-w-md text-sm text-zinc-500">Create a project to organize work, add team members, and track delivery.</p>
-              {canManage && (
-                <div className="mt-2">
-                  <Button onClick={() => setShowCreate(true)} className="h-9 border-transparent bg-indigo-500 text-white px-3.5 font-medium shadow-sm hover:bg-indigo-600">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create project
-                  </Button>
-                </div>
-              )}
-            </div>
-          ) : null}
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium text-zinc-900">Projects</h2>
-
-            <div className="flex items-center gap-3">
+    <div className="flex w-full max-w-6xl flex-col gap-4 pb-12">
+      <div className="rounded-xl border border-zinc-200 bg-white px-3 py-3 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative w-full sm:max-w-sm">
               <input
                 placeholder="Search projects"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 pl-9 text-sm text-zinc-700 outline-none transition-colors placeholder:text-zinc-400 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
               />
-
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as "all" | ProjectStatus)}
-                className="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="all">All</option>
-                <option value="active">Active</option>
-                <option value="paused">Paused</option>
-                <option value="archived">Archived</option>
-              </select>
+              <Calendar className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             </div>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as "all" | ProjectStatus)}
+              className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition-colors focus:border-transparent focus:ring-2 focus:ring-indigo-500 sm:w-44"
+            >
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="paused">Paused</option>
+              <option value="archived">Archived</option>
+            </select>
           </div>
+
+          {canManage && (
+            <Button
+              onClick={() => setShowCreate(true)}
+              className="h-9 shrink-0 border-transparent bg-indigo-500 px-3.5 font-medium text-white shadow-sm hover:bg-indigo-600"
+            >
+              <Plus className="mr-2 h-4 w-4 opacity-90" />
+              New Project
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+          <div className="border-b border-zinc-200/80 bg-zinc-50/80 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+            Projects
+          </div>
+          <div className="space-y-0 divide-y divide-zinc-100">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[minmax(240px,1fr)_120px_80px_120px_140px_120px] md:items-center md:gap-4 md:px-6 md:py-3">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-5 w-24" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {projects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/60 p-8 text-center shadow-sm">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50">
+                <Calendar className="h-6 w-6 text-indigo-600" />
+              </div>
+              <h2 className="text-base font-semibold text-zinc-900">No projects yet</h2>
+              <p className="max-w-md text-sm text-zinc-500">Create a project to organize work, add team members, and track delivery.</p>
+              {canManage && (
+                <Button onClick={() => setShowCreate(true)} className="h-9 border-transparent bg-indigo-500 px-3.5 font-medium text-white shadow-sm hover:bg-indigo-600">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create project
+                </Button>
+              )}
+            </div>
+          ) : null}
 
           <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
             <div className="hidden grid-cols-[minmax(240px,1fr)_120px_80px_120px_140px_120px] items-center gap-4 border-b border-zinc-200/80 bg-zinc-50/80 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 md:grid">
