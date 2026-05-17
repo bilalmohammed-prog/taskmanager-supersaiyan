@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -12,6 +11,7 @@ import { supabase } from "@/lib/supabase/client";
 import { useOrgRole } from "@/hooks/useOrgRole";
 import { usePageHeader } from "@/components/layout/PageHeaderContext";
 import { Button } from "@/components/ui/button";
+import { ExpandableDescription } from "@/components/tasks/ExpandableDescription";
 import {
   Select,
   SelectContent,
@@ -292,122 +292,134 @@ export default function EmployeeTasksPage() {
 
   return (
     <div className="flex w-full max-w-5xl flex-col gap-2 pb-12">
-      <div className="flex flex-col gap-2">
-        {loading && (
-          <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-            Loading tasks...
+      <section>
+        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+          <div className="hidden grid-cols-[minmax(0,2fr)_200px_140px_140px] items-center gap-4 border-b border-zinc-200/80 bg-zinc-50/80 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:grid">
+            <div>Task</div>
+            <div>Assigned Workspace</div>
+            <div>Status</div>
+            <div>Due Date</div>
           </div>
-        )}
 
-        {!loading && tasks.length === 0 && (
-          <div className="rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">
-            No tasks assigned to this employee.
+          <div className="flex flex-col">
+            {loading && (
+              <div className="px-4 py-4 text-sm text-zinc-500">Loading tasks...</div>
+            )}
+
+            {!loading && tasks.length === 0 && (
+              <div className="px-4 py-4 text-sm text-zinc-500">No tasks assigned to this employee.</div>
+            )}
+
+            {!loading &&
+              tasks.map((task) => (
+                <div
+                  key={task.task_id}
+                  className="group flex flex-col items-start gap-2.5 border-t border-zinc-100 px-4 py-3 transition-colors hover:bg-zinc-50/50 first:border-t-0 md:grid md:grid-cols-[minmax(0,2fr)_200px_140px_140px] md:items-center md:gap-4"
+                >
+                  <div className="flex w-full min-w-0 flex-col">
+                    <input
+                      value={task.title}
+                      onChange={(e) =>
+                        setTasks((prev) =>
+                          prev.map((t) =>
+                            t.task_id === task.task_id
+                              ? {
+                                  ...t,
+                                  title: e.target.value,
+                                }
+                              : t
+                          )
+                        )
+                      }
+                      onBlur={(e) => {
+                        void handleTitleCommit(task.task_id, e.target.value);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.currentTarget.blur();
+                        }
+                      }}
+                      disabled={!canManage}
+                      className="w-full truncate bg-transparent text-[15px] font-medium text-foreground outline-none disabled:cursor-default"
+                    />
+                    <ExpandableDescription
+                      value={task.description ?? ""}
+                      onChange={(nextValue) =>
+                        setTasks((prev) =>
+                          prev.map((t) =>
+                            t.task_id === task.task_id
+                              ? {
+                                  ...t,
+                                  description: nextValue,
+                                }
+                              : t
+                          )
+                        )
+                      }
+                      onCommit={(nextValue) => {
+                        void handleDescriptionCommit(task.task_id, nextValue);
+                      }}
+                      disabled={!canManage}
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div className="flex w-full items-center">
+                    <Select
+                      value={task.project_id ?? "__none__"}
+                      onValueChange={(value) => {
+                        void handleProjectChange(task.task_id, value === "__none__" ? null : value);
+                      }}
+                      disabled={!canManage}
+                    >
+                      <SelectTrigger className="h-7 w-full border-none bg-transparent px-0 text-xs text-zinc-500 shadow-none focus-visible:ring-0">
+                        <SelectValue placeholder="No workspace" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">No workspace</SelectItem>
+                        {projects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center">
+                    <Select
+                      value={(task.status ?? "todo") as TaskStatus}
+                      onValueChange={(value) => {
+                        void handleStatusChange(task.task_id, value as TaskStatus);
+                      }}
+                      disabled={!canManage}
+                    >
+                      <SelectTrigger className="h-8 w-full min-w-32 bg-background text-xs">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todo">To Do</SelectItem>
+                        <SelectItem value="in_progress">In Progress</SelectItem>
+                        <SelectItem value="blocked">Blocked</SelectItem>
+                        <SelectItem value="done">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center">
+                    <input
+                      type="date"
+                      value={task.due_date ?? ""}
+                      onChange={(e) => handleDueDateChange(task.task_id, e.target.value)}
+                      className="h-8 w-full min-w-36 rounded-md border border-input bg-background px-3 text-xs"
+                      disabled={!canManage}
+                    />
+                  </div>
+                </div>
+              ))}
           </div>
-        )}
-
-        {!loading &&
-          tasks.map((task) => (
-            <div
-              key={task.task_id}
-              className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-card px-4 py-3 md:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)] md:items-center"
-            >
-              <div className="space-y-2">
-                <input
-                  value={task.title}
-                  onChange={(e) =>
-                    setTasks((prev) =>
-                      prev.map((t) =>
-                        t.task_id === task.task_id
-                          ? {
-                              ...t,
-                              title: e.target.value,
-                            }
-                          : t
-                      )
-                    )
-                  }
-                  onBlur={(e) => {
-                    void handleTitleCommit(task.task_id, e.target.value);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  disabled={!canManage}
-                  className="w-full bg-transparent text-[15px] font-medium text-foreground outline-none disabled:cursor-default"
-                />
-                <Select
-                  value={task.project_id ?? "__none__"}
-                  onValueChange={(value) => {
-                    void handleProjectChange(task.task_id, value === "__none__" ? null : value);
-                  }}
-                  disabled={!canManage}
-                >
-                  <SelectTrigger className="h-7 w-fit min-w-40 border-none bg-transparent px-0 text-sm text-muted-foreground shadow-none focus-visible:ring-0">
-                    <SelectValue placeholder="No project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">No project</SelectItem>
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <textarea
-                  value={task.description ?? ""}
-                  onChange={(e) =>
-                    setTasks((prev) =>
-                      prev.map((t) =>
-                        t.task_id === task.task_id
-                          ? {
-                              ...t,
-                              description: e.target.value,
-                            }
-                          : t
-                      )
-                    )
-                  }
-                  onBlur={(e) => {
-                    void handleDescriptionCommit(task.task_id, e.target.value);
-                  }}
-                  rows={2}
-                  disabled={!canManage}
-                  placeholder="Add description"
-                  className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground placeholder:text-zinc-400 outline-none transition-colors focus:border-transparent focus:ring-2 focus:ring-indigo-500 disabled:cursor-default"
-                />
-              </div>
-              <div className="flex items-center gap-2 md:justify-end">
-                <Select
-                  value={(task.status ?? "todo") as TaskStatus}
-                  onValueChange={(value) => {
-                    void handleStatusChange(task.task_id, value as TaskStatus);
-                  }}
-                  disabled={!canManage}
-                >
-                  <SelectTrigger className="h-9 w-full min-w-36 bg-background text-sm">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todo">To Do</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="blocked">Blocked</SelectItem>
-                    <SelectItem value="done">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-                <input
-                  type="date"
-                  value={task.due_date ?? ""}
-                  onChange={(e) => handleDueDateChange(task.task_id, e.target.value)}
-                  className="h-9 w-full min-w-40 rounded-md border border-input bg-background px-3 text-sm"
-                  disabled={!canManage}
-                />
-              </div>
-            </div>
-          ))}
-      </div>
+        </div>
+      </section>
 
       {showCreate && canManage && (
         <div
