@@ -78,6 +78,8 @@ export default function ProjectsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [savingProjectId, setSavingProjectId] = useState<string | null>(null);
+  const [openDuePopoverId, setOpenDuePopoverId] = useState<string | null>(null);
 
   const PAGE_SIZE = 12;
 
@@ -374,7 +376,46 @@ export default function ProjectsPage() {
                         <div className="mt-1 flex items-center gap-2 md:hidden">
                           <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${getStatusBadgeClass(p.status)}`}>{p.status}</span>
                           <span className="h-1 w-1 rounded-full bg-zinc-300" />
-                          <span className="text-xs text-zinc-500">{formatDate(p.startDate)}</span>
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenDuePopoverId((id) => (id === p.id ? null : p.id));
+                              }}
+                              className="text-xs text-zinc-500 bg-transparent"
+                            >
+                              {p.endDate ? formatDate(p.endDate) : "No due date"}
+                            </button>
+
+                            {openDuePopoverId === p.id && (
+                              <div onClick={(e) => e.stopPropagation()} className="absolute left-0 z-50 mt-2 w-40 rounded-md border bg-white p-2 shadow">
+                                <input
+                                  type="date"
+                                  autoFocus
+                                  value={p.endDate ?? ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value || null;
+                                    setProjects((prev) => prev.map((pp) => (pp.id === p.id ? { ...pp, endDate: val } : pp)));
+                                  }}
+                                  onBlur={async (e) => {
+                                    const val = e.currentTarget.value || null;
+                                    setSavingProjectId(p.id);
+                                    try {
+                                      await updateProjectAction(p.id, { endDate: val });
+                                    } catch (err) {
+                                      addToast("Failed to update due date", "error");
+                                      await loadProjects();
+                                    } finally {
+                                      setSavingProjectId(null);
+                                      setOpenDuePopoverId(null);
+                                    }
+                                  }}
+                                  className="w-full rounded-md border px-2 py-1 text-sm outline-none"
+                                />
+                                {savingProjectId === p.id && <div className="mt-1 text-xs text-zinc-500">Saving...</div>}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -405,6 +446,7 @@ export default function ProjectsPage() {
                               addToast("Failed to update status", "error");
                             }
                           }}
+                          onClick={(e) => e.stopPropagation()}
                           className={`appearance-none rounded-md border px-2.5 py-1 text-[13px] font-medium outline-none ${getStatusBadgeClass(p.status)}`}
                         >
                           <option value="active">Active</option>
@@ -424,7 +466,49 @@ export default function ProjectsPage() {
 
                       <div className="hidden items-center text-sm text-zinc-500 md:flex">
                         <Calendar className="mr-1.5 h-3.5 w-3.5 opacity-70" />
-                        {formatDate(p.endDate)}
+                        <div className="relative">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenDuePopoverId((id) => (id === p.id ? null : p.id));
+                            }}
+                            className="flex items-center gap-2 text-sm font-medium text-zinc-600"
+                          >
+                            <span>{p.endDate ? formatDate(p.endDate) : "No due date"}</span>
+                          </button>
+
+                          {openDuePopoverId === p.id && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute right-0 z-50 mt-2 w-44 rounded-md border bg-white p-2 shadow"
+                            >
+                              <input
+                                type="date"
+                                autoFocus
+                                value={p.endDate ?? ""}
+                                onChange={(e) => {
+                                  const val = e.target.value || null;
+                                  setProjects((prev) => prev.map((pp) => (pp.id === p.id ? { ...pp, endDate: val } : pp)));
+                                }}
+                                onBlur={async (e) => {
+                                  const val = e.currentTarget.value || null;
+                                  setSavingProjectId(p.id);
+                                  try {
+                                    await updateProjectAction(p.id, { endDate: val });
+                                  } catch (err) {
+                                    addToast("Failed to update due date", "error");
+                                    await loadProjects();
+                                  } finally {
+                                    setSavingProjectId(null);
+                                    setOpenDuePopoverId(null);
+                                  }
+                                }}
+                                className="w-full rounded-md border px-2 py-1 text-sm outline-none"
+                              />
+                              {savingProjectId === p.id && <div className="mt-1 text-xs text-zinc-500">Saving...</div>}
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <div className="absolute top-3 right-3 flex w-full justify-end md:static md:w-auto">
