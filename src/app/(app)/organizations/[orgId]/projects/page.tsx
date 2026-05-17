@@ -60,7 +60,7 @@ function formatDate(date?: string | null) {
   if (!date) return "-";
   try {
     return new Date(date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
-  } catch (err) {
+  } catch {
     return new Date(date).toLocaleDateString();
   }
 }
@@ -96,6 +96,29 @@ function getFloatingPanelPosition(triggerRect: DOMRect, panelWidth: number, pane
   return { top, left };
 }
 
+function getAnchoredPopoverPosition(triggerRect: DOMRect, panelWidth: number, panelHeight: number): FloatingPanelPosition {
+  const viewportPadding = 12;
+  const gap = 6;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const openUpward = triggerRect.bottom + panelHeight + gap > viewportHeight - viewportPadding;
+
+  const top = openUpward
+    ? Math.max(viewportPadding, triggerRect.top - panelHeight - gap)
+    : Math.min(triggerRect.bottom + gap, viewportHeight - panelHeight - viewportPadding);
+
+  const preferredLeft = triggerRect.right - panelWidth;
+  const left = Math.min(
+    Math.max(preferredLeft, viewportPadding),
+    viewportWidth - panelWidth - viewportPadding
+  );
+
+  return { top, left };
+}
+
+const desktopProjectsTableGrid =
+  "md:grid-cols-[minmax(0,2.1fr)_minmax(0,1.35fr)_72px_112px_130px_104px_56px]";
+
 export default function ProjectsPage() {
   const { orgId } = useParams<{ orgId: string }>();
   const router = useRouter();
@@ -108,7 +131,6 @@ export default function ProjectsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
-  const [status, setStatus] = useState<ProjectStatus>("active");
   const [membersList, setMembersList] = useState<Array<{ user_id: string; name: string }>>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
@@ -118,7 +140,6 @@ export default function ProjectsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | ProjectStatus>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [savingProjectId, setSavingProjectId] = useState<string | null>(null);
@@ -209,7 +230,7 @@ export default function ProjectsPage() {
             }
 
             map[p.id] = { owner, memberCount, completed, total };
-          } catch (e) {
+          } catch {
             // ignore per-project failures
           }
         })
@@ -249,7 +270,6 @@ export default function ProjectsPage() {
       setName("");
       setStartDate("");
       setEndDate("");
-      setStatus("active");
       setSelectedMembers([]);
     } catch {
       addToast("Create failed", "error");
@@ -267,7 +287,7 @@ export default function ProjectsPage() {
         setMembersLoading(true);
         const res = await listOrgMembers(orgId!);
         if (!cancelled) setMembersList(res.data ?? []);
-      } catch (e) {
+      } catch {
         // ignore
       } finally {
         if (!cancelled) setMembersLoading(false);
@@ -285,7 +305,6 @@ export default function ProjectsPage() {
     if (!confirm("Delete this project?")) return;
 
     const backup = projects;
-    setDeletingId(id);
     setProjects((prev) => prev.filter((p) => p.id !== id));
 
     try {
@@ -295,8 +314,6 @@ export default function ProjectsPage() {
       addToast("Delete failed", "error");
       setProjects(backup);
     }
-
-    setDeletingId(null);
   }
 
   useEffect(() => {
@@ -364,7 +381,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="flex w-full max-w-6xl flex-col gap-4 pb-12">
-      <div className="rounded-xl border border-zinc-200 bg-white px-3 py-3 shadow-sm">
+      <div className="mx-auto w-full max-w-5xl rounded-xl border border-zinc-200 bg-white px-4 py-2.5 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative w-full sm:max-w-sm">
@@ -392,7 +409,7 @@ export default function ProjectsPage() {
           {canManage && (
             <Button
               onClick={() => setShowCreate(true)}
-              className="h-9 shrink-0 border-transparent bg-indigo-500 px-3.5 font-medium text-white shadow-sm hover:bg-indigo-600"
+              className="h-9 shrink-0 rounded-lg border border-indigo-500 bg-indigo-500 px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-600"
             >
               <Plus className="mr-2 h-4 w-4 opacity-90" />
               New Project
@@ -402,19 +419,25 @@ export default function ProjectsPage() {
       </div>
 
       {loading ? (
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+        <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
           <div className="border-b border-zinc-200/80 bg-zinc-50/80 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
             Projects
           </div>
           <div className="space-y-0 divide-y divide-zinc-100">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="grid grid-cols-1 gap-3 px-4 py-4 md:grid-cols-[minmax(240px,1fr)_120px_80px_120px_140px_120px] md:items-center md:gap-4 md:px-6 md:py-3">
+              <div
+                key={i}
+                className={`grid grid-cols-1 gap-3 px-4 py-4 md:items-center md:gap-4 md:px-6 md:py-3 ${desktopProjectsTableGrid}`}
+              >
                 <Skeleton className="h-5 w-3/4" />
                 <Skeleton className="h-5 w-24" />
                 <Skeleton className="h-5 w-16" />
                 <Skeleton className="h-8 w-24" />
                 <Skeleton className="h-5 w-28" />
                 <Skeleton className="h-5 w-24" />
+                <div className="hidden justify-end md:flex">
+                  <Skeleton className="h-8 w-8 rounded-md" />
+                </div>
               </div>
             ))}
           </div>
@@ -437,14 +460,17 @@ export default function ProjectsPage() {
             </div>
           ) : null}
 
-          <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-            <div className="hidden grid-cols-[minmax(240px,1fr)_120px_80px_120px_140px_120px] items-center gap-4 border-b border-zinc-200/80 bg-zinc-50/80 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 md:grid">
-              <div>Project</div>
-              <div>Owner</div>
-              <div>Members</div>
-              <div>Status</div>
-              <div>Progress</div>
-              <div>Due Date</div>
+          <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+            <div
+              className={`hidden items-center gap-4 border-b border-zinc-200/80 bg-zinc-50/80 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 md:grid ${desktopProjectsTableGrid}`}
+            >
+              <div className="min-w-0">Project</div>
+              <div className="min-w-0">Owner</div>
+              <div className="whitespace-nowrap">Members</div>
+              <div className="whitespace-nowrap">Status</div>
+              <div className="whitespace-nowrap">Progress</div>
+              <div className="whitespace-nowrap">Due Date</div>
+              <div className="text-right">Actions</div>
             </div>
 
             <div className="divide-y divide-zinc-100">
@@ -460,10 +486,10 @@ export default function ProjectsPage() {
                     <div
                       key={p.id}
                       onClick={() => router.push(`/organizations/${orgId}/projects/${p.id}`)}
-                      className="group relative flex flex-col items-start gap-3 px-4 py-3 transition-colors hover:bg-zinc-50/50 md:grid md:grid-cols-[minmax(240px,1fr)_120px_80px_120px_140px_120px] md:items-center md:gap-4 md:px-6 md:py-3"
+                      className={`group relative flex flex-col items-start gap-3 px-4 py-3 transition-colors hover:bg-zinc-50/50 md:grid md:items-center md:gap-4 md:px-6 md:py-3 ${desktopProjectsTableGrid}`}
                     >
                       <div className="flex w-full min-w-0 flex-col">
-                        <span className="truncate text-[15px] font-medium text-zinc-900">{p.name}</span>
+                        <span className="min-w-0 break-words text-[15px] font-medium leading-relaxed text-zinc-900">{p.name}</span>
                         <div className="mt-1 flex items-center gap-2 md:hidden">
                           <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${getStatusBadgeClass(p.status)}`}>{p.status}</span>
                           <span className="h-1 w-1 rounded-full bg-zinc-300" />
@@ -493,7 +519,7 @@ export default function ProjectsPage() {
                                     setSavingProjectId(p.id);
                                     try {
                                       await updateProjectAction(p.id, { endDate: val });
-                                    } catch (err) {
+                                    } catch {
                                       addToast("Failed to update due date", "error");
                                       await loadProjects();
                                     } finally {
@@ -511,11 +537,11 @@ export default function ProjectsPage() {
                       </div>
 
                       <div className="hidden min-w-0 md:flex md:items-center">
-                        <span className="truncate text-sm text-zinc-700">{meta.owner ?? "—"}</span>
+                        <span className="min-w-0 break-words text-sm leading-relaxed text-zinc-700">{meta.owner ?? "—"}</span>
                       </div>
 
                       <div className="hidden md:flex md:items-center">
-                        <span className="text-sm tabular-nums text-zinc-600">{meta.memberCount ?? 0}</span>
+                        <span className="whitespace-nowrap text-sm tabular-nums text-zinc-600">{meta.memberCount ?? 0}</span>
                       </div>
 
                       <div className="hidden md:flex md:items-center md:gap-2">
@@ -526,7 +552,7 @@ export default function ProjectsPage() {
                             try {
                               await updateProjectAction(p.id, { status: nv });
                               setProjects((prev) => prev.map((pp) => (pp.id === p.id ? { ...pp, status: nv } : pp)));
-                            } catch (err) {
+                            } catch {
                               addToast("Failed to update status", "error");
                             }
                           }}
@@ -539,16 +565,16 @@ export default function ProjectsPage() {
                         </select>
                       </div>
 
-                      <div className="hidden md:flex md:flex-col md:items-start md:gap-2">
-                        <div className="w-28">
-                          <div className="h-2 w-full rounded-full bg-zinc-100">
+                      <div className="hidden min-w-0 md:flex md:flex-col md:items-start md:gap-2">
+                        <div className="w-full max-w-28">
+                          <div className="h-1.5 w-full rounded-full bg-zinc-100">
                             <div style={{ width: `${progressPct}%` }} className="h-2 rounded-full bg-emerald-500" />
                           </div>
                         </div>
-                        <span className="text-xs text-zinc-500">{progressText}</span>
+                        <span className="whitespace-nowrap text-xs text-zinc-500">{progressText}</span>
                       </div>
 
-                      <div className="hidden items-center text-sm text-zinc-500 md:flex">
+                      <div className="hidden min-w-0 items-center text-sm text-zinc-500 md:flex">
                         <Calendar className="mr-1.5 h-3.5 w-3.5 opacity-70" />
                         <div className="relative">
                           <button
@@ -556,7 +582,7 @@ export default function ProjectsPage() {
                               e.stopPropagation();
                               setOpenDuePopoverId((id) => (id === p.id ? null : p.id));
                             }}
-                            className="flex items-center gap-2 text-sm font-medium text-zinc-600"
+                            className="flex items-center gap-2 whitespace-nowrap text-sm font-medium text-zinc-600"
                           >
                             <span>{p.endDate ? formatDate(p.endDate) : "No due date"}</span>
                           </button>
@@ -579,7 +605,7 @@ export default function ProjectsPage() {
                                   setSavingProjectId(p.id);
                                   try {
                                     await updateProjectAction(p.id, { endDate: val });
-                                  } catch (err) {
+                                  } catch {
                                     addToast("Failed to update due date", "error");
                                     await loadProjects();
                                   } finally {
@@ -595,7 +621,7 @@ export default function ProjectsPage() {
                         </div>
                       </div>
 
-                      <div className="absolute top-3 right-3 flex w-full justify-end md:static md:w-auto">
+                      <div className="hidden w-full shrink-0 md:flex md:items-center md:justify-end">
                         {canManage && (
                           <button
                             type="button"
@@ -607,7 +633,7 @@ export default function ProjectsPage() {
                                 openActionsMenu(p, e.currentTarget.getBoundingClientRect());
                               }
                             }}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white/90 text-zinc-500 shadow-sm transition-all hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 md:opacity-100"
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center self-center rounded-md text-zinc-400 transition-[background-color,color] hover:bg-zinc-100 hover:text-zinc-700 focus-visible:bg-zinc-100 focus-visible:text-zinc-700 focus-visible:outline-none group-hover:text-zinc-600"
                             aria-label={`Project actions for ${p.name}`}
                             aria-expanded={actionsMenu?.projectId === p.id}
                           >
@@ -640,7 +666,7 @@ export default function ProjectsPage() {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              openRenameCard(actionsMenu.projectId, actionsMenu.projectName, e.currentTarget.getBoundingClientRect());
+              openRenameCard(actionsMenu.projectId, actionsMenu.projectName, actionsMenu.triggerRect);
             }}
             className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus:bg-zinc-50 focus:outline-none"
           >
@@ -667,17 +693,15 @@ export default function ProjectsPage() {
       {typeof document !== "undefined" && renameCard && createPortal(
         <div
           ref={renameCardRef}
-          className="fixed z-[80] w-[320px] rounded-xl border border-zinc-200 bg-white p-4 shadow-2xl shadow-zinc-200/80"
+          className="fixed z-[80] w-[272px] rounded-lg border border-zinc-200/90 bg-white p-3 shadow-lg shadow-zinc-900/8"
           style={{
-            ...getFloatingPanelPosition(renameCard.triggerRect, 320, 176),
+            ...getAnchoredPopoverPosition(renameCard.triggerRect, 272, 136),
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-zinc-900">Rename Project</p>
-              <p className="mt-0.5 text-xs text-zinc-500">Update the project name inline.</p>
-            </div>
+          <div className="mb-2.5">
+            <p className="text-[13px] font-semibold text-zinc-900">Rename project</p>
+            <p className="mt-0.5 text-[11px] text-zinc-500">Update the project name inline.</p>
           </div>
 
           <Input
@@ -694,16 +718,16 @@ export default function ProjectsPage() {
                 setRenameCard(null);
               }
             }}
-            className="h-9"
+            className="h-8 rounded-md border-zinc-200 px-2.5 text-sm shadow-none focus-visible:ring-1 focus-visible:ring-indigo-500"
             placeholder="Project name"
           />
 
-          <div className="mt-4 flex items-center justify-end gap-2">
+          <div className="mt-3 flex items-center justify-end gap-1.5">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setRenameCard(null)}
-              className="h-8"
+              className="h-7 rounded-md px-2.5 text-xs"
             >
               Cancel
             </Button>
@@ -712,7 +736,7 @@ export default function ProjectsPage() {
               onClick={() => {
                 void saveRenamedProject();
               }}
-              className="h-8 bg-indigo-500 text-white hover:bg-indigo-600"
+              className="h-7 rounded-md bg-indigo-500 px-2.5 text-xs text-white hover:bg-indigo-600"
             >
               Save
             </Button>
