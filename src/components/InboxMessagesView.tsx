@@ -70,6 +70,7 @@ export default function InboxMessagesView({
   );
   const [selected, setSelected] = useState<ExtendedMessageUI | null>(null);
   const [acceptError, setAcceptError] = useState<string | null>(null);
+  const [senderEmailById, setSenderEmailById] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -111,6 +112,37 @@ export default function InboxMessagesView({
           ...apiMessages.map(toMessageUI),
           ...inviteRows.map((invite) => toInviteMessageUI(invite, normalizedEmail)),
         ];
+
+        const profileIds = Array.from(
+          new Set(
+            mergedMessages.flatMap((message) => {
+              const ids: string[] = [];
+              if (message.sender_id) ids.push(message.sender_id);
+              if (message.recipient_id) ids.push(message.recipient_id);
+              return ids;
+            })
+          )
+        );
+
+        if (profileIds.length > 0) {
+          const { data: profiles, error: profileError } = await supabase
+            .from("profiles")
+            .select("id,username")
+            .in("id", profileIds);
+
+          if (!profileError && profiles) {
+            const nextMap: Record<string, string> = {};
+            profiles.forEach((profile) => {
+              if (profile.username) {
+                nextMap[profile.id] = profile.username;
+              }
+            });
+            if (currentUserId && normalizedEmail) {
+              nextMap[currentUserId] = normalizedEmail;
+            }
+            setSenderEmailById(nextMap);
+          }
+        }
 
         const byId = new Map<string, ExtendedMessageUI>();
         mergedMessages.forEach((item) => {
@@ -199,6 +231,20 @@ export default function InboxMessagesView({
     });
   }
 
+  function getSenderLabel(message: ExtendedMessageUI): string {
+    return senderEmailById[message.sender_id] ?? "Unknown";
+  }
+
+  function getRecipientLabel(message: ExtendedMessageUI): string | null {
+    if (message._type === "invite") {
+      return message.invite_email ?? "Unknown";
+    }
+    if (message.recipient_id) {
+      return senderEmailById[message.recipient_id] ?? "Unknown";
+    }
+    return null;
+  }
+
   return (
     <div className="flex h-[calc(100vh-52px)] overflow-hidden">
       <div className="w-[320px] flex-shrink-0 border-r border-border overflow-y-auto">
@@ -224,9 +270,14 @@ export default function InboxMessagesView({
               selected?.id === msg.id ? "bg-accent" : ""
             }`}
           >
-            <p className="text-xs text-muted-foreground truncate">
-              From: {msg.sender_id.slice(0, 8)}...
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground truncate">
+                From: {senderEmailById[msg.sender_id] ?? "Unknown"}
+              </p>
+              <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${msg._type === "invite" ? "border-amber-200 bg-amber-50 text-amber-700" : "border-zinc-200 bg-zinc-50 text-zinc-600"}`}>
+                {msg._type === "invite" ? "Invite" : "Message"}
+              </span>
+            </div>
             <p className="text-sm text-foreground mt-1 line-clamp-2">
               {msg.content}
             </p>
@@ -253,12 +304,17 @@ export default function InboxMessagesView({
         {selected ? (
           <div className="max-w-2xl space-y-4">
             <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">
-                From: {selected.sender_id}
-              </p>
-              {selected.recipient_id && (
+              <div className="flex flex-wrap items-center gap-2">
                 <p className="text-xs text-muted-foreground">
-                  To: {selected.recipient_id}
+                  From: {getSenderLabel(selected)}
+                </p>
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${selected._type === "invite" ? "border-amber-200 bg-amber-50 text-amber-700" : "border-zinc-200 bg-zinc-50 text-zinc-600"}`}>
+                  {selected._type === "invite" ? "Invite" : "Message"}
+                </span>
+              </div>
+              {getRecipientLabel(selected) && (
+                <p className="text-xs text-muted-foreground">
+                  To: {getRecipientLabel(selected)}
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
