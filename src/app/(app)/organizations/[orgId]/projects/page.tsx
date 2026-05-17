@@ -38,7 +38,11 @@ type ProjectRow = {
 
 function formatDate(date?: string | null) {
   if (!date) return "-";
-  return new Date(date).toLocaleDateString();
+  try {
+    return new Date(date).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+  } catch (err) {
+    return new Date(date).toLocaleDateString();
+  }
 }
 
 function getStatusBadgeClass(status: ProjectStatus) {
