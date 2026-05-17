@@ -238,26 +238,24 @@ export default function MyTasksPage() {
       )}
 
       <div className="rounded-xl border border-zinc-200/80 bg-white shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]">
-        <div className="hidden grid-cols-[220px_minmax(260px,1fr)_170px_160px_140px] items-center gap-4 border-b border-zinc-200/80 px-4 py-3 text-sm font-semibold text-zinc-500 md:grid">
+        <div className="hidden grid-cols-[220px_minmax(260px,1fr)_170px_160px] items-center gap-4 border-b border-zinc-200/80 px-4 py-3 text-sm font-semibold text-zinc-500 md:grid">
           <div>Project</div>
           <div>Task</div>
           <div>Status</div>
           <div>Due Date</div>
-          <div>Allocated Hours</div>
         </div>
 
-        <div className="flex flex-col gap-2 p-2">
+        <div className="flex flex-col divide-y divide-zinc-200/80">
           {loading ? (
             Array.from({ length: 6 }).map((_, index) => (
               <div
                 key={index}
-                className="grid grid-cols-1 gap-3 rounded-lg border border-zinc-200/80 px-4 py-3 md:grid-cols-[220px_minmax(260px,1fr)_170px_160px_140px] md:items-center"
+                className="grid grid-cols-1 gap-3 px-4 py-3 md:grid-cols-[220px_minmax(260px,1fr)_170px_160px] md:items-center"
               >
                 <Skeleton className="h-5 w-28" />
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-8 w-28" />
                 <Skeleton className="h-5 w-24" />
-                <Skeleton className="h-5 w-16" />
               </div>
             ))
           ) : filteredTasks.length === 0 ? (
@@ -274,11 +272,9 @@ export default function MyTasksPage() {
             filteredTasks.map((task) => (
               <div
                 key={task.id}
-                className="grid grid-cols-1 gap-3 rounded-lg border border-zinc-200/80 bg-white px-4 py-3 transition-colors hover:border-zinc-300 md:grid-cols-[220px_minmax(260px,1fr)_170px_160px_140px] md:items-center"
+                className="grid grid-cols-1 gap-3 px-4 py-3 transition-colors hover:bg-zinc-50/60 md:grid-cols-[220px_minmax(260px,1fr)_170px_160px] md:items-center"
               >
-                <div className="inline-flex w-fit items-center rounded-full border border-indigo-200/80 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">
-                  {task.project_name}
-                </div>
+                <div className="text-sm font-medium text-zinc-700">{task.project_name}</div>
 
                 <div className="text-sm font-medium text-zinc-900">{task.title}</div>
 
@@ -302,10 +298,6 @@ export default function MyTasksPage() {
                 >
                   <Calendar className="h-3.5 w-3.5" />
                   {formatDueDate(task.due_date)}
-                </div>
-
-                <div className="text-sm text-zinc-600">
-                  {task.allocated_hours === null ? "-" : task.allocated_hours}
                 </div>
 
                 <div className="md:hidden">
