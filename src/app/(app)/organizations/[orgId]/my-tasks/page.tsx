@@ -69,6 +69,7 @@ export default function MyTasksPage() {
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
 
+  const [taskQuery, setTaskQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [dueSort, setDueSort] = useState<DueSort>("asc");
@@ -121,10 +122,12 @@ export default function MyTasksPage() {
   }, [tasks]);
 
   const filteredTasks = useMemo(() => {
+    const normalizedQuery = taskQuery.trim().toLowerCase();
     const byFilter = tasks.filter((task) => {
       const statusMatch = statusFilter === "all" || task.status === statusFilter;
       const projectMatch = projectFilter === "all" || task.project_id === projectFilter;
-      return statusMatch && projectMatch;
+      const titleMatch = !normalizedQuery || task.title.toLowerCase().includes(normalizedQuery);
+      return statusMatch && projectMatch && titleMatch;
     });
 
     const sorted = [...byFilter].sort((a, b) => {
@@ -135,7 +138,7 @@ export default function MyTasksPage() {
     });
 
     return sorted;
-  }, [tasks, statusFilter, projectFilter, dueSort]);
+  }, [tasks, statusFilter, projectFilter, dueSort, taskQuery]);
 
   const summary = useMemo(() => {
     const total = tasks.length;
@@ -165,20 +168,19 @@ export default function MyTasksPage() {
 
   useEffect(() => {
     setPageHeader(
-      <div className="flex w-full flex-wrap items-center justify-between gap-3">
+      <div className="flex w-full flex-wrap items-center justify-between gap-3 md:flex-nowrap">
         <div className="min-w-0">
           <h1 className="truncate text-lg font-semibold tracking-tight text-zinc-900">My Tasks</h1>
           <p className="text-xs text-zinc-500">All tasks assigned to you across projects</p>
         </div>
 
-        <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-1 flex-wrap items-center justify-end gap-2 md:flex-nowrap">
           <div className="relative w-full max-w-[220px]">
             <input
-              value={projectFilter}
-              onChange={(e) => setProjectFilter(e.target.value)}
-              placeholder="Search projects"
+              value={taskQuery}
+              onChange={(e) => setTaskQuery(e.target.value)}
+              placeholder="Search tasks"
               className="h-8 w-full rounded-md border border-zinc-200 bg-white px-3 text-xs text-zinc-700 outline-none transition-colors focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-              list="project-options"
             />
           </div>
           <select
@@ -208,7 +210,7 @@ export default function MyTasksPage() {
             type="button"
             variant="outline"
             onClick={() => setDueSort((prev) => (prev === "asc" ? "desc" : "asc"))}
-            className="h-8 border-zinc-200 px-2.5 text-xs text-zinc-700"
+            className="h-8 shrink-0 border-zinc-200 px-2.5 text-xs text-zinc-700"
           >
             <ArrowUpDown className="mr-2 h-4 w-4" />
             {dueSort === "asc" ? "Earliest" : "Latest"}
@@ -220,18 +222,10 @@ export default function MyTasksPage() {
     return () => {
       setPageHeader(null);
     };
-  }, [dueSort, projectFilter, projectOptions, setPageHeader, statusFilter]);
+  }, [dueSort, projectFilter, projectOptions, setPageHeader, statusFilter, taskQuery]);
 
   return (
     <div className="flex w-full max-w-6xl flex-col gap-6 pb-12">
-      <datalist id="project-options">
-        {projectOptions.map((project) => (
-          <option key={project.id} value={project.id}>
-            {project.name}
-          </option>
-        ))}
-      </datalist>
-
       <div className="flex flex-wrap gap-2 rounded-xl border border-zinc-200/80 bg-white p-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]">
         <div className="rounded-lg border border-zinc-200/70 bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
           <span className="font-semibold text-zinc-900">Total:</span> {summary.total}
