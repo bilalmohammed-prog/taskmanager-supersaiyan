@@ -2,6 +2,10 @@
 
 import { useOrgRole } from "@/hooks/useOrgRole";
 import { createProjectAction } from "@/actions/project/create";
+import { listOrgMembers } from "@/actions/organization/listOrgMembers";
+import { assignProjectMember } from "@/actions/project/assignProjectMember";
+import { listProjectMembers } from "@/actions/project/listProjectMembers";
+import { updateProjectAction } from "@/actions/project/update";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useParams, useRouter } from "next/navigation";
@@ -62,6 +66,13 @@ export default function ProjectsPage() {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [status, setStatus] = useState<ProjectStatus>("active");
+  const [membersList, setMembersList] = useState<Array<{ user_id: string; name: string }>>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [memberFilter, setMemberFilter] = useState("");
+  const [projectMeta, setProjectMeta] = useState<Record<string, { owner?: string; memberCount?: number; completed?: number; total?: number }>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | ProjectStatus>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -119,18 +130,69 @@ export default function ProjectsPage() {
     [orgId, projects.length, addToast]
   );
 
+  useEffect(() => {
+    if (!projects.length || !orgId) return;
+
+    let cancelled = false;
+
+    async function fetchMeta() {
+      const map: Record<string, { owner?: string; memberCount?: number; completed?: number; total?: number }> = {};
+
+      await Promise.all(
+        projects.map(async (p) => {
+          try {
+            const members = await listProjectMembers(p.id);
+            const memberCount = members.length;
+            const owner = members[0]?.name ?? undefined;
+
+            const { data: tasks } = await supabase
+              .from("tasks")
+              .select("status")
+              .eq("project_id", p.id)
+              .is("deleted_at", null);
+
+            let completed = 0;
+            let total = 0;
+            if (Array.isArray(tasks)) {
+              const arr = tasks as Array<{ status: string | null }>;
+              total = arr.length;
+              completed = arr.filter((t) => t.status === "done").length;
+            }
+
+            map[p.id] = { owner, memberCount, completed, total };
+          } catch (e) {
+            // ignore per-project failures
+          }
+        })
+      );
+
+      if (!cancelled) setProjectMeta(map);
+    }
+
+    void fetchMeta();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projects, orgId]);
+
   async function handleCreate() {
     if (!name.trim()) return;
 
     try {
       setCreating(true);
 
-      await createProjectAction({
+      const created = await createProjectAction({
         name: name.trim(),
-        status,
+        // new projects default to active (no UI to choose)
+        status: "active",
         startDate: startDate || null,
         endDate: endDate || null,
       });
+
+      if (selectedMembers.length > 0 && created?.id) {
+        await Promise.all(selectedMembers.map((uid) => assignProjectMember(created.id, uid, orgId!)));
+      }
 
       await loadProjects();
 
@@ -139,12 +201,36 @@ export default function ProjectsPage() {
       setStartDate("");
       setEndDate("");
       setStatus("active");
+      setSelectedMembers([]);
     } catch {
       addToast("Create failed", "error");
     } finally {
       setCreating(false);
     }
   }
+
+  useEffect(() => {
+    if (!showCreate) return;
+    let cancelled = false;
+
+    async function loadMembers() {
+      try {
+        setMembersLoading(true);
+        const res = await listOrgMembers(orgId!);
+        if (!cancelled) setMembersList(res.data ?? []);
+      } catch (e) {
+        // ignore
+      } finally {
+        if (!cancelled) setMembersLoading(false);
+      }
+    }
+
+    void loadMembers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showCreate, orgId]);
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this project?")) return;
@@ -189,52 +275,15 @@ export default function ProjectsPage() {
           <div className="flex shrink-0">
             <Button
               onClick={() => setShowCreate(true)}
-              className="border-transparent bg-indigo-600 text-white shadow-sm hover:bg-indigo-700"
+              className="h-9 border-transparent bg-indigo-500 text-white px-3.5 font-medium shadow-sm hover:bg-indigo-600"
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 h-4 w-4 opacity-90" />
               New Project
             </Button>
           </div>
         )}
       </div>
-
-      <div className="flex flex-col justify-between gap-6 rounded-xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] lg:flex-row lg:items-center">
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-zinc-900">Project Portfolio</span>
-            <span className="text-xs text-zinc-500">{projects.length} visible projects</span>
-          </div>
-
-          <div className="mx-2 hidden h-8 w-px bg-zinc-200 sm:block" />
-
-          <div className="flex items-center gap-3">
-            <div className="flex -space-x-2">
-              {projects.slice(0, 3).map((project) => (
-                <div
-                  key={project.id}
-                  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-zinc-100 text-xs font-medium text-zinc-700 shadow-sm ring-1 ring-zinc-200/50"
-                  title={project.name}
-                >
-                  {project.name.charAt(0).toUpperCase()}
-                </div>
-              ))}
-              {projects.length === 0 && (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-zinc-100 text-xs font-medium text-zinc-700 shadow-sm ring-1 ring-zinc-200/50">
-                  0
-                </div>
-              )}
-            </div>
-            <span className="text-xs text-zinc-500">Recently created</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 border-t border-zinc-100 pt-4 lg:border-t-0 lg:pt-0">
-          <span className="hidden text-xs text-zinc-500 sm:block">Status:</span>
-          <div className="inline-flex items-center rounded-md border border-zinc-200/60 bg-zinc-50 px-2.5 py-1 text-xs font-medium text-zinc-600">
-            {hasMore ? "More available" : "Fully loaded"}
-          </div>
-        </div>
-      </div>
+      {/* Project Portfolio summary intentionally removed for a cleaner, production-grade layout */}
 
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -254,81 +303,148 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="space-y-4">
+          {projects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/60 p-10 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50">
+                <Calendar className="h-7 w-7 text-indigo-600" />
+              </div>
+              <h2 className="text-lg font-semibold text-zinc-900">No projects yet</h2>
+              <p className="max-w-md text-sm text-zinc-500">Create a project to organize work, add team members, and track delivery.</p>
+              {canManage && (
+                <div className="mt-2">
+                  <Button onClick={() => setShowCreate(true)} className="h-9 border-transparent bg-indigo-500 text-white px-3.5 font-medium shadow-sm hover:bg-indigo-600">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create project
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : null}
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-medium text-zinc-900">Projects</h2>
-            <span className="text-sm text-zinc-500">
-              {projects.length} {projects.length === 1 ? "project" : "projects"}
-            </span>
+
+            <div className="flex items-center gap-3">
+              <input
+                placeholder="Search projects"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as "all" | ProjectStatus)}
+                className="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="paused">Paused</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
           </div>
 
           <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-            <div className="hidden grid-cols-[minmax(240px,1fr)_140px_160px_160px_60px] items-center gap-4 border-b border-zinc-200/80 bg-zinc-50/80 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 md:grid">
+            <div className="hidden grid-cols-[minmax(240px,1fr)_120px_80px_120px_140px_120px] items-center gap-4 border-b border-zinc-200/80 bg-zinc-50/80 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 md:grid">
               <div>Project</div>
+              <div>Owner</div>
+              <div>Members</div>
               <div>Status</div>
-              <div>Start Date</div>
-              <div>End Date</div>
-              <div></div>
+              <div>Progress</div>
+              <div>Due Date</div>
             </div>
 
             <div className="divide-y divide-zinc-100">
-              {projects.map((p) => (
-                <div
-                  key={p.id}
-                  onClick={() => router.push(`/organizations/${orgId}/projects/${p.id}`)}
-                  className="group relative flex flex-col items-start gap-3 px-4 py-4 transition-colors hover:bg-zinc-50/50 md:grid md:grid-cols-[minmax(240px,1fr)_140px_160px_160px_60px] md:items-center md:gap-4 md:px-6 md:py-3.5"
-                >
-                  <div className="flex w-full min-w-0 flex-col">
-                    <span className="truncate text-[15px] font-medium text-zinc-900">
-                      {p.name}
-                    </span>
-                    <div className="mt-1 flex items-center gap-2 md:hidden">
-                      <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${getStatusBadgeClass(p.status)}`}>
-                        {p.status}
-                      </span>
-                      <span className="h-1 w-1 rounded-full bg-zinc-300" />
-                      <span className="text-xs text-zinc-500">{formatDate(p.startDate)}</span>
+              {projects
+                .filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                .filter((p) => (statusFilter === "all" ? true : p.status === statusFilter))
+                .map((p) => {
+                  const meta = projectMeta[p.id] ?? {};
+                  const progressText = meta.total ? `${meta.completed ?? 0}/${meta.total} tasks` : "0/0 tasks";
+                  const progressPct = meta.total ? Math.round(((meta.completed ?? 0) / meta.total) * 100) : 0;
+
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => router.push(`/organizations/${orgId}/projects/${p.id}`)}
+                      className="group relative flex flex-col items-start gap-3 px-4 py-3 transition-colors hover:bg-zinc-50/50 md:grid md:grid-cols-[minmax(240px,1fr)_120px_80px_120px_140px_120px] md:items-center md:gap-4 md:px-6 md:py-3"
+                    >
+                      <div className="flex w-full min-w-0 flex-col">
+                        <span className="truncate text-[15px] font-medium text-zinc-900">{p.name}</span>
+                        <div className="mt-1 flex items-center gap-2 md:hidden">
+                          <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${getStatusBadgeClass(p.status)}`}>{p.status}</span>
+                          <span className="h-1 w-1 rounded-full bg-zinc-300" />
+                          <span className="text-xs text-zinc-500">{formatDate(p.startDate)}</span>
+                        </div>
+                      </div>
+
+                      <div className="hidden md:flex md:items-center md:gap-2">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-xs font-medium text-zinc-700">{meta.owner ? meta.owner.charAt(0) : "-"}</div>
+                        <span className="text-sm text-zinc-700 truncate">{meta.owner ?? "—"}</span>
+                      </div>
+
+                      <div className="hidden md:flex md:items-center">
+                        <div className="flex items-center -space-x-2">
+                          {/* compact avatar stack */}
+                          {Array.from({ length: Math.min(meta.memberCount ?? 0, 3) }).map((_, idx) => (
+                            <div key={idx} className="h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-zinc-100 text-[10px] font-bold text-zinc-700 shadow-sm ring-1 ring-zinc-200/50 flex">{/* placeholder */}M</div>
+                          ))}
+                        </div>
+                        <span className="ml-2 text-sm text-zinc-600">{meta.memberCount ?? 0}</span>
+                      </div>
+
+                      <div className="hidden md:flex md:items-center md:gap-2">
+                        <select
+                          value={p.status}
+                          onChange={async (e) => {
+                            const nv = e.target.value as ProjectStatus;
+                            try {
+                              await updateProjectAction(p.id, { status: nv });
+                              setProjects((prev) => prev.map((pp) => (pp.id === p.id ? { ...pp, status: nv } : pp)));
+                            } catch (err) {
+                              addToast("Failed to update status", "error");
+                            }
+                          }}
+                          className={`appearance-none rounded-md border px-2.5 py-1 text-[13px] font-medium outline-none ${getStatusBadgeClass(p.status)}`}
+                        >
+                          <option value="active">Active</option>
+                          <option value="paused">Paused</option>
+                          <option value="archived">Archived</option>
+                        </select>
+                      </div>
+
+                      <div className="hidden md:flex md:flex-col md:items-start md:gap-2">
+                        <div className="w-28">
+                          <div className="h-2 w-full rounded-full bg-zinc-100">
+                            <div style={{ width: `${progressPct}%` }} className="h-2 rounded-full bg-emerald-500" />
+                          </div>
+                        </div>
+                        <span className="text-xs text-zinc-500">{progressText}</span>
+                      </div>
+
+                      <div className="hidden items-center text-sm text-zinc-500 md:flex">
+                        <Calendar className="mr-1.5 h-3.5 w-3.5 opacity-70" />
+                        {formatDate(p.endDate)}
+                      </div>
+
+                      <div className="absolute top-3 right-3 flex w-full justify-end md:static md:w-auto">
+                        {canManage && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(p.id);
+                            }}
+                            className="rounded-lg p-1.5 text-zinc-400 opacity-0 transition-colors group-hover:opacity-100 hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900 md:opacity-100"
+                            aria-label={`Delete ${p.name}`}
+                          >
+                            <MoreHorizontal className="h-5 w-5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-
-                  <div className="hidden md:block">
-                    <span className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium ${getStatusBadgeClass(p.status)}`}>
-                      {p.status}
-                    </span>
-                  </div>
-
-                  <div className="hidden items-center text-sm text-zinc-500 md:flex">
-                    <Calendar className="mr-1.5 h-3.5 w-3.5 opacity-70" />
-                    {formatDate(p.startDate)}
-                  </div>
-
-                  <div className="hidden items-center text-sm text-zinc-500 md:flex">
-                    <Calendar className="mr-1.5 h-3.5 w-3.5 opacity-70" />
-                    {formatDate(p.endDate)}
-                  </div>
-
-                  <div className="absolute top-4 right-4 flex w-full justify-end md:static md:w-auto">
-                    {canManage && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(p.id);
-                        }}
-                        className="rounded-lg p-1.5 text-zinc-400 opacity-0 transition-colors group-hover:opacity-100 hover:bg-zinc-100 hover:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-900 md:opacity-100"
-                        aria-label={`Delete ${p.name}`}
-                      >
-                        <MoreHorizontal className="h-5 w-5" />
-                      </button>
-                    )}
-                  </div>
-
-                  {canManage && deletingId === p.id && (
-                    <div className="md:hidden">
-                      <span className="text-xs text-zinc-500">Deleting...</span>
-                    </div>
-                  )}
-                </div>
-              ))}
+                  );
+                })}
             </div>
           </div>
         </div>
@@ -358,15 +474,62 @@ export default function ProjectsPage() {
               className="w-full rounded-md border border-zinc-200 bg-white p-2 text-sm text-zinc-900 shadow-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
             />
 
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-              className="w-full rounded-md border border-zinc-200 bg-white p-2 text-sm text-zinc-900 shadow-sm outline-none transition-colors focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="active">Active</option>
-              <option value="paused">Paused</option>
-              <option value="archived">Archived</option>
-            </select>
+            {/* Member assignment (optional) */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-zinc-700">Assign members (optional)</label>
+
+              <div className="flex flex-wrap gap-2">
+                {selectedMembers.map((id) => {
+                  const member = membersList.find((m) => m.user_id === id);
+                  const label = member?.name ?? id;
+                  return (
+                    <div key={id} className="inline-flex items-center gap-2 rounded-full bg-zinc-50 px-2 py-1 text-sm text-zinc-700">
+                      <div className="h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 flex">{label.charAt(0)}</div>
+                      <span className="truncate max-w-[120px]">{label}</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedMembers((prev) => prev.filter((s) => s !== id))}
+                        className="ml-1 text-zinc-400 hover:text-zinc-700"
+                        aria-label={`Remove ${label}`}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <input
+                placeholder="Search members"
+                value={memberFilter}
+                onChange={(e) => setMemberFilter(e.target.value)}
+                className="w-full rounded-md border border-zinc-200 bg-white p-2 text-sm text-zinc-900 shadow-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+              />
+
+              <div className="max-h-36 overflow-auto rounded-md border border-zinc-100 bg-white p-2">
+                {membersLoading ? (
+                  <div className="text-sm text-zinc-500">Loading members…</div>
+                ) : (
+                  (membersList
+                    .filter((m) => m.name.toLowerCase().includes(memberFilter.toLowerCase()))
+                    .slice(0, 20)
+                    .map((member) => (
+                      <label key={member.user_id} className="flex items-center gap-2 py-1 text-sm text-zinc-700">
+                        <input
+                          type="checkbox"
+                          checked={selectedMembers.includes(member.user_id)}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedMembers((prev) => [...prev, member.user_id]);
+                            else setSelectedMembers((prev) => prev.filter((id) => id !== member.user_id));
+                          }}
+                        />
+                        <div className="h-6 w-6 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 flex">{member.name.charAt(0)}</div>
+                        <span>{member.name}</span>
+                      </label>
+                    ))) || <div className="text-sm text-zinc-500">No members</div>
+                )}
+              </div>
+            </div>
 
             <input
               type="date"
