@@ -1,3 +1,17 @@
 1. must add deleting tasks 
 2. refine ux for all pages starting from team (unnecessary text
 and space wasted)
+
+instant allocation of tasks in projects:
+
+factors:
+1. role
+2. work hrs filled
+3. Ask to divide project into tasks and the role req for that task
+4. use ai to decompose project into roles and tasks?
+5. each task k hrs and each emp is given n hrs per day to finish it
+6. each emp has different total work hrs
+7. Task dependencies - Huge gap. Can't assign Task B if Task A not done. Need dependency graph or at least "blocked by" field.
+8. Priority/urgency - Which tasks must happen NOW vs can wait? High-priority tasks should steal capacity from low-priority ones.
+9. Skill level - Junior vs senior employee. Senior might finish 8hr task in 6hrs. Junior might need 10hrs. This multiplier matters.
+10. req skils- react, js etc 
