@@ -6,7 +6,7 @@ import { listOrgMembers } from "@/actions/organization/listOrgMembers";
 import { assignProjectMember } from "@/actions/project/assignProjectMember";
 import { listProjectMembers } from "@/actions/project/listProjectMembers";
 import { updateProjectAction } from "@/actions/project/update";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useParams, useRouter } from "next/navigation";
 import { deleteProject } from "@/actions/project/deleteProject";
@@ -152,7 +152,11 @@ export default function ProjectsPage() {
   const renameCardRef = useRef<HTMLDivElement | null>(null);
 
   const PAGE_SIZE = 12;
+  const projectsCountRef = useRef(0);
 
+useEffect(() => {
+  projectsCountRef.current = projects.length;
+}, [projects.length]);
   const loadProjects = useCallback(
     async (replace = true) => {
       if (!orgId) return;
@@ -164,7 +168,7 @@ export default function ProjectsPage() {
           setLoadingMore(true);
         }
 
-        const currentLength = replace ? 0 : projects.length;
+        const currentLength = replace ? 0 : projectsCountRef.current;
         const from = currentLength;
         const to = from + PAGE_SIZE - 1;
 
@@ -245,7 +249,7 @@ export default function ProjectsPage() {
     return () => {
       cancelled = true;
     };
-  }, [projects, orgId]);
+  }, [orgId, projects.length]);
 
   async function handleCreate() {
     if (!name.trim()) return;
@@ -379,10 +383,9 @@ export default function ProjectsPage() {
       addToast("Failed to rename project", "error");
     }
   }
-
-  useEffect(() => {
-    setPageHeader(
-      <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+  const pageHeader = useMemo(
+  () => (
+    <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative w-full sm:max-w-md">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
@@ -416,12 +419,18 @@ export default function ProjectsPage() {
           </Button>
         )}
       </div>
+  ),
+  [canManage, searchQuery, statusFilter]
+);
+  useEffect(() => {
+    setPageHeader(pageHeader
+      
     );
 
     return () => {
       setPageHeader(null);
     };
-  }, [canManage, searchQuery, setPageHeader, statusFilter]);
+  }, [pageHeader, setPageHeader]);
 
   return (
     <div className="flex w-full flex-col gap-4 pb-12">
