@@ -1,15 +1,30 @@
 // src/hooks/useOrgRole.ts
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { useParams } from "next/navigation";
 
-export function useOrgRole() {
-  const { orgId } = useParams<{ orgId: string }>();
+export function useOrgRole(orgIdOverride?: string) {
+  const params = useParams();
+  const orgIdParam = params.orgId;
+  const orgIdFromParams = useMemo(() => {
+    if (Array.isArray(orgIdParam)) return orgIdParam[0] ?? "";
+    if (typeof orgIdParam === "string") return orgIdParam;
+    return "";
+  }, [orgIdParam]);
   const [role, setRole] = useState<string | null>(null);
 
+  function isValidUuid(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  }
+
+  const orgId = useMemo(() => {
+    if (orgIdOverride && isValidUuid(orgIdOverride)) return orgIdOverride;
+    return orgIdFromParams;
+  }, [orgIdFromParams, orgIdOverride]);
+
   useEffect(() => {
-    if (!orgId) return;
+    if (!orgId || !isValidUuid(orgId)) return;
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
       supabase

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { AlertCircle, Calendar, CheckSquare, Plus, Search, Square, Users } from "lucide-react";
 import { listTasksByProject } from "@/actions/task/listByProject";
 import { updateTask } from "@/actions/task/update";
@@ -27,6 +27,8 @@ type TaskWithAssignee = Tables<"tasks"> & {
   assignee_name: string | null;
 };
 
+type TaskPatch = Partial<TaskWithAssignee>;
+
 type TaskStatus = Enums<"task_status">;
 
 type HumanResource = {
@@ -35,6 +37,155 @@ type HumanResource = {
 };
 
 type ProjectRecord = Pick<Tables<"projects">, "id" | "name">;
+type ProjectRecordWithOrg = ProjectRecord & { organization_id: string };
+
+type TaskRowProps = {
+  task: TaskWithAssignee;
+  canManage: boolean;
+  projectMembers: HumanResource[];
+  savingId: string | null;
+  onCommitUpdate: (taskId: string, updates: TablesUpdate<"tasks">) => void;
+  onAssign: (taskId: string, resourceId: string) => void;
+  onDelete: (taskId: string) => void;
+};
+
+const TaskRow = memo(function TaskRow({
+  task,
+  canManage,
+  projectMembers,
+  savingId,
+  onCommitUpdate,
+  onAssign,
+  onDelete,
+}: TaskRowProps) {
+  const [titleValue, setTitleValue] = useState(task.title);
+  const [descriptionValue, setDescriptionValue] = useState(task.description ?? "");
+  const [dueDateValue, setDueDateValue] = useState(task.due_date ?? "");
+
+  return (
+    <div
+      className="group flex flex-col items-start gap-2.5 border-t border-zinc-100 px-4 py-3.5 transition-colors hover:bg-zinc-50/50 first:border-t-0 md:grid md:grid-cols-[48px_minmax(0,1.8fr)_220px_152px_132px] md:items-center md:gap-4 md:py-3"
+    >
+      <div className="hidden cursor-pointer justify-center text-zinc-300 transition-colors group-hover:text-indigo-500 md:flex">
+        {task.status === "done" ? (
+          <CheckSquare className="h-5 w-5 text-indigo-600" />
+        ) : (
+          <Square className="h-5 w-5" />
+        )}
+      </div>
+
+      <div className="flex w-full min-w-0 flex-col">
+        <input
+          value={titleValue}
+          onChange={(e) => setTitleValue(e.target.value)}
+          onBlur={(e) => {
+            onCommitUpdate(task.id, { title: e.target.value });
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+          className={`w-full truncate bg-transparent text-[15px] font-medium outline-none ${task.status === "done" ? "text-zinc-500" : "text-zinc-900"}`}
+        />
+        <ExpandableDescription
+          value={descriptionValue}
+          onChange={(nextValue) => setDescriptionValue(nextValue)}
+          onCommit={(nextValue) => {
+            onCommitUpdate(task.id, { description: nextValue.trim() ? nextValue : null });
+          }}
+          disabled={!canManage}
+          className="mt-1"
+        />
+        <div className="mt-1.5 flex items-center gap-3 text-xs text-zinc-500 md:hidden">
+          <span className={`rounded px-2 py-0.5 text-xs font-medium ${getTaskStatusBadgeClass(task.status)}`}>
+            {getTaskStatusLabel(task.status)}
+          </span>
+          <span>{formatDueDate(task.due_date)}</span>
+          {savingId === task.id && <span>Saving...</span>}
+        </div>
+      </div>
+
+      <div className="flex w-full items-center gap-2.5">
+        {task.assignee_name ? (
+          <select
+            value={task.assignee_id || ""}
+            onChange={(e) => onAssign(task.id, e.target.value)}
+            className="min-w-0 flex-1 appearance-none bg-transparent text-sm font-medium text-zinc-900 outline-none"
+          >
+            <option value="">Unassigned</option>
+            {projectMembers.map((employee) => (
+              <option key={employee.user_id} value={employee.user_id}>
+                {employee.name}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <div className="flex w-full items-center gap-2.5">
+            <span className="flex items-center gap-1.5 text-sm font-medium italic text-zinc-400">
+              <AlertCircle className="h-4 w-4" />
+              Unassigned
+            </span>
+            <select
+              value={task.assignee_id || ""}
+              onChange={(e) => onAssign(task.id, e.target.value)}
+              className="min-w-0 flex-1 appearance-none bg-transparent text-sm text-zinc-500 outline-none"
+            >
+              <option value="">Unassigned</option>
+              {projectMembers.map((employee) => (
+                <option key={employee.user_id} value={employee.user_id}>
+                  {employee.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      <div className="hidden md:flex md:flex-col md:items-start md:gap-2">
+        <select
+          value={task.status ?? "todo"}
+          onChange={(e) => {
+            const value = e.target.value as TaskStatus;
+            onCommitUpdate(task.id, { status: value });
+          }}
+          className={`appearance-none rounded-md border px-2.5 py-1 text-[13px] font-medium outline-none ${getTaskStatusBadgeClass(task.status)}`}
+        >
+          <option value="todo">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="blocked">Blocked</option>
+          <option value="done">Completed</option>
+        </select>
+        {savingId === task.id && <span className="text-xs text-zinc-500">Saving...</span>}
+      </div>
+
+      <div className="hidden md:flex md:items-center md:gap-2">
+        <input
+          type="date"
+          value={dueDateValue}
+          onChange={(e) => setDueDateValue(e.target.value)}
+          onBlur={(e) => {
+            onCommitUpdate(task.id, { due_date: e.target.value || null });
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === "Escape") e.currentTarget.blur();
+          }}
+          className="bg-transparent text-sm font-medium text-zinc-600 outline-none"
+        />
+      </div>
+
+      {canManage && (
+        <div className="flex w-full justify-end md:hidden">
+          <button
+            type="button"
+            onClick={() => onDelete(task.id)}
+            className="text-xs font-medium text-zinc-500 hover:text-zinc-900"
+          >
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+});
 
 function formatDueDate(value: string | null) {
   if (!value) return "No due date";
@@ -59,14 +210,26 @@ function getTaskStatusBadgeClass(status: TaskStatus | null) {
 }
 
 export default function ProjectWorkspacePage() {
-  const role = useOrgRole();
-  const canManage = role === "owner" || role === "admin" || role === "manager";
   const { addToast } = useToast();
   const { setPageHeader } = usePageHeader();
-  const { orgId, projectId } = useParams<{ orgId: string; projectId: string }>();
+  const router = useRouter();
+  const params = useParams();
+  const orgIdParam = params.orgId;
+  const projectIdParam = params.projectId;
+  const orgId = Array.isArray(orgIdParam)
+    ? orgIdParam[0] ?? ""
+    : typeof orgIdParam === "string"
+      ? orgIdParam
+      : "";
+  const projectId = Array.isArray(projectIdParam)
+    ? projectIdParam[0] ?? ""
+    : typeof projectIdParam === "string"
+      ? projectIdParam
+      : "";
 
   const [projectMembers, setProjectMembers] = useState<HumanResource[]>([]);
   const [employees, setEmployees] = useState<HumanResource[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [tasks, setTasks] = useState<TaskWithAssignee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,47 +246,127 @@ export default function ProjectWorkspacePage() {
   const [selectedMembersToAdd, setSelectedMembersToAdd] = useState<string[]>([]);
   const [selectedMembersToRemove, setSelectedMembersToRemove] = useState<string[]>([]);
   const [savingMembers, setSavingMembers] = useState(false);
+  const [resolvedOrgId, setResolvedOrgId] = useState("");
+  const activeOrgId = isValidUuid(orgId) ? orgId : resolvedOrgId;
 
-  useEffect(() => {
-    async function load() {
-      setProjectMembers([]);
+  const role = useOrgRole(activeOrgId);
+  const canManage = role === "owner" || role === "admin" || role === "manager";
 
-      const humansResult = await listOrgMembers(orgId);
+  function isValidUuid(value: string): boolean {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  }
+
+  const orgMembersCacheRef = useRef<{ orgId: string; members: HumanResource[] } | null>(null);
+
+  const fetchOrgMembers = useCallback(async () => {
+    if (!activeOrgId) return;
+    if (orgMembersCacheRef.current?.orgId === activeOrgId) {
+      setEmployees(orgMembersCacheRef.current.members);
+      return;
+    }
+
+    setMembersLoading(true);
+    try {
+      const humansResult = await listOrgMembers(activeOrgId);
       if (!humansResult.error && humansResult.data) {
-        setEmployees(
-          humansResult.data.map((human) => ({
-            user_id: human.user_id,
-            name: human.name,
-          }))
-        );
+        const mapped = humansResult.data.map((human) => ({
+          user_id: human.user_id,
+          name: human.name,
+        }));
+        orgMembersCacheRef.current = { orgId: activeOrgId, members: mapped };
+        setEmployees(mapped);
       } else {
         setEmployees([]);
       }
+    } catch {
+      setEmployees([]);
+    } finally {
+      setMembersLoading(false);
+    }
+  }, [activeOrgId]);
 
-      const { data: projectData } = await supabase
-        .from("projects")
-        .select("id, name")
-        .eq("id", projectId)
-        .eq("organization_id", orgId)
-        .maybeSingle<ProjectRecord>();
+  useEffect(() => {
+    if (!isValidUuid(projectId)) {
+      setLoading(false);
+      return;
+    }
 
-      if (projectData?.name) {
-        setProjectName(projectData.name);
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setProjectMembers([]);
+
+      let effectiveOrgId = isValidUuid(orgId) ? orgId : "";
+
+      try {
+        const { data: projectData } = await supabase
+          .from("projects")
+          .select("id, name, organization_id")
+          .eq("id", projectId)
+          .maybeSingle<ProjectRecordWithOrg>();
+
+        if (!cancelled) {
+          if (projectData?.name) setProjectName(projectData.name);
+          if (!effectiveOrgId && projectData?.organization_id) {
+            effectiveOrgId = projectData.organization_id;
+            setResolvedOrgId(projectData.organization_id);
+          }
+        }
+      } catch {
+        // ignore
       }
 
-      const members = await listProjectMembers(projectId);
-      setProjectMembers(members);
+      if (!effectiveOrgId) {
+        if (!cancelled) {
+          setEmployees([]);
+          setProjectMembers([]);
+          setTasks([]);
+          setLoading(false);
+        }
+        return;
+      }
 
-      setLoading(true);
-      const data = await listTasksByProject(projectId, orgId);
-      setTasks(data);
-      setLoading(false);
+      const [membersResult, tasksResult] = await Promise.allSettled([
+        listProjectMembers(projectId),
+        listTasksByProject(projectId, effectiveOrgId),
+      ]);
+
+      if (!cancelled) {
+        if (membersResult.status === "fulfilled") {
+          setProjectMembers(membersResult.value);
+        } else {
+          setProjectMembers([]);
+        }
+
+        if (tasksResult.status === "fulfilled") {
+          setTasks(tasksResult.value);
+        } else {
+          setTasks([]);
+        }
+
+        setLoading(false);
+      }
     }
 
-    if (projectId && orgId) {
-      void load();
-    }
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, orgId]);
+
+  useEffect(() => {
+    if (showAddMembers) {
+      void fetchOrgMembers();
+    }
+  }, [showAddMembers, fetchOrgMembers]);
+
+  useEffect(() => {
+    if (!isValidUuid(orgId) && isValidUuid(resolvedOrgId) && isValidUuid(projectId)) {
+      router.replace(`/organizations/${resolvedOrgId}/projects/${projectId}`);
+    }
+  }, [orgId, resolvedOrgId, projectId, router]);
 
   const availableEmployees = useMemo(
     () => employees.filter((employee) => !projectMembers.some((member) => member.user_id === employee.user_id)),
@@ -140,21 +383,27 @@ export default function ProjectWorkspacePage() {
     [memberSearch, projectMembers]
   );
 
-  function updateLocal(id: string, updates: TablesUpdate<"tasks">) {
+  const updateTaskInState = useCallback((id: string, updates: TaskPatch) => {
     setTasks((prev) => prev.map((task) => (task.id === id ? { ...task, ...updates } : task)));
-  }
+  }, []);
 
-  async function commitUpdate(id: string, updates: TablesUpdate<"tasks">) {
+  const commitUpdate = useCallback(async (id: string, updates: TablesUpdate<"tasks">) => {
     try {
       setSavingId(id);
-      await updateTask(id, updates, orgId);
+      if (!activeOrgId) return;
+      await updateTask(id, updates, activeOrgId);
     } catch (error) {
       console.error("Save failed", error);
       addToast("Failed to save task", "error");
     } finally {
       setSavingId(null);
     }
-  }
+  }, [activeOrgId, addToast]);
+
+  const commitTaskUpdate = useCallback((id: string, updates: TablesUpdate<"tasks">) => {
+    updateTaskInState(id, updates);
+    void commitUpdate(id, updates);
+  }, [commitUpdate, updateTaskInState]);
 
   async function handleCreate() {
     if (!title.trim() || !dueDate) return;
@@ -162,11 +411,12 @@ export default function ProjectWorkspacePage() {
     try {
       setCreating(true);
 
+      if (!activeOrgId) return;
       const created = await createTask(
         title.trim(),
         createDescription.trim() || undefined,
         dueDate,
-        orgId,
+        activeOrgId,
         projectId
       );
       const newTask: TaskWithAssignee = {
@@ -178,7 +428,7 @@ export default function ProjectWorkspacePage() {
       if (selectedEmployee) {
         await assignTaskToResource(created.id, selectedEmployee);
         newTask.assignee_id = selectedEmployee;
-        newTask.assignee_name = employees.find((employee) => employee.user_id === selectedEmployee)?.name ?? null;
+        newTask.assignee_name = projectMembers.find((employee) => employee.user_id === selectedEmployee)?.name ?? null;
       }
 
       setTasks((prev) => [newTask, ...prev]);
@@ -195,46 +445,41 @@ export default function ProjectWorkspacePage() {
     }
   }
 
-  async function handleDelete(id: string) {
+  const handleDelete = useCallback(async (id: string) => {
     const backup = tasks;
     setTasks((prev) => prev.filter((task) => task.id !== id));
 
     try {
-      await deleteTaskAction(id, orgId);
+      if (!activeOrgId) return;
+      await deleteTaskAction(id, activeOrgId);
       addToast("Task deleted", "success");
     } catch {
       setTasks(backup);
       addToast("Failed to delete task", "error");
     }
-  }
+  }, [activeOrgId, addToast, tasks]);
 
-  async function handleTaskAssignment(taskId: string, resourceId: string) {
+  const handleTaskAssignment = useCallback(async (taskId: string, resourceId: string) => {
     try {
       await assignTaskToResource(taskId, resourceId || null);
       const employee = projectMembers.find((member) => member.user_id === resourceId);
 
-      setTasks((prev) =>
-        prev.map((task) =>
-          task.id === taskId
-            ? {
-                ...task,
-                assignee_id: resourceId || null,
-                assignee_name: employee?.name ?? null,
-              }
-            : task
-        )
-      );
+      updateTaskInState(taskId, {
+        assignee_id: resourceId || null,
+        assignee_name: employee?.name ?? null,
+      });
     } catch {
       addToast("Failed to update assignee", "error");
     }
-  }
+  }, [addToast, projectMembers, updateTaskInState]);
 
   async function handleAddMembers() {
     if (selectedMembersToAdd.length === 0) return;
 
     try {
       setSavingMembers(true);
-      await Promise.all(selectedMembersToAdd.map((userId) => assignProjectMember(projectId, userId, orgId)));
+      if (!activeOrgId) return;
+      await Promise.all(selectedMembersToAdd.map((userId) => assignProjectMember(projectId, userId, activeOrgId)));
 
       const nextMembers = employees.filter((employee) => selectedMembersToAdd.includes(employee.user_id));
       setProjectMembers((prev) => [
@@ -341,135 +586,16 @@ export default function ProjectWorkspacePage() {
               <div className="px-4 py-4 text-sm text-zinc-500">Loading...</div>
             ) : (
               tasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="group flex flex-col items-start gap-2.5 border-t border-zinc-100 px-4 py-3.5 transition-colors hover:bg-zinc-50/50 first:border-t-0 md:grid md:grid-cols-[48px_minmax(0,1.8fr)_220px_152px_132px] md:items-center md:gap-4 md:py-3"
-                >
-                  <div className="hidden cursor-pointer justify-center text-zinc-300 transition-colors group-hover:text-indigo-500 md:flex">
-                    {task.status === "done" ? (
-                      <CheckSquare className="h-5 w-5 text-indigo-600" />
-                    ) : (
-                      <Square className="h-5 w-5" />
-                    )}
-                  </div>
-
-                  <div className="flex w-full min-w-0 flex-col">
-                    <input
-                      value={task.title}
-                      onChange={(e) => updateLocal(task.id, { title: e.target.value })}
-                      onBlur={(e) => {
-                        void commitUpdate(task.id, { title: e.target.value });
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") e.currentTarget.blur();
-                      }}
-                      className={`w-full truncate bg-transparent text-[15px] font-medium outline-none ${task.status === "done" ? "text-zinc-500" : "text-zinc-900"}`}
-                    />
-                    <ExpandableDescription
-                      value={task.description ?? ""}
-                      onChange={(nextValue) => updateLocal(task.id, { description: nextValue })}
-                      onCommit={(nextValue) => {
-                        void commitUpdate(task.id, { description: nextValue.trim() ? nextValue : null });
-                      }}
-                      disabled={!canManage}
-                      className="mt-1"
-                    />
-                    <div className="mt-1.5 flex items-center gap-3 text-xs text-zinc-500 md:hidden">
-                      <span className={`rounded px-2 py-0.5 text-xs font-medium ${getTaskStatusBadgeClass(task.status)}`}>
-                        {getTaskStatusLabel(task.status)}
-                      </span>
-                      <span>{formatDueDate(task.due_date)}</span>
-                      {savingId === task.id && <span>Saving...</span>}
-                    </div>
-                  </div>
-
-                  <div className="flex w-full items-center gap-2.5">
-                    {task.assignee_name ? (
-                      <select
-                        value={task.assignee_id || ""}
-                        onChange={(e) => {
-                          void handleTaskAssignment(task.id, e.target.value);
-                        }}
-                        className="min-w-0 flex-1 appearance-none bg-transparent text-sm font-medium text-zinc-900 outline-none"
-                      >
-                        <option value="">Unassigned</option>
-                        {projectMembers.map((employee) => (
-                          <option key={employee.user_id} value={employee.user_id}>
-                            {employee.name}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="flex w-full items-center gap-2.5">
-                        <span className="flex items-center gap-1.5 text-sm font-medium italic text-zinc-400">
-                          <AlertCircle className="h-4 w-4" />
-                          Unassigned
-                        </span>
-                        <select
-                          value={task.assignee_id || ""}
-                          onChange={(e) => {
-                            void handleTaskAssignment(task.id, e.target.value);
-                          }}
-                          className="min-w-0 flex-1 appearance-none bg-transparent text-sm text-zinc-500 outline-none"
-                        >
-                          <option value="">Unassigned</option>
-                          {projectMembers.map((employee) => (
-                            <option key={employee.user_id} value={employee.user_id}>
-                              {employee.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="hidden md:flex md:flex-col md:items-start md:gap-2">
-                    <select
-                      value={task.status ?? "todo"}
-                      onChange={(e) => {
-                        const value = e.target.value as TaskStatus;
-                        updateLocal(task.id, { status: value });
-                        void commitUpdate(task.id, { status: value });
-                      }}
-                      className={`appearance-none rounded-md border px-2.5 py-1 text-[13px] font-medium outline-none ${getTaskStatusBadgeClass(task.status)}`}
-                    >
-                      <option value="todo">To Do</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="blocked">Blocked</option>
-                      <option value="done">Completed</option>
-                    </select>
-                    {savingId === task.id && <span className="text-xs text-zinc-500">Saving...</span>}
-                  </div>
-
-                  <div className="hidden md:flex md:items-center md:gap-2">
-                    <input
-                      type="date"
-                      value={task.due_date ?? ""}
-                      onChange={(e) => updateLocal(task.id, { due_date: e.target.value })}
-                      onBlur={(e) => {
-                        void commitUpdate(task.id, { due_date: e.target.value });
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === "Escape") e.currentTarget.blur();
-                      }}
-                      className="bg-transparent text-sm font-medium text-zinc-600 outline-none"
-                    />
-                  </div>
-
-                  {canManage && (
-                    <div className="flex w-full justify-end md:hidden">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void handleDelete(task.id);
-                        }}
-                        className="text-xs font-medium text-zinc-500 hover:text-zinc-900"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <TaskRow
+                  key={`${task.id}-${task.title}-${task.description ?? ""}-${task.due_date ?? ""}`}
+                  task={task}
+                  canManage={canManage}
+                  projectMembers={projectMembers}
+                  savingId={savingId}
+                  onCommitUpdate={commitTaskUpdate}
+                  onAssign={handleTaskAssignment}
+                  onDelete={handleDelete}
+                />
               ))
             )}
           </div>
@@ -579,11 +705,16 @@ export default function ProjectWorkspacePage() {
             </div>
 
             <div className="max-h-72 overflow-auto rounded-lg border border-zinc-100 bg-zinc-50/40">
-              {filteredAvailableEmployees.length === 0 ? (
+              {membersLoading ? (
+                <div className="px-4 py-6 text-sm text-zinc-500">Loading members...</div>
+              ) : filteredAvailableEmployees.length === 0 ? (
                 <div className="px-4 py-6 text-sm text-zinc-500">No available members found.</div>
               ) : (
                 filteredAvailableEmployees.map((employee) => (
-                  <label key={employee.user_id} className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3 last:border-b-0">
+                  <label
+                    key={employee.user_id}
+                    className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3 last:border-b-0"
+                  >
                     <input
                       type="checkbox"
                       checked={selectedMembersToAdd.includes(employee.user_id)}
