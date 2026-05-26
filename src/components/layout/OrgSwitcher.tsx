@@ -9,6 +9,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -122,7 +123,15 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
     );
   }
 
-  const dropdown = (
+  const triggerClass = collapsed
+    ? "h-11 w-11 justify-center rounded-xl border border-zinc-200/70 bg-white p-0 text-zinc-700 shadow-none transition-colors hover:bg-zinc-50 focus:ring-2 focus:ring-indigo-500 [&>svg]:hidden"
+    : "h-10 w-full rounded-md border border-zinc-200/70 bg-white text-sm font-semibold text-zinc-900 shadow-none focus:ring-2 focus:ring-indigo-500";
+
+  const contentProps = collapsed
+    ? { position: "popper" as const, side: "right" as const, align: "start" as const, sideOffset: 8 }
+    : {};
+
+  const selectTree = (
     <Select
       value={orgId}
       onValueChange={(value) => {
@@ -130,88 +139,30 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
       }}
       disabled={switchingId !== null}
     >
-      <SelectTrigger className="h-10 w-full rounded-md border border-zinc-200/70 bg-white text-sm font-semibold text-zinc-900 shadow-none focus:ring-2 focus:ring-indigo-500">
-        <SelectValue placeholder="Select organization" />
+      <SelectTrigger aria-label="Switch organization" className={triggerClass}>
+        {collapsed ? (
+          <span className="flex h-11 w-11 items-center justify-center">
+            <Building2 className="h-5 w-5" />
+          </span>
+        ) : (
+          <SelectValue placeholder="Select organization" />
+        )}
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent {...contentProps}>
         {orgs.map((org) => (
           <SelectItem key={org.id} value={org.id}>
             {org.name || org.slug}
           </SelectItem>
         ))}
-        <div className="border-t border-zinc-100 px-2 py-2">
-          <button
-            type="button"
-            onClick={() => router.push("/onboarding")}
-            className="w-full rounded-md bg-white px-3 py-2 text-left text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
-          >
-            Create new organization
-          </button>
-        </div>
+        <SelectSeparator className="my-1 bg-zinc-100" />
+        <SelectItem value="__create__">Create new organization</SelectItem>
       </SelectContent>
     </Select>
   );
 
   if (collapsed) {
-  return (
-    <div className="flex justify-center">
-      <Select
-        value={orgId}
-        onValueChange={(value) => {
-          void handleSwitch(value);
-        }}
-        disabled={switchingId !== null}
-      >
-        <SelectTrigger
-          aria-label="Switch organization"
-          className="
-            h-11 w-11 rounded-xl
-            border border-zinc-200/70
-            bg-white
-            p-0
-            shadow-none
-            transition-colors
-            hover:bg-zinc-50
-            focus:ring-2 focus:ring-indigo-500
-          "
-        >
-          <div className="flex w-full items-center justify-center">
-            <Building2 className="h-5 w-5 text-zinc-700" />
-          </div>
-        </SelectTrigger>
-
-        <SelectContent
-  position="popper"
-  side="right"
-  align="start"
-  sideOffset={8}
->
-          {orgs.map((org) => (
-            <SelectItem key={org.id} value={org.id}>
-              {org.name || org.slug}
-            </SelectItem>
-          ))}
-
-          <div className="border-t border-zinc-100 px-2 py-2">
-            <button
-              type="button"
-              onClick={() => router.push("/onboarding")}
-              className="
-                w-full rounded-md px-3 py-2
-                text-left text-sm font-medium
-                text-zinc-700
-                transition-colors
-                hover:bg-zinc-100
-              "
-            >
-              Create new organization
-            </button>
-          </div>
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
+    return <div className="flex justify-center">{selectTree}</div>;
+  }
 
   return (
     <div className="space-y-2 rounded-lg border border-zinc-200/60 bg-zinc-50/60 px-3 py-2 shadow-none">
@@ -221,7 +172,7 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
         </p>
       </div>
 
-      {dropdown}
+      {selectTree}
 
       {switchingId && (
         <p className="text-xs text-zinc-500">Switching organization...</p>
