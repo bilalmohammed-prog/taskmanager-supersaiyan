@@ -143,7 +143,7 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
           <button
             type="button"
             onClick={() => router.push("/onboarding")}
-            className="w-full rounded-md border border-zinc-200/70 bg-white px-3 py-2 text-left text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            className="w-full rounded-md bg-white px-3 py-2 text-left text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
           >
             Create new organization
           </button>
