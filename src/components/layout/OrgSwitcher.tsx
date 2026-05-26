@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Building2, PlusCircle } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { getUserOrganizationsAction } from "@/actions/organization/getUserOrganizations";
 import { switchOrganization } from "@/actions/organization/switchOrganization";
 
@@ -86,7 +86,7 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
         return;
       }
 
-      router.push(`/organizations/${targetOrgId}/inbox`);
+      router.push(`/organizations/${targetOrgId}/team`);
       router.refresh();
     } finally {
       setSwitchingId(null);
@@ -97,7 +97,7 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
+      <div className="rounded-lg border border-zinc-200/60 bg-zinc-50/60 px-3 py-2 text-xs text-zinc-500">
         Loading organizations...
       </div>
     );
@@ -108,7 +108,7 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
       <button
         type="button"
         onClick={() => router.refresh()}
-        className="w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-left text-xs text-red-700"
+        className="w-full rounded-lg border border-red-200/70 bg-red-50/70 px-3 py-2 text-left text-xs text-red-700"
       >
         {loadError}. Click to retry.
       </button>
@@ -122,7 +122,7 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
       onChange={(e) => {
         void handleSwitch(e.target.value);
       }}
-      className="h-9 w-full rounded-md border border-zinc-200 bg-white px-2.5 text-sm text-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-70"
+      className="h-9 w-full rounded-md border border-zinc-200/70 bg-white px-2.5 text-sm text-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-70"
     >
       {orgs.map((org) => (
         <option key={org.id} value={org.id}>
@@ -136,7 +136,7 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
   if (collapsed) {
     return (
       <div className="flex justify-center">
-        <div className="relative flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-600">
+        <div className="relative flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-200/60 bg-zinc-50/60 text-zinc-600">
           <Building2 className="h-5 w-5" />
           <span className="sr-only">Switch organization</span>
           <select
@@ -161,13 +161,11 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
   }
 
   return (
-    <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
+    <div className="space-y-2 rounded-lg border border-zinc-200/60 bg-zinc-50/60 px-3 py-2 shadow-none">
       <div className="min-w-0">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Organization</p>
-        <div className="flex items-center justify-between gap-2">
-          <p className="truncate text-sm font-semibold text-zinc-900">{activeLabel}</p>
-          <PlusCircle className="h-4 w-4 text-zinc-400" />
-        </div>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+          Current organization
+        </p>
       </div>
 
       {dropdown}
