@@ -57,7 +57,7 @@ export default function LoginPage() {
                   <span className="text-sm font-semibold text-white">RO</span>
                 </div>
                 <div>
-                  <h1 className="text-lg font-semibold">ResourceOS</h1>
+                  <h1 className="text-lg font-semibold">FlashAssign</h1>
                   <p className="text-sm text-slate-600">Workspace Intelligence</p>
                 </div>
               </div>
@@ -74,7 +74,7 @@ export default function LoginPage() {
                   Deliver outcomes.
                 </h2>
                 <p className="mt-6 text-base leading-relaxed text-slate-600">
-                  ResourceOS gives every organization one shared surface for tasks,
+                  FlashAssign gives every organization one shared surface for tasks,
                   assignments, and execution velocity.
                 </p>
               </div>

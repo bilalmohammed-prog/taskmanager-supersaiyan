@@ -2,7 +2,6 @@
 
 import { useOrgRole } from "@/hooks/useOrgRole";
 import { createProjectAction } from "@/actions/project/create";
-import { listOrgMembers } from "@/actions/organization/listOrgMembers";
 import { assignProjectMember } from "@/actions/project/assignProjectMember";
 import { updateProjectAction } from "@/actions/project/update";
 import { listProjectsWithMetaAction, type ProjectWithMeta } from "@/actions/project/listWithMeta";
@@ -16,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Calendar, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { createPortal } from "react-dom";
+import { listOrgMembers } from "@/actions/organization/listOrgMembers";
 
 type ProjectStatus = "active" | "paused" | "archived";
 
@@ -36,6 +36,7 @@ type ProjectsClientPageProps = {
   orgId: string;
   initialProjects: ProjectWithMeta[];
 };
+
 
 function formatDate(date?: string | null) {
   if (!date) return "-";
@@ -112,7 +113,7 @@ export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsC
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
-  const [membersList, setMembersList] = useState<Array<{ user_id: string; name: string }>>([]);
+  const [membersList, setMembersList] = useState<Array<{ user_id: string; name: string; email: string | null }>>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [memberFilter, setMemberFilter] = useState("");
@@ -222,10 +223,13 @@ export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsC
       try {
         setMembersLoading(true);
         const res = await listOrgMembers(orgId);
-        if (!cancelled) setMembersList(res.data ?? []);
-      } catch {
-        // ignore
-      } finally {
+        if (!cancelled) {
+          setMembersList(res.data ?? []);
+        }
+      } catch (err) {
+  console.error("Failed to load members:", err);
+  addToastRef.current("Failed to load members", "error");
+} finally {
         if (!cancelled) setMembersLoading(false);
       }
     }
@@ -730,45 +734,63 @@ export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsC
               <div className="space-y-3">
                 <label className="text-sm font-medium text-zinc-700">Assign members (optional)</label>
 
-                <div className="flex flex-wrap gap-2">
-                  {selectedMembers.map((id) => {
-                    const member = membersList.find((m) => m.user_id === id);
-                    const label = member?.name ?? id;
-                    return (
-                      <div key={id} className="inline-flex items-center gap-2 rounded-full bg-zinc-50 px-2.5 py-1 text-sm text-zinc-700">
-                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-semibold text-indigo-700">{label.charAt(0)}</div>
-                        <span className="truncate max-w-[120px]">{label}</span>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedMembers((prev) => prev.filter((s) => s !== id))}
-                          className="ml-1 text-zinc-400 hover:text-zinc-700"
-                          aria-label={`Remove ${label}`}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    );
-                  })}
+                {selectedMembers.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedMembers.map((id) => {
+                      const member = membersList.find((m) => m.user_id === id);
+                      const label = member?.name ?? id;
+                      return (
+                        <div key={id} className="inline-flex items-center gap-2 rounded-full bg-zinc-50 px-2.5 py-1 text-sm text-zinc-700">
+                          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-semibold text-indigo-700">
+                            {label.charAt(0)}
+                          </div>
+                          <span className="truncate max-w-[120px]">{label}</span>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedMembers((prev) => prev.filter((s) => s !== id))}
+                            className="ml-1 text-zinc-400 hover:text-zinc-700"
+                            aria-label={`Remove ${label}`}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                  <Input
+                    placeholder="Search members by mail or name"
+                    value={memberFilter}
+                    onChange={(e) => setMemberFilter(e.target.value)}
+                    className="h-10 pl-9"
+                  />
                 </div>
 
-                <input
-                  placeholder="Search members"
-                  value={memberFilter}
-                  onChange={(e) => setMemberFilter(e.target.value)}
-                  className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-                />
-
-                <div className="max-h-40 overflow-auto rounded-md bg-zinc-50/50 px-1">
+                <div className="max-h-48 overflow-auto rounded-lg border border-zinc-100 bg-zinc-50/40">
                   {membersLoading ? (
-                    <div className="px-2 py-2 text-sm text-zinc-500">Loading members...</div>
+                    <div className="px-4 py-6 text-sm text-zinc-500">Loading members...</div>
+                  ) : membersList.filter((m) => {
+                    const query = memberFilter.toLowerCase();
+                    const nameMatch = m.name.toLowerCase().includes(query);
+                    const emailMatch = (m.email ?? "").toLowerCase().includes(query);
+                    return nameMatch || emailMatch;
+                  }).length === 0 ? (
+                    <div className="px-4 py-6 text-sm text-zinc-500">No members found.</div>
                   ) : (
-                    (membersList
-                      .filter((m) => m.name.toLowerCase().includes(memberFilter.toLowerCase()))
-                      .slice(0, 20)
+                    membersList
+                      .filter((m) => {
+                        const query = memberFilter.toLowerCase();
+                        const nameMatch = m.name.toLowerCase().includes(query);
+                        const emailMatch = (m.email ?? "").toLowerCase().includes(query);
+                        return nameMatch || emailMatch;
+                      })
                       .map((member) => (
                         <label
                           key={member.user_id}
-                          className="flex items-center gap-3 border-b border-zinc-100 px-2 py-2 last:border-b-0 text-sm text-zinc-700"
+                          className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3 last:border-b-0"
                         >
                           <input
                             type="checkbox"
@@ -777,14 +799,18 @@ export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsC
                               if (e.target.checked) setSelectedMembers((prev) => [...prev, member.user_id]);
                               else setSelectedMembers((prev) => prev.filter((id) => id !== member.user_id));
                             }}
-                            className="mt-0 shrink-0"
                           />
-                          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-semibold text-indigo-700">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-700">
                             {member.name.charAt(0)}
                           </div>
-                          <span className="min-w-0 flex-1 truncate">{member.name}</span>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium text-zinc-900">{member.name}</div>
+                            <div className="truncate text-xs text-zinc-500">
+                              {member.email ?? "Organization member"}
+                            </div>
+                          </div>
                         </label>
-                      ))) || <div className="px-2 py-2 text-sm text-zinc-500">No members</div>
+                      ))
                   )}
                 </div>
               </div>

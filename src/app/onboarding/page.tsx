@@ -18,7 +18,7 @@ export default function OnboardingPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground">
               RO
             </div>
-            <p className="font-heading text-lg font-bold tracking-tight">ResourceOS</p>
+            <p className="font-heading text-lg font-bold tracking-tight">FlashAssign</p>
           </div>
           <CardTitle className="font-heading text-2xl font-bold tracking-tight">
             Create your organization

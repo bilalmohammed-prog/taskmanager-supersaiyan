@@ -40,7 +40,7 @@ export default function LeftSideBar({ collapsed, onToggle }: LeftSideBarProps) {
         <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between gap-3"}`}>
           {!collapsed && (
             <div className="text-lg font-semibold tracking-tight text-zinc-800">
-              ResourceManager
+              FlashAssign
             </div>
           )}
           <button

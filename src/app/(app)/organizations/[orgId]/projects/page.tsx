@@ -2,15 +2,16 @@
 import { listProjectsWithMetaAction } from "@/actions/project/listWithMeta";
 
 type ProjectsPageProps = {
-  params: { orgId: string };
+  params: Promise<{ orgId: string }>;
 };
 
 export default async function ProjectsPage({ params }: ProjectsPageProps) {
+  const { orgId } = await params;
   const initialProjects = await listProjectsWithMetaAction({
-    organizationId: params.orgId,
+    organizationId: orgId,
     pageSize: 12,
     pageOffset: 0,
   });
 
-  return <ProjectsClientPage orgId={params.orgId} initialProjects={initialProjects} />;
+  return <ProjectsClientPage orgId={orgId} initialProjects={initialProjects} />;
 }

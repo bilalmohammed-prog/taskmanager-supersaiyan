@@ -14,7 +14,7 @@ export function Sidebar() {
       <div className="px-6 space-y-8">
         {/* Logo/Brand Area (Optional for context) */}
         <div className="font-semibold text-lg tracking-tight text-zinc-800">
-          ResourceManager
+          FlashAssign
         </div>
 
         <nav className="space-y-1 mt-8">
