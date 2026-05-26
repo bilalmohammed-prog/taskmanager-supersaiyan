@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Building2, PlusCircle } from "lucide-react";
 import { getUserOrganizationsAction } from "@/actions/organization/getUserOrganizations";
 import { switchOrganization } from "@/actions/organization/switchOrganization";
 
@@ -67,6 +68,11 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
   }, [orgId, orgs]);
 
   async function handleSwitch(targetOrgId: string) {
+    if (targetOrgId === "__create__") {
+      router.push("/onboarding");
+      return;
+    }
+
     if (!targetOrgId || targetOrgId === orgId) {
       return;
     }
@@ -89,10 +95,6 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
 
   const activeLabel = activeOrg?.name ?? activeOrg?.slug ?? "Organization";
 
-  if (collapsed) {
-    return null;
-  }
-
   if (loading) {
     return (
       <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-500">
@@ -113,11 +115,47 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
     );
   }
 
-  if (orgs.length <= 1) {
+  const dropdown = (
+    <select
+      value={orgId}
+      disabled={switchingId !== null}
+      onChange={(e) => {
+        void handleSwitch(e.target.value);
+      }}
+      className="h-9 w-full rounded-md border border-zinc-200 bg-white px-2.5 text-sm text-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-70"
+    >
+      {orgs.map((org) => (
+        <option key={org.id} value={org.id}>
+          {org.name || org.slug}
+        </option>
+      ))}
+      <option value="__create__">Create new organization...</option>
+    </select>
+  );
+
+  if (collapsed) {
     return (
-      <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Organization</p>
-        <p className="truncate text-sm font-semibold text-zinc-900">{activeLabel}</p>
+      <div className="flex justify-center">
+        <div className="relative flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-600">
+          <Building2 className="h-5 w-5" />
+          <span className="sr-only">Switch organization</span>
+          <select
+            value={orgId}
+            disabled={switchingId !== null}
+            onChange={(e) => {
+              void handleSwitch(e.target.value);
+            }}
+            aria-label="Switch organization"
+            className="absolute inset-0 cursor-pointer opacity-0"
+          >
+            {orgs.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name || org.slug}
+              </option>
+            ))}
+            <option value="__create__">Create new organization...</option>
+          </select>
+        </div>
       </div>
     );
   }
@@ -126,23 +164,13 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
     <div className="space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
       <div className="min-w-0">
         <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">Organization</p>
-        <p className="truncate text-sm font-semibold text-zinc-900">{activeLabel}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-semibold text-zinc-900">{activeLabel}</p>
+          <PlusCircle className="h-4 w-4 text-zinc-400" />
+        </div>
       </div>
 
-      <select
-        value={orgId}
-        disabled={switchingId !== null}
-        onChange={(e) => {
-          void handleSwitch(e.target.value);
-        }}
-        className="h-9 w-full rounded-md border border-zinc-200 bg-white px-2.5 text-sm text-zinc-700 outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-70"
-      >
-        {orgs.map((org) => (
-          <option key={org.id} value={org.id}>
-            {org.name || org.slug}
-          </option>
-        ))}
-      </select>
+      {dropdown}
 
       {switchingId && (
         <p className="text-xs text-zinc-500">Switching organization...</p>
