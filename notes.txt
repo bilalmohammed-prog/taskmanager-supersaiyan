@@ -1,6 +1,5 @@
 1. must add deleting tasks 
-2. refine ux for all pages starting from team (unnecessary text
-and space wasted)
+2. optimize the react compoennets to make page loading quick
 
 instant allocation of tasks in projects:
 
