@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Compiled test output
     ".tmp-tests/**",
+      // Reference assets not part of the main app
+      "figma ui reference/**",
+      "src/app/auth/login/components/**",
   ]),
 ]);
 

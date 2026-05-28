@@ -1,4 +1,4 @@
-1. must add deleting tasks 
+
 2. optimize the react compoennets to make page loading quick
 
 instant allocation of tasks in projects:
