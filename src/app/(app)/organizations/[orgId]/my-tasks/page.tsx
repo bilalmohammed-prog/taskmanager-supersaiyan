@@ -11,10 +11,18 @@ import type { Enums } from "@/lib/types/database";
 import type { MyTaskListItem } from "@/services/task/myTasks.service";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ExpandableDescription } from "@/components/tasks/ExpandableDescription";
 
 type TaskStatus = Enums<"task_status">;
 type StatusFilter = "all" | TaskStatus;
 type DueSort = "asc" | "desc";
+
+type MyTaskRowProps = {
+  task: MyTaskListItem;
+  canUpdateStatus: boolean;
+  savingId: string | null;
+  onStatusChange: (taskId: string, status: TaskStatus) => void;
+};
 
 function getTaskStatusLabel(status: TaskStatus) {
   if (status === "in_progress") return "In Progress";
@@ -56,6 +64,50 @@ function isOverdue(task: MyTaskListItem) {
   today.setHours(0, 0, 0, 0);
 
   return dueDate < today;
+}
+
+function MyTaskRow({ task, canUpdateStatus, savingId, onStatusChange }: MyTaskRowProps) {
+  return (
+    <div className="grid grid-cols-1 gap-3 px-4 py-3.5 transition-colors hover:bg-zinc-50/60 md:grid-cols-[minmax(0,1fr)_210px_160px_160px] md:items-center md:gap-5">
+      <div className="min-w-0">
+        <div className="truncate text-sm font-medium text-zinc-900" title={task.title}>
+          {task.title}
+        </div>
+        <ExpandableDescription
+          value={task.description}
+          onChange={() => {}}
+          onCommit={() => {}}
+          disabled
+          placeholder="No description"
+          className="mt-1"
+        />
+      </div>
+
+      <div className="min-w-0 text-sm font-medium text-zinc-700 truncate" title={task.project_name}>
+        {task.project_name}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <select
+          disabled={!canUpdateStatus || savingId === task.id}
+          value={task.status}
+          onChange={(e) => onStatusChange(task.id, e.target.value as TaskStatus)}
+          className={`w-fit appearance-none rounded-md border px-2.5 py-1 text-[13px] font-medium outline-none disabled:opacity-60 ${getTaskStatusBadgeClass(task.status)}`}
+        >
+          <option value="todo">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="blocked">Blocked</option>
+          <option value="done">Completed</option>
+        </select>
+        {savingId === task.id && <span className="text-xs text-zinc-500">Saving...</span>}
+      </div>
+
+      <div className={`flex items-center gap-1.5 text-sm ${isOverdue(task) ? "font-semibold text-red-600" : "text-zinc-600"}`}>
+        <Calendar className="h-3.5 w-3.5" />
+        {formatDueDate(task.due_date)}
+      </div>
+    </div>
+  );
 }
 
 export default function MyTasksPage() {
@@ -251,22 +303,22 @@ export default function MyTasksPage() {
       )}
 
       <div className="rounded-xl border border-zinc-200/80 bg-white shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]">
-        <div className="hidden grid-cols-[minmax(260px,1fr)_210px_160px_160px] items-center gap-5 border-b border-zinc-200/80 px-4 py-3 text-sm font-semibold text-zinc-500 md:grid">
+        <div className="hidden grid-cols-[minmax(0,1fr)_210px_160px_160px] items-center gap-5 border-b border-zinc-200/80 bg-zinc-50/80 px-4 py-3 text-sm font-semibold text-zinc-500 md:grid">
           <div>Task</div>
           <div>Project</div>
           <div>Status</div>
           <div>Due Date</div>
         </div>
 
-        <div className="flex flex-col divide-y divide-zinc-200/80">
+        <div className="flex flex-col">
           {loading ? (
             Array.from({ length: 6 }).map((_, index) => (
               <div
                 key={index}
-                className="grid grid-cols-1 gap-3 px-4 py-3 md:grid-cols-[minmax(260px,1fr)_210px_160px_160px] md:items-center md:gap-5"
+                className="grid grid-cols-1 gap-3 px-4 py-3.5 md:grid-cols-[minmax(0,1fr)_210px_160px_160px] md:items-center md:gap-5"
               >
                 <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-4 w-40" />
                 <Skeleton className="h-8 w-28" />
                 <Skeleton className="h-5 w-24" />
               </div>
@@ -283,42 +335,13 @@ export default function MyTasksPage() {
             </div>
           ) : (
             filteredTasks.map((task) => (
-              <div
+              <MyTaskRow
                 key={task.id}
-                className="grid grid-cols-1 gap-3 px-4 py-3 transition-colors hover:bg-zinc-50/60 md:grid-cols-[minmax(180px,1fr)_210px_160px_160px] md:items-center md:gap-5"
-              >
-                <div className="text-sm font-medium text-zinc-900">{task.title}</div>
-
-                <div className="text-sm font-medium text-zinc-700 truncate" title={task.project_name}>
-                  {task.project_name}
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <select
-                    disabled={!canUpdateStatus || savingId === task.id}
-                    value={task.status}
-                    onChange={(e) => handleStatusChange(task.id, e.target.value as TaskStatus)}
-                    className={`w-fit appearance-none rounded-md border px-2.5 py-1 text-[13px] font-medium outline-none disabled:opacity-60 ${getTaskStatusBadgeClass(task.status)}`}
-                  >
-                    <option value="todo">To Do</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="blocked">Blocked</option>
-                    <option value="done">Completed</option>
-                  </select>
-                  {savingId === task.id && <span className="text-xs text-zinc-500">Saving...</span>}
-                </div>
-
-                <div
-                  className={`flex items-center gap-1.5 text-sm ${isOverdue(task) ? "font-semibold text-red-600" : "text-zinc-600"}`}
-                >
-                  <Calendar className="h-3.5 w-3.5" />
-                  {formatDueDate(task.due_date)}
-                </div>
-
-                <div className="md:hidden">
-                  <span className="text-xs text-zinc-500">{getTaskStatusLabel(task.status)}</span>
-                </div>
-              </div>
+                task={task}
+                canUpdateStatus={canUpdateStatus}
+                savingId={savingId}
+                onStatusChange={handleStatusChange}
+              />
             ))
           )}
         </div>

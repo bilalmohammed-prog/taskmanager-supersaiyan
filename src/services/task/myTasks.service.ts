@@ -5,6 +5,7 @@ import type { Database } from "@/lib/types/database";
 export type MyTaskListItem = {
   id: string;
   title: string;
+  description: string | null;
   status: Database["public"]["Enums"]["task_status"];
   due_date: string | null;
   project_id: string;
@@ -18,6 +19,7 @@ type AssignmentWithTaskRow = {
   tasks: {
     id: string;
     title: string;
+    description: string | null;
     status: Database["public"]["Enums"]["task_status"] | null;
     due_date: string | null;
     deleted_at: string | null;
@@ -37,7 +39,7 @@ export async function listMyTasks(
   const { data, error } = await supabase
     .from("assignments")
     .select(
-      "task_id,allocated_hours,tasks!inner(id,title,status,due_date,deleted_at,organization_id,project_id,projects(id,name))"
+      "task_id,allocated_hours,tasks!inner(id,title,description,status,due_date,deleted_at,organization_id,project_id,projects(id,name))"
     )
     .eq("user_id", params.userId)
     .eq("tasks.organization_id", params.organizationId)
@@ -65,6 +67,7 @@ export async function listMyTasks(
       return {
         id: task.id,
         title: task.title,
+        description: task.description,
         status: task.status ?? "todo",
         due_date: task.due_date,
         project_id: task.project_id,
