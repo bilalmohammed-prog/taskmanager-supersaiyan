@@ -13,13 +13,22 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
 export default async function ProjectsPage() {
+  console.time("[perf] [Page] legacy projects total");
+  console.time("[perf] [Fetch] legacy projects requireOrgContext");
   const ctx = await requireOrgContext();
+  console.timeEnd("[perf] [Fetch] legacy projects requireOrgContext");
+
+  console.time("[perf] [Fetch] legacy projects initial queries");
   const [projects, orgMembersResult] = await Promise.all([
     listProjectsAction(),
     listOrgMembers(ctx.organizationId),
   ]);
+  console.timeEnd("[perf] [Fetch] legacy projects initial queries");
 
   const orgMembers = orgMembersResult.data ?? [];
+  // POTENTIAL WATERFALL
+  // [N+1 Risk] One project-member query is issued per project during page render.
+  console.time("[perf] [N+1 Risk] legacy projects members per-project queries");
   const membersByProject = new Map(
     await Promise.all(
       projects.map(async (project) => {
@@ -31,6 +40,9 @@ export default async function ProjectsPage() {
       })
     )
   );
+  console.timeEnd("[perf] [N+1 Risk] legacy projects members per-project queries");
+  console.info(`[perf] [N+1 Risk] legacy projects members per-project queries count=${projects.length}`);
+  console.timeEnd("[perf] [Page] legacy projects total");
 
   async function createProjectMutation(formData: FormData) {
     "use server";

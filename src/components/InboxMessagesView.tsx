@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/types/database";
@@ -59,12 +59,15 @@ function toInviteMessageUI(invite: Invite, normalizedEmail: string): ExtendedMes
   };
 }
 
+// POSSIBLE LARGE CLIENT COMPONENT
 export default function InboxMessagesView({
   initialMessages,
 }: {
   initialMessages: Message[];
 }) {
   const { orgId } = useParams<{ orgId: string }>();
+  const hydrationStartRef = useRef<number | null>(null);
+  const renderCountRef = useRef(0);
   const [messages, setMessages] = useState<ExtendedMessageUI[]>(
     initialMessages.map(toMessageUI)
   );
@@ -73,10 +76,27 @@ export default function InboxMessagesView({
   const [senderEmailById, setSenderEmailById] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    hydrationStartRef.current = performance.now();
+    console.time("[perf] inbox hydration");
+    console.timeEnd("[perf] inbox hydration");
+  }, []);
+
+  useEffect(() => {
+    renderCountRef.current += 1;
+    if (renderCountRef.current > 1) {
+      console.info(
+        `[render] inbox #${renderCountRef.current} messages=${messages.length} selected=${selected ? "yes" : "no"}`
+      );
+    }
+  }, [messages.length, selected]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function refreshMessages() {
       try {
+        const loadStart = performance.now();
+        const apiStart = performance.now();
         const [response, authResult] = await Promise.all([
           fetch(`/api/messages?organizationId=${encodeURIComponent(orgId)}`, {
             method: "GET",
@@ -85,6 +105,7 @@ export default function InboxMessagesView({
           }),
           supabase.auth.getUser(),
         ]);
+        console.info(`[perf] inbox api+auth ${(performance.now() - apiStart).toFixed(1)}ms`);
 
         const apiMessages: Message[] = response.ok
           ? (((await response.json()) as { data?: { messages?: Message[] } }).data?.messages ?? [])
@@ -92,6 +113,7 @@ export default function InboxMessagesView({
 
         const normalizedEmail = authResult.data.user?.email?.toLowerCase().trim() ?? "";
         const currentUserId = authResult.data.user?.id ?? "";
+        const inviteStart = performance.now();
         const inviteRows: Invite[] = normalizedEmail
           ? await (async () => {
               const { data, error } = await supabase
@@ -107,7 +129,11 @@ export default function InboxMessagesView({
               return data ?? [];
             })()
           : [];
+        console.info(
+          `[perf] inbox invites query ${(performance.now() - inviteStart).toFixed(1)}ms`
+        );
 
+        const mergeStart = performance.now();
         const mergedMessages = [
           ...apiMessages.map(toMessageUI),
           ...inviteRows.map((invite) => toInviteMessageUI(invite, normalizedEmail)),
@@ -125,10 +151,15 @@ export default function InboxMessagesView({
         );
 
         if (profileIds.length > 0) {
+          const profileStart = performance.now();
           const { data: profiles, error: profileError } = await supabase
             .from("profiles")
             .select("id,username")
             .in("id", profileIds);
+
+          console.info(
+            `[perf] inbox profiles query ${(performance.now() - profileStart).toFixed(1)}ms`
+          );
 
           if (!profileError && profiles) {
             const nextMap: Record<string, string> = {};
@@ -157,11 +188,17 @@ export default function InboxMessagesView({
         const ordered = [...nextMessages].sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         );
+        const computeMs = performance.now() - mergeStart;
+        if (computeMs > 16) {
+          console.info(`[perf] inbox merge+sort ${computeMs.toFixed(1)}ms`);
+        }
         setMessages(ordered);
         setSelected((prev) => {
           if (!prev) return null;
           return ordered.find((message) => message.id === prev.id) ?? null;
         });
+        const totalMs = performance.now() - loadStart;
+        console.info(`[perf] inbox refresh total ${totalMs.toFixed(1)}ms`);
       } catch {
         // Keep existing inbox content if polling fails.
       }

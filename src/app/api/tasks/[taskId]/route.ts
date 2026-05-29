@@ -25,25 +25,35 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ taskId: string }> }
 ) {
+  const routeStart = Date.now();
   try {
+    const tenantStart = Date.now();
     const tenant = await requireTenantContext(req);
+    console.info(`[perf] [Fetch] api task PATCH requireTenantContext ${Date.now() - tenantStart}ms`);
     const { supabase, organizationId } = tenant;
     authorize("update", "task", tenant);
 
     const { taskId } = taskIdParamsSchema.parse(await params);
+    const parseStart = Date.now();
     const body = taskUpdateSchema.parse(await req.json());
+    console.info(`[perf] [Compute] api task PATCH parse body ${Date.now() - parseStart}ms`);
 
+    const taskStart = Date.now();
     const task = await getTaskById(supabase, { organizationId, taskId });
+    console.info(`[perf] [DB] api task PATCH getTaskById ${Date.now() - taskStart}ms`);
 
     if (!task) {
       throw new ValidationError({ message: "Task not found in your organization" });
     }
 
     if (task.project_id) {
+      // POTENTIAL WATERFALL
+      const projectStart = Date.now();
       const project = await getProjectById(supabase, {
         organizationId,
         projectId: task.project_id,
       });
+      console.info(`[perf] [DB] api task PATCH getProjectById ${Date.now() - projectStart}ms`);
 
       if (!project) {
         throw new ValidationError({
@@ -61,6 +71,7 @@ export async function PATCH(
     const normalizedStatus = normalizeTaskUpdateStatus(body.status);
     if (normalizedStatus !== undefined) updatePayload.status = normalizedStatus;
 
+    const updateStart = Date.now();
     const { data, error } = await supabase
       .from("tasks")
       .update(updatePayload)
@@ -69,6 +80,7 @@ export async function PATCH(
       .is("deleted_at", null)
       .select()
       .maybeSingle();
+    console.info(`[perf] [DB] api task PATCH update task ${Date.now() - updateStart}ms`);
 
     if (error) {
       throw new ValidationError({ message: error.message, details: error });
@@ -77,11 +89,14 @@ export async function PATCH(
       throw new ValidationError({ message: "Task not found in your organization" });
     }
 
+    const assignmentsStart = Date.now();
     const assignments = await listAssignments(supabase, {
       organizationId,
       taskId,
     });
+    console.info(`[perf] [DB] api task PATCH listAssignments ${Date.now() - assignmentsStart}ms`);
     const assignment = assignments[0];
+    console.info(`[perf] [Page] api task PATCH total ${Date.now() - routeStart}ms`);
 
     return ok(
       {
@@ -101,6 +116,7 @@ export async function PATCH(
       { status: 200 }
     );
   } catch (err) {
+    console.info(`[perf] [Page] api task PATCH total ${Date.now() - routeStart}ms`);
     console.error("[PATCH_TASK_EXCEPTION]:", err);
     return fail(err);
   }
@@ -111,17 +127,24 @@ export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ taskId: string }> }
 ) {
+  const routeStart = Date.now();
   try {
+    const tenantStart = Date.now();
     const tenant = await requireTenantContext(req);
+    console.info(`[perf] [Fetch] api task DELETE requireTenantContext ${Date.now() - tenantStart}ms`);
     const { supabase, organizationId } = tenant;
     authorize("delete", "task", tenant);
 
     const { taskId } = taskIdParamsSchema.parse(await params);
 
+    const deleteStart = Date.now();
     await deleteTaskService(supabase, { organizationId, taskId });
+    console.info(`[perf] [DB] api task DELETE deleteTask ${Date.now() - deleteStart}ms`);
+    console.info(`[perf] [Page] api task DELETE total ${Date.now() - routeStart}ms`);
 
     return ok({ message: "Task deleted successfully" }, { status: 200 });
   } catch (err) {
+    console.info(`[perf] [Page] api task DELETE total ${Date.now() - routeStart}ms`);
     console.error("[DELETE_TASK_EXCEPTION]:", err);
     return fail(err);
   }

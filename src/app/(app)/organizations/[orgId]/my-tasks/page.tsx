@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { Calendar, ClipboardList, ArrowUpDown } from "lucide-react";
 import { listMyTasks } from "@/actions/task/listMyTasks";
@@ -110,11 +110,15 @@ function MyTaskRow({ task, canUpdateStatus, savingId, onStatusChange }: MyTaskRo
   );
 }
 
+// POSSIBLE LARGE CLIENT COMPONENT
 export default function MyTasksPage() {
   const { orgId } = useParams<{ orgId: string }>();
   const role = useOrgRole();
   const canUpdateStatus = role !== null;
   const { setPageHeader } = usePageHeader();
+
+  const hydrationStartRef = useRef<number | null>(null);
+  const renderCountRef = useRef(0);
 
   const [tasks, setTasks] = useState<MyTaskListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,6 +131,21 @@ export default function MyTasksPage() {
   const [dueSort, setDueSort] = useState<DueSort>("asc");
 
   useEffect(() => {
+    hydrationStartRef.current = performance.now();
+    console.time("[perf] page my-tasks hydration");
+    console.timeEnd("[perf] page my-tasks hydration");
+  }, []);
+
+  useEffect(() => {
+    renderCountRef.current += 1;
+    if (renderCountRef.current > 1) {
+      console.info(
+        `[render] my-tasks #${renderCountRef.current} tasks=${tasks.length} loading=${loading} filters=${statusFilter}/${projectFilter} query=${taskQuery.length}`
+      );
+    }
+  }, [loading, projectFilter, statusFilter, taskQuery.length, tasks.length]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadMyTasks() {
@@ -136,8 +155,14 @@ export default function MyTasksPage() {
       setError(null);
       setLoading(true);
 
+      const loadStart = performance.now();
+
       try {
+        const queryStart = performance.now();
         const data = await listMyTasks(orgId);
+        console.info(`[perf] my-tasks listMyTasks ${(
+          performance.now() - queryStart
+        ).toFixed(1)}ms`);
         if (!cancelled) {
           setTasks(data);
         }
@@ -148,6 +173,11 @@ export default function MyTasksPage() {
       } finally {
         if (!cancelled) {
           setLoading(false);
+          console.info(
+            `[perf] my-tasks load total ${(
+              performance.now() - loadStart
+            ).toFixed(1)}ms`
+          );
         }
       }
     }
@@ -173,6 +203,7 @@ export default function MyTasksPage() {
     return options.sort((a, b) => a.name.localeCompare(b.name));
   }, [tasks]);
 
+  // POSSIBLE RERENDER HOTSPOT
   const filteredTasks = useMemo(() => {
     const normalizedQuery = taskQuery.trim().toLowerCase();
     const byFilter = tasks.filter((task) => {
@@ -200,6 +231,33 @@ export default function MyTasksPage() {
     const done = tasks.filter((task) => task.status === "done").length;
 
     return { total, todo, inProgress, blocked, done };
+  }, [tasks]);
+
+  useEffect(() => {
+    console.time("[perf] my-tasks filter+sort");
+    const normalizedQuery = taskQuery.trim().toLowerCase();
+    const byFilter = tasks.filter((task) => {
+      const statusMatch = statusFilter === "all" || task.status === statusFilter;
+      const projectMatch = projectFilter === "all" || task.project_id === projectFilter;
+      const titleMatch = !normalizedQuery || task.title.toLowerCase().includes(normalizedQuery);
+      return statusMatch && projectMatch && titleMatch;
+    });
+    [...byFilter].sort((a, b) => {
+      const aDue = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
+      const bDue = b.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY;
+
+      return dueSort === "asc" ? aDue - bDue : bDue - aDue;
+    });
+    console.timeEnd("[perf] my-tasks filter+sort");
+  }, [tasks, statusFilter, projectFilter, dueSort, taskQuery]);
+
+  useEffect(() => {
+    console.time("[perf] my-tasks summary compute");
+    tasks.filter((task) => task.status === "todo").length;
+    tasks.filter((task) => task.status === "in_progress").length;
+    tasks.filter((task) => task.status === "blocked").length;
+    tasks.filter((task) => task.status === "done").length;
+    console.timeEnd("[perf] my-tasks summary compute");
   }, [tasks]);
 
   async function handleStatusChange(taskId: string, status: TaskStatus) {

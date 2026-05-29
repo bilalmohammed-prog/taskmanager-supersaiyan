@@ -14,12 +14,14 @@ async function assertOrgMember(
   organizationId: string,
   userId: string
 ): Promise<void> {
+  const queryStart = Date.now();
   const { data, error } = await supabase
     .from("org_members")
     .select("id")
     .eq("organization_id", organizationId)
     .eq("user_id", userId)
     .maybeSingle();
+  console.info(`[perf] [DB] messaging.service assertOrgMember ${Date.now() - queryStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
@@ -59,13 +61,17 @@ export async function createMessage(
     });
   }
 
+  const validateStart = Date.now();
   await assertOrgMember(supabase, params.organizationId, params.senderId);
 
   if (recipientId) {
+    // POTENTIAL WATERFALL
     await assertOrgMember(supabase, params.organizationId, recipientId);
   }
+  console.info(`[perf] [Fetch] messaging.service createMessage membership checks ${Date.now() - validateStart}ms`);
 
   if (projectId) {
+    const projectStart = Date.now();
     const { data: project, error: projectError } = await supabase
       .from("projects")
       .select("id")
@@ -73,6 +79,7 @@ export async function createMessage(
       .eq("organization_id", params.organizationId)
       .is("deleted_at", null)
       .maybeSingle();
+    console.info(`[perf] [DB] messaging.service createMessage project check ${Date.now() - projectStart}ms`);
 
     if (projectError) {
       throw new ValidationError({ message: projectError.message, details: projectError });
@@ -94,11 +101,13 @@ export async function createMessage(
     insertPayload.project_id = projectId;
   }
 
+  const insertStart = Date.now();
   const { data, error } = await supabase
     .from("messages")
     .insert(insertPayload)
     .select("*")
     .maybeSingle();
+  console.info(`[perf] [DB] messaging.service createMessage insert ${Date.now() - insertStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
@@ -119,6 +128,7 @@ export async function listMessages(
     projectId?: string;
   }
 ): Promise<MessageRow[]> {
+  const totalStart = Date.now();
   await assertOrgMember(supabase, params.organizationId, params.userId);
 
   const recipientId = params.recipientId?.trim() || undefined;
@@ -126,6 +136,7 @@ export async function listMessages(
 
   // Project messages (safe)
   if (projectId) {
+    const queryStart = Date.now();
     const { data, error } = await supabase
       .from("messages")
       .select("*")
@@ -133,18 +144,20 @@ export async function listMessages(
       .eq("project_id", projectId)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
+    console.info(`[perf] [DB] messaging.service listMessages project ${Date.now() - queryStart}ms`);
 
     if (error) {
       console.error("[LIST_MESSAGES_PROJECT_ERROR]", error);
       throw new ValidationError({ message: "Failed to fetch messages" });
     }
 
+    console.info(`[perf] [Fetch] messaging.service listMessages total ${Date.now() - totalStart}ms`);
     return data ?? [];
   }
 
   // Direct conversation (NO string interpolation)
   if (recipientId) {
-    
+    const queryStart = Date.now();
     const [sent, received] = await Promise.all([
       supabase
         .from("messages")
@@ -168,27 +181,44 @@ export async function listMessages(
       throw new ValidationError({ message: "Failed to fetch messages" });
     }
 
-    return [...(sent.data ?? []), ...(received.data ?? [])].sort(
+    const computeStart = Date.now();
+    const rows = [...(sent.data ?? []), ...(received.data ?? [])].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
+    console.info(`[perf] [DB] messaging.service listMessages direct ${Date.now() - queryStart}ms`);
+    const computeMs = Date.now() - computeStart;
+    if (computeMs > 8) {
+      console.info(`[perf] [Compute] messaging.service sort direct messages ${computeMs}ms`);
+    }
+    console.info(`[perf] [Fetch] messaging.service listMessages total ${Date.now() - totalStart}ms`);
+    return rows;
   }
 
   // All messages involving user
+  const queryStart = Date.now();
   const { data, error } = await supabase
     .from("messages")
     .select("*")
     .eq("organization_id", params.organizationId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
+  console.info(`[perf] [DB] messaging.service listMessages all ${Date.now() - queryStart}ms`);
 
   if (error) {
     console.error("[LIST_MESSAGES_ALL_ERROR]", error);
     throw new ValidationError({ message: "Failed to fetch messages" });
   }
 
-  return (data ?? []).filter(
+  const computeStart = Date.now();
+  const rows = (data ?? []).filter(
     (m) => m.sender_id === params.userId || m.recipient_id === params.userId
   );
+  const computeMs = Date.now() - computeStart;
+  if (computeMs > 8) {
+    console.info(`[perf] [Compute] messaging.service filter user messages ${computeMs}ms`);
+  }
+  console.info(`[perf] [Fetch] messaging.service listMessages total ${Date.now() - totalStart}ms`);
+  return rows;
 }
 
 export async function deleteMessage(
@@ -200,6 +230,7 @@ export async function deleteMessage(
     actorRole: AppRole;
   }
 ): Promise<void> {
+  const lookupStart = Date.now();
   const { data: message, error: messageError } = await supabase
     .from("messages")
     .select("id,sender_id")
@@ -207,6 +238,7 @@ export async function deleteMessage(
     .eq("id", params.messageId)
     .is("deleted_at", null)
     .maybeSingle();
+  console.info(`[perf] [DB] messaging.service deleteMessage lookup ${Date.now() - lookupStart}ms`);
 
   if (messageError) {
     throw new ValidationError({ message: messageError.message, details: messageError });
@@ -226,6 +258,7 @@ export async function deleteMessage(
     });
   }
 
+  const updateStart = Date.now();
   const { data: updated, error } = await supabase
     .from("messages")
     .update({ deleted_at: new Date().toISOString() })
@@ -234,6 +267,7 @@ export async function deleteMessage(
     .is("deleted_at", null)
     .select("id")
     .maybeSingle();
+  console.info(`[perf] [DB] messaging.service deleteMessage update ${Date.now() - updateStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });

@@ -12,7 +12,12 @@ type RoleType = Database["public"]["Enums"]["role_type"];
 const roleOptions: RoleType[] = ["owner", "admin", "manager", "employee", "viewer"];
 
 export default async function OrgSettingsPage() {
+  console.time("[perf] [Page] org settings total");
+  console.time("[perf] [Fetch] org settings requireOrgContext");
   const ctx = await requireOrgContext();
+  console.timeEnd("[perf] [Fetch] org settings requireOrgContext");
+
+  console.time("[perf] [Fetch] org settings member queries");
   const [membersResult, orgMembersResult] = await Promise.all([
     listOrgMembers(ctx.organizationId),
     ctx.supabase
@@ -20,8 +25,13 @@ export default async function OrgSettingsPage() {
       .select("user_id,role")
       .eq("organization_id", ctx.organizationId),
   ]);
+  console.timeEnd("[perf] [Fetch] org settings member queries");
+
+  console.time("[perf] [Compute] org settings role map");
   const members = membersResult.data ?? [];
   const roleByUserId = new Map((orgMembersResult.data ?? []).map((row) => [row.user_id, row.role]));
+  console.timeEnd("[perf] [Compute] org settings role map");
+  console.timeEnd("[perf] [Page] org settings total");
 
   async function inviteMemberMutation(formData: FormData) {
     "use server";

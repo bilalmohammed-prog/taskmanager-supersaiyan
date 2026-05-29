@@ -58,13 +58,17 @@ export async function getTasksByProject(
   supabase: SupabaseClient<Database>,
   params: { organizationId: string; projectId: string }
 ): Promise<Tables<"tasks">[]> {
+  console.time("[DB] workspace tasks query");
   const { data, error } = await supabase
     .from("tasks")
-    .select("*")
+    .select(
+      "id,title,description,due_date,status,organization_id,project_id,created_by,created_at,deleted_at"
+    )
     .eq("organization_id", params.organizationId)
     .eq("project_id", params.projectId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
+  console.timeEnd("[DB] workspace tasks query");
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });

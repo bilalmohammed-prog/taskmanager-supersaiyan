@@ -16,16 +16,22 @@ type TaskDetailPageProps = {
 };
 
 export default async function TaskDetailPage({ params }: TaskDetailPageProps) {
+  console.time("[perf] [Page] legacy task detail total");
   const { id: taskId } = await params;
+  console.time("[perf] [Fetch] legacy task detail requireOrgContext");
   const ctx = await requireOrgContext();
+  console.timeEnd("[perf] [Fetch] legacy task detail requireOrgContext");
 
+  console.time("[perf] [Fetch] legacy task detail queries");
   const [task, commentRows, assignmentRows] = await Promise.all([
     getTaskById(ctx.supabase, { organizationId: ctx.organizationId, taskId }),
     listComments(taskId),
     listAssignments(ctx.supabase, { organizationId: ctx.organizationId, taskId }),
   ]);
+  console.timeEnd("[perf] [Fetch] legacy task detail queries");
 
   if (!task) notFound();
+  console.timeEnd("[perf] [Page] legacy task detail total");
 
   async function setStatusMutation(formData: FormData) {
     "use server";

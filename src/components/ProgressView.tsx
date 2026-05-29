@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getTeamProgress } from "@/lib/api";
 
 type EmployeeProgress = {
@@ -12,15 +12,35 @@ type EmployeeProgress = {
 };
 
 export default function ProgressView() {
+  // POSSIBLE LARGE CLIENT COMPONENT
+  const hydrationStartRef = useRef<number | null>(null);
+  const renderCountRef = useRef(0);
   const [data, setData] = useState<EmployeeProgress[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    hydrationStartRef.current = performance.now();
+    console.time("[perf] [Hydration] progress view");
+    console.timeEnd("[perf] [Hydration] progress view");
+  }, []);
+
+  useEffect(() => {
+    renderCountRef.current += 1;
+    if (renderCountRef.current > 1) {
+      console.info(`[perf] [Render] progress view render count=${renderCountRef.current} rows=${data.length}`);
+    }
+  });
+
+  useEffect(() => {
     async function fetchStats() {
       try {
+        const loadStart = performance.now();
         setLoading(true);
+        const fetchStart = performance.now();
         const { employees } = await getTeamProgress();
+        console.info(`[perf] [Fetch] progress view getTeamProgress ${performance.now() - fetchStart}ms`);
         setData(employees);
+        console.info(`[perf] [Fetch] progress view load total ${performance.now() - loadStart}ms`);
       } catch (err) {
         console.error("Error loading progress", err);
         setData([]);
@@ -32,6 +52,7 @@ export default function ProgressView() {
     fetchStats();
   }, []);
 
+  // POSSIBLE RERENDER HOTSPOT
   const overall = data.reduce(
     (acc, curr) => ({
       total: acc.total + curr.total_tasks,
@@ -39,6 +60,18 @@ export default function ProgressView() {
     }),
     { total: 0, completed: 0 }
   );
+
+  useEffect(() => {
+    console.time("[perf] [Compute] progress view overall reduce");
+    data.reduce(
+      (acc, curr) => ({
+        total: acc.total + curr.total_tasks,
+        completed: acc.completed + curr.completed_tasks,
+      }),
+      { total: 0, completed: 0 }
+    );
+    console.timeEnd("[perf] [Compute] progress view overall reduce");
+  }, [data]);
 
   const getPercentage = (completed: number, total: number) =>
     total === 0 ? 0 : Math.round((completed / total) * 100);

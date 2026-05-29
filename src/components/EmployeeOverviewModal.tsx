@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getEmployeeOverview } from "@/lib/api";
 import { useToast } from "@/components/providers/toast";
 
@@ -17,9 +17,24 @@ export default function EmployeeOverviewModal({
   isOpen,
   onClose
 }: EmployeeOverviewModalProps) {
+  const hydrationStartRef = useRef<number | null>(null);
+  const renderCountRef = useRef(0);
   const [overview, setOverview] = useState<{ empID: string | null; name: string | null } | null>(null);
   const [loading, setLoading] = useState(false);
   const { addToast } = useToast();
+
+  useEffect(() => {
+    hydrationStartRef.current = performance.now();
+    console.time("[perf] [Hydration] employee overview modal");
+    console.timeEnd("[perf] [Hydration] employee overview modal");
+  }, []);
+
+  useEffect(() => {
+    renderCountRef.current += 1;
+    if (renderCountRef.current > 2) {
+      console.info(`[perf] [Render] employee overview modal render count=${renderCountRef.current} isOpen=${isOpen}`);
+    }
+  });
 
   useEffect(() => {
     if (isOpen && employeeEmail) {
@@ -29,12 +44,16 @@ export default function EmployeeOverviewModal({
 
   const loadOverview = async () => {
     try {
+      const loadStart = performance.now();
       setLoading(true);
+      const fetchStart = performance.now();
       const data = await getEmployeeOverview(employeeEmail);
+      console.info(`[perf] [Fetch] employee overview getEmployeeOverview ${performance.now() - fetchStart}ms`);
       setOverview({
         empID: data.empID,
         name: data.name ?? null
       });
+      console.info(`[perf] [Fetch] employee overview load total ${performance.now() - loadStart}ms`);
     } catch (err) {
       console.error("Failed to load employee overview", err);
       addToast("Failed to load employee overview", "error");

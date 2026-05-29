@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { apiFetch } from "@/lib/api/client";
 
 type Message = {
@@ -13,18 +13,40 @@ type Message = {
 };
 
 export default function InboxView() {
+  // POSSIBLE LARGE CLIENT COMPONENT
+  const hydrationStartRef = useRef<number | null>(null);
+  const renderCountRef = useRef(0);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selected, setSelected] = useState<Message | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    hydrationStartRef.current = performance.now();
+    console.time("[perf] [Hydration] legacy inbox");
+    console.timeEnd("[perf] [Hydration] legacy inbox");
+  }, []);
+
+  useEffect(() => {
+    renderCountRef.current += 1;
+    if (renderCountRef.current > 1) {
+      console.info(`[perf] [Render] legacy inbox render count=${renderCountRef.current} messages=${messages.length}`);
+    }
+  });
+
+  useEffect(() => {
     async function loadMessages() {
       try {
+        const loadStart = performance.now();
         setLoading(true);
+        const fetchStart = performance.now();
         const res = await apiFetch("/api/messages");
+        console.info(`[perf] [Fetch] legacy inbox api ${performance.now() - fetchStart}ms`);
+        const parseStart = performance.now();
         const json = await res.json();
+        console.info(`[perf] [Compute] legacy inbox json parse ${performance.now() - parseStart}ms`);
         setMessages(json?.data?.messages ?? json?.messages ?? []);
+        console.info(`[perf] [Fetch] legacy inbox load total ${performance.now() - loadStart}ms`);
       } catch (err) {
         console.error(err);
         setError("Failed to load messages");
@@ -37,6 +59,8 @@ export default function InboxView() {
   }, []);
 
   function formatDate(dateStr: string) {
+    // POTENTIAL WATERFALL
+    // Hydration may differ across server/client locales if this component is ever server-rendered with dates.
     return new Date(dateStr).toLocaleString(undefined, {
       day: "2-digit",
       month: "short",

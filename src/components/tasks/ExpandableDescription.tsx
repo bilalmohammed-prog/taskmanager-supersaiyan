@@ -25,7 +25,8 @@ export function ExpandableDescription({
   const contentId = useId();
   const normalizedValue = value ?? "";
   const hasValue = useMemo(() => normalizedValue.trim().length > 0, [normalizedValue]);
-  const label = hasValue ? "Description" : "Add description";
+  const label = hasValue ? "Description" : disabled ? placeholder : "Add description";
+  const textareaValue = disabled && !hasValue ? "" : normalizedValue;
 
   return (
     <div className={cn("relative space-y-2", className)}>
@@ -51,7 +52,7 @@ export function ExpandableDescription({
       >
         <div className="rounded-md border border-zinc-200 bg-white p-0.5 transition-[box-shadow,border-color] focus-within:border-transparent focus-within:ring-2 focus-within:ring-indigo-500">
           <textarea
-            value={normalizedValue}
+            value={textareaValue}
             onChange={(e) => onChange(e.target.value)}
             onBlur={(e) => onCommit(e.target.value)}
             rows={2}

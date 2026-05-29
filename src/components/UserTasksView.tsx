@@ -29,6 +29,7 @@ function prettyDateTime(dt: string | Date | number | null) {
   });
 }
 
+// POSSIBLE LARGE CLIENT COMPONENT
 export default function UserTasksView() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -36,6 +37,23 @@ export default function UserTasksView() {
   const { addToast } = useToast();
 
   const initRef = useRef(false);
+  const hydrationStartRef = useRef<number | null>(null);
+  const renderCountRef = useRef(0);
+
+  useEffect(() => {
+    hydrationStartRef.current = performance.now();
+    console.time("[perf] user-tasks hydration");
+    console.timeEnd("[perf] user-tasks hydration");
+  }, []);
+
+  useEffect(() => {
+    renderCountRef.current += 1;
+    if (renderCountRef.current > 1) {
+      console.info(
+        `[render] user-tasks #${renderCountRef.current} tasks=${tasks.length} loading=${loading}`
+      );
+    }
+  }, [loading, tasks.length]);
 
   useEffect(() => {
     let mounted = true;
@@ -47,7 +65,10 @@ export default function UserTasksView() {
 
         setLoading(true);
 
+        const loadStart = performance.now();
+        const authStart = performance.now();
         const { data: { session } } = await supabase.auth.getSession();
+        console.info(`[perf] user-tasks auth session ${(performance.now() - authStart).toFixed(1)}ms`);
 
         if (!session?.user) {
           if (mounted) {
@@ -59,11 +80,14 @@ export default function UserTasksView() {
 
         const user = session.user;
 
+        // POTENTIAL WATERFALL
+        const profileStart = performance.now();
         const { data: profile } = await supabase
           .from("profiles")
           .select("active_organization_id")
           .eq("id", user.id)
           .maybeSingle();
+        console.info(`[perf] user-tasks profile query ${(performance.now() - profileStart).toFixed(1)}ms`);
 
         const orgId = profile?.active_organization_id;
 
@@ -73,14 +97,17 @@ export default function UserTasksView() {
           return;
         }
 
+        const tasksStart = performance.now();
         const { data, error } = await supabase
           .from("tasks")
           .select("id, title, description, due_date, status")
           .eq("organization_id", orgId)
           .order("created_at", { ascending: true });
+        console.info(`[perf] user-tasks tasks query ${(performance.now() - tasksStart).toFixed(1)}ms`);
 
         if (mounted) {
           if (!error && data) {
+            const mapStart = performance.now();
             setTasks(data.map(t => ({
               id: t.id,
               title: t.title,
@@ -88,9 +115,14 @@ export default function UserTasksView() {
               due_date: t.due_date,
               status: t.status,
             })));
+            const mapMs = performance.now() - mapStart;
+            if (mapMs > 12) {
+              console.info(`[perf] user-tasks map ${mapMs.toFixed(1)}ms`);
+            }
           }
           setLoading(false);
           initRef.current = false;
+          console.info(`[perf] user-tasks load total ${(performance.now() - loadStart).toFixed(1)}ms`);
         }
       } catch (err) {
         console.error("Error in loadTasks:", err);

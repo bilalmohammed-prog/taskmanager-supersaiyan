@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { createTask } from "@/actions/task/create";
@@ -232,6 +232,7 @@ const EmployeeTaskRow = memo(function EmployeeTaskRow({
   );
 });
 
+// POSSIBLE LARGE CLIENT COMPONENT
 export default function EmployeeTasksPage() {
   const role = useOrgRole();
   const canManage = role === "owner" || role === "admin" || role === "manager";
@@ -239,6 +240,8 @@ export default function EmployeeTasksPage() {
   const { setPageHeader } = usePageHeader();
 
   const { orgId, employeeId } = useParams<{ orgId: string; employeeId: string }>();
+  const hydrationStartRef = useRef<number | null>(null);
+  const renderCountRef = useRef(0);
   const [tasks, setTasks] = useState<EmployeeTask[]>([]);
   const [employeeName, setEmployeeName] = useState("Employee");
   const [projects, setProjects] = useState<ProjectOption[]>([]);
@@ -252,7 +255,23 @@ export default function EmployeeTasksPage() {
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
 
+  useEffect(() => {
+    hydrationStartRef.current = performance.now();
+    console.time("[perf] page employee-tasks hydration");
+    console.timeEnd("[perf] page employee-tasks hydration");
+  }, []);
+
+  useEffect(() => {
+    renderCountRef.current += 1;
+    if (renderCountRef.current > 1) {
+      console.info(
+        `[render] employee-tasks #${renderCountRef.current} tasks=${tasks.length} loading=${loading} deleteMode=${deleteMode}`
+      );
+    }
+  }, [deleteMode, loading, tasks.length]);
+
   const fetchEmployeeTasks = useCallback(async () => {
+    const queryStart = performance.now();
     const { data } = await supabase
       .from("assignments")
       .select(
@@ -265,7 +284,17 @@ export default function EmployeeTasksPage() {
       .eq("organization_id", orgId)
       .is("tasks.deleted_at", null);
 
-    return mapAssignmentRowsToEmployeeTasks((data ?? []) as AssignmentTaskRow[]);
+    console.info(
+      `[perf] employee-tasks assignments query ${(performance.now() - queryStart).toFixed(1)}ms`
+    );
+
+    const mapStart = performance.now();
+    const result = mapAssignmentRowsToEmployeeTasks((data ?? []) as AssignmentTaskRow[]);
+    const mapMs = performance.now() - mapStart;
+    if (mapMs > 12) {
+      console.info(`[perf] employee-tasks map tasks ${mapMs.toFixed(1)}ms`);
+    }
+    return result;
   }, [orgId]);
 
   const selectedTaskIdSet = useMemo(() => new Set(selectedTaskIds), [selectedTaskIds]);
@@ -318,17 +347,28 @@ export default function EmployeeTasksPage() {
     async function load() {
       try {
         setLoading(true);
+        const loadStart = performance.now();
 
+        const membersStart = performance.now();
         const members = await listOrgMembers(orgId);
+        console.info(
+          `[perf] employee-tasks listOrgMembers ${(performance.now() - membersStart).toFixed(1)}ms`
+        );
         const match = members.data?.find((m) => m.user_id === employeeId);
         if (match) {
           setEmployeeName(match.name);
         }
 
+        const tasksStart = performance.now();
         const normalizedTasks = await fetchEmployeeTasks();
+        console.info(
+          `[perf] employee-tasks fetchEmployeeTasks ${(performance.now() - tasksStart).toFixed(1)}ms`
+        );
 
         setTasks(normalizedTasks);
 
+        // POTENTIAL WATERFALL
+        const projectsStart = performance.now();
         const { data: projectData } = await supabase
           .from("projects")
           .select("id, name")
@@ -336,7 +376,14 @@ export default function EmployeeTasksPage() {
           .is("deleted_at", null)
           .order("name", { ascending: true });
 
+        console.info(
+          `[perf] employee-tasks projects query ${(performance.now() - projectsStart).toFixed(1)}ms`
+        );
+
         setProjects((projectData ?? []).map((p) => ({ id: p.id, name: p.name })));
+        console.info(
+          `[perf] employee-tasks load total ${(performance.now() - loadStart).toFixed(1)}ms`
+        );
       } finally {
         setLoading(false);
       }

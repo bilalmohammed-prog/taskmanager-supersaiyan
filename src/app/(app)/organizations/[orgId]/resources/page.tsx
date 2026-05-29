@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { listOrgMembers } from "@/actions/organization/listOrgMembers";
@@ -20,12 +20,38 @@ export default function ResourcesPage() {
   const [workforce, setWorkforce] = useState<WorkforceRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const hydrationStartRef = useRef<number | null>(null);
+  const renderCountRef = useRef(0);
+
+  useEffect(() => {
+    hydrationStartRef.current = performance.now();
+    console.time("[perf] page resources hydration");
+    console.timeEnd("[perf] page resources hydration");
+  }, []);
+
+  useEffect(() => {
+    renderCountRef.current += 1;
+    if (renderCountRef.current > 1) {
+      console.info(
+        `[render] resources #${renderCountRef.current} members=${workforce.length} loading=${loading}`
+      );
+    }
+  }, [loading, workforce.length]);
+
   useEffect(() => {
     async function load() {
       try {
         setLoading(true);
+        const loadStart = performance.now();
+
+        const membersStart = performance.now();
 
         const membersResult = await listOrgMembers(orgId);
+        console.info(
+          `[perf] resources listOrgMembers ${(
+            performance.now() - membersStart
+          ).toFixed(1)}ms`
+        );
         if (membersResult.error || !membersResult.data) {
           addToast("Failed to load workforce", "error");
           return;
@@ -33,6 +59,7 @@ export default function ResourcesPage() {
 
         const members = membersResult.data;
 
+        const assignmentsStart = performance.now();
         const { data: assignments, error: assignError } = await supabase
           .from("assignments")
           .select(`
@@ -47,6 +74,12 @@ export default function ResourcesPage() {
           .eq("organization_id", orgId)
           .is("tasks.deleted_at", null);
 
+        console.info(
+          `[perf] resources assignments query ${(
+            performance.now() - assignmentsStart
+          ).toFixed(1)}ms`
+        );
+
         if (assignError) {
           addToast("Failed to load assignments", "error");
           return;
@@ -58,6 +91,7 @@ export default function ResourcesPage() {
           tasks: { id: string; status: string | null; deleted_at: string | null };
         };
 
+        const computeStart = performance.now();
         const rows = (assignments ?? []) as AssignmentRow[];
 
         const statsMap = new Map<
@@ -93,6 +127,15 @@ export default function ResourcesPage() {
         });
 
         setWorkforce(formatted);
+        const computeMs = performance.now() - computeStart;
+        if (computeMs > 12) {
+          console.info(`[perf] resources compute workload ${computeMs.toFixed(1)}ms`);
+        }
+        console.info(
+          `[perf] resources load total ${(
+            performance.now() - loadStart
+          ).toFixed(1)}ms`
+        );
       } catch (err) {
         console.error(err);
         addToast("Unexpected error loading workforce", "error");

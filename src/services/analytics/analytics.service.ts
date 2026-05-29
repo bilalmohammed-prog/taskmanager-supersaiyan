@@ -29,11 +29,16 @@ export async function getTeamWorkload(
   supabase: SupabaseClient<Database>,
   params: { organizationId: string }
 ): Promise<TeamMemberWorkload[]> {
+  const assignmentsStart = Date.now();
   const { data: assignments, error: assignmentsError } = await supabase
     .from("assignments")
     .select("user_id,allocated_hours,task_id,end_time")
     .eq("organization_id", params.organizationId)
     .is("end_time", null);
+
+  console.info(
+    `[perf] service getTeamWorkload assignments ${Date.now() - assignmentsStart}ms`
+  );
 
   if (assignmentsError) {
     throw new ValidationError({
@@ -42,12 +47,15 @@ export async function getTeamWorkload(
     });
   }
 
+  const tasksStart = Date.now();
   const { data: openTasks, error: tasksError } = await supabase
     .from("tasks")
     .select("id,status")
     .eq("organization_id", params.organizationId)
     .is("deleted_at", null)
     .in("status", ["todo", "in_progress", "blocked"]);
+
+  console.info(`[perf] service getTeamWorkload tasks ${Date.now() - tasksStart}ms`);
 
   if (tasksError) {
     throw new ValidationError({ message: tasksError.message, details: tasksError });
@@ -56,10 +64,15 @@ export async function getTeamWorkload(
   const openTaskIds = new Set((openTasks ?? []).map((task) => task.id));
   const userIds = Array.from(new Set((assignments ?? []).map((row) => row.user_id)));
 
+  const profilesStart = Date.now();
   const { data: profiles, error: profilesError } =
     userIds.length > 0
       ? await supabase.from("profiles").select("id,full_name").in("id", userIds)
       : { data: [], error: null };
+
+  console.info(
+    `[perf] service getTeamWorkload profiles ${Date.now() - profilesStart}ms`
+  );
 
   if (profilesError) {
     throw new ValidationError({
@@ -74,6 +87,7 @@ export async function getTeamWorkload(
     { totalHours: number; assignmentCount: number; openTaskCount: number }
   >();
 
+  const computeStart = Date.now();
   for (const row of assignments ?? []) {
     const current = aggregate.get(row.user_id) ?? {
       totalHours: 0,
@@ -89,19 +103,27 @@ export async function getTeamWorkload(
     aggregate.set(row.user_id, current);
   }
 
-  return Array.from(aggregate.entries()).map(([userId, totals]) => ({
+  const result = Array.from(aggregate.entries()).map(([userId, totals]) => ({
     employee_id: userId,
     employee_name: nameById.get(userId) ?? null,
     total_allocated_hours: totals.totalHours,
     assignment_count: totals.assignmentCount,
     open_tasks_count: totals.openTaskCount,
   }));
+
+  const computeMs = Date.now() - computeStart;
+  if (computeMs > 12) {
+    console.info(`[perf] service getTeamWorkload compute ${computeMs}ms`);
+  }
+
+  return result;
 }
 
 export async function getProjectProgress(
   supabase: SupabaseClient<Database>,
   params: { organizationId: string; projectId: string }
 ): Promise<ProjectProgressMetrics> {
+  const projectStart = Date.now();
   const { data: project, error: projectError } = await supabase
     .from("projects")
     .select("id")
@@ -109,6 +131,8 @@ export async function getProjectProgress(
     .eq("organization_id", params.organizationId)
     .is("deleted_at", null)
     .maybeSingle();
+
+  console.info(`[perf] service getProjectProgress project ${Date.now() - projectStart}ms`);
 
   if (projectError) {
     throw new ValidationError({ message: projectError.message, details: projectError });
@@ -125,6 +149,7 @@ export async function getProjectProgress(
     };
   }
 
+  const tasksStart = Date.now();
   const { data: tasks, error: tasksError } = await supabase
     .from("tasks")
     .select("status")
@@ -132,10 +157,13 @@ export async function getProjectProgress(
     .eq("project_id", params.projectId)
     .is("deleted_at", null);
 
+  console.info(`[perf] service getProjectProgress tasks ${Date.now() - tasksStart}ms`);
+
   if (tasksError) {
     throw new ValidationError({ message: tasksError.message, details: tasksError });
   }
 
+  const computeStart = Date.now();
   const total_tasks = tasks?.length ?? 0;
   const completed_tasks = (tasks ?? []).filter((task) => task.status === "done").length;
   const in_progress_tasks = (tasks ?? []).filter(
@@ -144,7 +172,7 @@ export async function getProjectProgress(
   const todo_tasks = (tasks ?? []).filter((task) => task.status === "todo").length;
   const blocked_tasks = (tasks ?? []).filter((task) => task.status === "blocked").length;
 
-  return {
+  const result = {
     total_tasks,
     completed_tasks,
     in_progress_tasks,
@@ -152,12 +180,20 @@ export async function getProjectProgress(
     blocked_tasks,
     completion_rate: total_tasks > 0 ? completed_tasks / total_tasks : 0,
   };
+
+  const computeMs = Date.now() - computeStart;
+  if (computeMs > 12) {
+    console.info(`[perf] service getProjectProgress compute ${computeMs}ms`);
+  }
+
+  return result;
 }
 
 export async function getTaskCompletionRate(
   supabase: SupabaseClient<Database>,
   params: { organizationId: string }
 ): Promise<TaskCompletionMetrics> {
+  const queryStart = Date.now();
   const [totalResult, completedResult] = await Promise.all([
     supabase
       .from("tasks")
@@ -171,6 +207,10 @@ export async function getTaskCompletionRate(
       .is("deleted_at", null)
       .eq("status", "done"),
   ]);
+
+  console.info(
+    `[perf] service getTaskCompletionRate queries ${Date.now() - queryStart}ms`
+  );
 
   if (totalResult.error) {
     throw new ValidationError({
@@ -186,13 +226,21 @@ export async function getTaskCompletionRate(
     });
   }
 
+  const computeStart = Date.now();
   const total_tasks = totalResult.count ?? 0;
   const completed_tasks = completedResult.count ?? 0;
   const completion_rate = total_tasks > 0 ? completed_tasks / total_tasks : 0;
 
-  return {
+  const result = {
     total_tasks,
     completed_tasks,
     completion_rate,
   };
+
+  const computeMs = Date.now() - computeStart;
+  if (computeMs > 8) {
+    console.info(`[perf] service getTaskCompletionRate compute ${computeMs}ms`);
+  }
+
+  return result;
 }

@@ -16,8 +16,11 @@ type TaskRow = {
 };
 
 export async function GET(req: Request): Promise<NextResponse> {
+  const routeStart = Date.now();
   try {
+    const tenantStart = Date.now();
     const tenant = await requireTenantContext(req);
+    console.info(`[perf] [Fetch] api displayTasks requireTenantContext ${Date.now() - tenantStart}ms`);
     authorize("read", "task", tenant);
     const { supabase, organizationId } = tenant;
 
@@ -31,18 +34,25 @@ export async function GET(req: Request): Promise<NextResponse> {
       return NextResponse.json({ success: true, data: { tasks: [] } });
     }
 
+    const membersStart = Date.now();
     const members = await listOrganizationMembers(supabase, { organizationId });
+    console.info(`[perf] [DB] api displayTasks listOrganizationMembers ${Date.now() - membersStart}ms`);
     const isMember = members.some((member) => member.userId === userId);
     if (!isMember) {
       return NextResponse.json({ success: true, data: { tasks: [] } });
     }
 
+    const assignmentsStart = Date.now();
     const assignments = await listAssignments(supabase, {
       organizationId,
       userId,
     });
+    console.info(`[perf] [DB] api displayTasks listAssignments ${Date.now() - assignmentsStart}ms`);
 
     /* ================= MAP ================= */
+    // POTENTIAL WATERFALL
+    // [N+1 Risk] Each assignment can trigger a separate task lookup.
+    const formatStart = Date.now();
     const formattedTasks = (
       await Promise.all(
         assignments.map(async (assignment) => {
@@ -86,9 +96,14 @@ export async function GET(req: Request): Promise<NextResponse> {
         })
       )
     ).filter((row): row is NonNullable<typeof row> => Boolean(row));
+    console.info(
+      `[perf] [N+1 Risk] api displayTasks per-assignment task fetches ${Date.now() - formatStart}ms count=${assignments.length}`
+    );
+    console.info(`[perf] [Page] api displayTasks total ${Date.now() - routeStart}ms`);
 
     return NextResponse.json({ success: true, data: { tasks: formattedTasks } });
   } catch (err) {
+    console.info(`[perf] [Page] api displayTasks total ${Date.now() - routeStart}ms`);
     console.error("[TASK_ROUTE_EXCEPTION]", err);
     return fail(err);
   }

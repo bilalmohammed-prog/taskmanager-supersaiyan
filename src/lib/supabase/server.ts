@@ -3,10 +3,18 @@ import { createServerClient } from "@supabase/ssr";
 import type { CookieOptions } from "@supabase/ssr";
 import type { Database } from "@/lib/types/database";
 
-export async function getSupabaseServer() {
-  const cookieStore = await cookies();
+let supabaseServerTraceId = 0;
 
-  return createServerClient<Database>(
+export async function getSupabaseServer() {
+  const traceId = ++supabaseServerTraceId;
+  const clientLabel = `[Fetch] Supabase server client create #${traceId}`;
+  const cookiesLabel = `[DB] auth/session cookies #${traceId}`;
+  console.time(clientLabel);
+  console.time(cookiesLabel);
+  const cookieStore = await cookies();
+  console.timeEnd(cookiesLabel);
+
+  const client = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -38,4 +46,6 @@ export async function getSupabaseServer() {
       },
     }
   );
+  console.timeEnd(clientLabel);
+  return client;
 }

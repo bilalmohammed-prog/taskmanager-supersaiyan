@@ -36,6 +36,7 @@ export async function listMyTasks(
   supabase: SupabaseClient<Database>,
   params: { organizationId: string; userId: string }
 ): Promise<MyTaskListItem[]> {
+  const queryStart = Date.now();
   const { data, error } = await supabase
     .from("assignments")
     .select(
@@ -54,9 +55,12 @@ export async function listMyTasks(
     throw new ValidationError({ message: error.message, details: error });
   }
 
+  console.info(`[perf] service listMyTasks query ${Date.now() - queryStart}ms`);
+
   const rows = (data ?? []) as AssignmentWithTaskRow[];
 
-  return rows
+  const computeStart = Date.now();
+  const result = rows
     .filter((row) => row.tasks?.project_id)
     .map((row) => {
       const task = row.tasks;
@@ -76,4 +80,11 @@ export async function listMyTasks(
       };
     })
     .filter((row): row is MyTaskListItem => row !== null);
+
+  const computeMs = Date.now() - computeStart;
+  if (computeMs > 12) {
+    console.info(`[perf] service listMyTasks map ${computeMs}ms`);
+  }
+
+  return result;
 }

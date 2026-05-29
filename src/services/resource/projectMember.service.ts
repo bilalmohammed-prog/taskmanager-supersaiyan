@@ -16,12 +16,26 @@ async function assertActiveProjectInOrganization(
   organizationId: string,
   projectId: string
 ): Promise<void> {
-  const { data: organization, error: organizationError } = await supabase
-    .from("organizations")
-    .select("id")
-    .eq("id", organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
+  console.time("[DB] workspace members assert organization+project");
+  const [organizationResult, projectResult] = await Promise.all([
+    supabase
+      .from("organizations")
+      .select("id")
+      .eq("id", organizationId)
+      .is("deleted_at", null)
+      .maybeSingle(),
+    supabase
+      .from("projects")
+      .select("id")
+      .eq("id", projectId)
+      .eq("organization_id", organizationId)
+      .is("deleted_at", null)
+      .maybeSingle(),
+  ]);
+  console.timeEnd("[DB] workspace members assert organization+project");
+
+  const { data: organization, error: organizationError } = organizationResult;
+  const { data: project, error: projectError } = projectResult;
 
   if (organizationError) {
     throw new ValidationError({
@@ -30,24 +44,16 @@ async function assertActiveProjectInOrganization(
     });
   }
 
-  if (!organization) {
-    throw new ForbiddenError({
-      message: "Organization does not exist or is inactive",
-    });
-  }
-
-  const { data: project, error: projectError } = await supabase
-    .from("projects")
-    .select("id")
-    .eq("id", projectId)
-    .eq("organization_id", organizationId)
-    .is("deleted_at", null)
-    .maybeSingle();
-
   if (projectError) {
     throw new ValidationError({
       message: projectError.message,
       details: projectError,
+    });
+  }
+
+  if (!organization) {
+    throw new ForbiddenError({
+      message: "Organization does not exist or is inactive",
     });
   }
 
@@ -88,37 +94,50 @@ export async function listProjectMembers(
   supabase: SupabaseClient<Database>,
   params: { organizationId: string; projectId: string }
 ): Promise<ProjectMemberWithProfile[]> {
+  console.time("[Service] workspace listProjectMembers total");
   await assertActiveProjectInOrganization(supabase, params.organizationId, params.projectId);
 
+  console.time("[DB] workspace members rows");
   const { data: members, error: membersError } = await supabase
     .from("project_members")
     .select("id,user_id,role,joined_at,left_at")
     .eq("organization_id", params.organizationId)
     .eq("project_id", params.projectId)
     .is("left_at", null);
+  console.timeEnd("[DB] workspace members rows");
 
   if (membersError) {
     throw new ValidationError({ message: membersError.message, details: membersError });
   }
 
+  console.time("[Compute] workspace members user ids");
   const userIds = Array.from(new Set((members ?? []).map((member) => member.user_id)));
+  console.timeEnd("[Compute] workspace members user ids");
 
   if (userIds.length === 0) {
+    console.timeEnd("[Service] workspace listProjectMembers total");
     return [];
   }
 
+  // POTENTIAL WATERFALL
+  // Profiles are fetched after project_members instead of via a joined select.
+  console.time("[DB] workspace member profiles");
   const { data: profiles, error: profileError } = await supabase
     .from("profiles")
     .select("id,full_name")
     .in("id", userIds);
+  console.timeEnd("[DB] workspace member profiles");
 
   if (profileError) {
     throw new ValidationError({ message: profileError.message, details: profileError });
   }
 
+  console.time("[Compute] workspace member profile index");
   const profileById = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
+  console.timeEnd("[Compute] workspace member profile index");
 
-  return (members ?? []).map((member) => {
+  console.time("[Compute] workspace members merge");
+  const rows = (members ?? []).map((member) => {
     const profile = profileById.get(member.user_id);
     return {
       id: member.id,
@@ -129,6 +148,9 @@ export async function listProjectMembers(
       full_name: profile?.full_name ?? null,
     };
   });
+  console.timeEnd("[Compute] workspace members merge");
+  console.timeEnd("[Service] workspace listProjectMembers total");
+  return rows;
 }
 
 export async function addProjectMember(

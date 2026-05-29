@@ -29,12 +29,14 @@ async function assertActiveOrganization(
   supabase: SupabaseClient<Database>,
   organizationId: string
 ): Promise<void> {
+  const queryStart = Date.now();
   const { data: organization, error } = await supabase
     .from("organizations")
     .select("id")
     .eq("id", organizationId)
     .is("deleted_at", null)
     .maybeSingle();
+  console.info(`[perf] [DB] assignment.service assertActiveOrganization ${Date.now() - queryStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
@@ -52,6 +54,7 @@ async function assertActiveTaskInOrganization(
   organizationId: string,
   taskId: string
 ): Promise<void> {
+  const queryStart = Date.now();
   const { data: task, error } = await supabase
     .from("tasks")
     .select("id")
@@ -59,6 +62,7 @@ async function assertActiveTaskInOrganization(
     .eq("organization_id", organizationId)
     .is("deleted_at", null)
     .maybeSingle();
+  console.info(`[perf] [DB] assignment.service assertActiveTask ${Date.now() - queryStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
@@ -76,12 +80,14 @@ async function assertOrgMember(
   organizationId: string,
   userId: string
 ): Promise<void> {
+  const queryStart = Date.now();
   const { data: orgMember, error } = await supabase
     .from("org_members")
     .select("user_id")
     .eq("organization_id", organizationId)
     .eq("user_id", userId)
     .maybeSingle();
+  console.info(`[perf] [DB] assignment.service assertOrgMember ${Date.now() - queryStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
@@ -116,7 +122,9 @@ async function assertNoDuplicateActiveAssignment(
     query = query.neq("id", params.excludeAssignmentId);
   }
 
+  const queryStart = Date.now();
   const { data, error } = await query.maybeSingle();
+  console.info(`[perf] [DB] assignment.service duplicate check ${Date.now() - queryStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
@@ -140,11 +148,13 @@ async function fetchAssignmentsByIds(
     return [];
   }
 
+  const queryStart = Date.now();
   const { data: assignments, error } = await supabase
     .from("assignments")
     .select("id,user_id,task_id,allocated_hours,created_at,start_time,end_time")
     .eq("organization_id", params.organizationId)
     .in("id", params.assignmentIds);
+  console.info(`[perf] [DB] assignment.service fetchAssignmentsByIds ${Date.now() - queryStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
@@ -161,22 +171,37 @@ async function hydrateAssignmentRows(
     "id" | "user_id" | "task_id" | "allocated_hours" | "created_at" | "start_time" | "end_time"
   >[]
 ): Promise<AssignmentListRow[]> {
+  const hydrateStart = Date.now();
   const userIds = Array.from(new Set(assignments.map((row) => row.user_id)));
   const taskIds = Array.from(new Set(assignments.map((row) => row.task_id)));
 
+  const queryStart = Date.now();
   const [profilesResult, tasksResult] = await Promise.all([
     userIds.length > 0
-      ? supabase.from("profiles").select("id,full_name").in("id", userIds)
+      ? (async () => {
+          console.time("[DB] workspace assignments profiles");
+          const result = await supabase.from("profiles").select("id,full_name").in("id", userIds);
+          console.timeEnd("[DB] workspace assignments profiles");
+          return result;
+        })()
       : Promise.resolve({ data: [], error: null }),
     taskIds.length > 0
-      ? supabase
-          .from("tasks")
-          .select("id,title,status")
-          .eq("organization_id", organizationId)
-          .is("deleted_at", null)
-          .in("id", taskIds)
+      ? (async () => {
+          console.time("[DB] workspace assignments task hydration");
+          // POSSIBLE OVERFETCH
+          // listTasksByProject already fetched project tasks, but assignment hydration fetches task data again.
+          const result = await supabase
+            .from("tasks")
+            .select("id,title,status")
+            .eq("organization_id", organizationId)
+            .is("deleted_at", null)
+            .in("id", taskIds);
+          console.timeEnd("[DB] workspace assignments task hydration");
+          return result;
+        })()
       : Promise.resolve({ data: [], error: null }),
   ]);
+  console.info(`[perf] [DB] assignment.service hydrate profiles+tasks ${Date.now() - queryStart}ms`);
 
   if (profilesResult.error) {
     throw new ValidationError({
@@ -197,7 +222,8 @@ async function hydrateAssignmentRows(
   );
   const taskById = new Map((tasksResult.data ?? []).map((task) => [task.id, task]));
 
-  return assignments.map((row) => {
+  const computeStart = Date.now();
+  const rows = assignments.map((row) => {
     const profile = profileById.get(row.user_id);
     const task = taskById.get(row.task_id);
 
@@ -221,21 +247,29 @@ async function hydrateAssignmentRows(
             title: task.title,
             status: task.status ?? null,
           }
-        : null,
+      : null,
     };
   });
+  const computeMs = Date.now() - computeStart;
+  if (computeMs > 8) {
+    console.info(`[perf] [Compute] assignment.service hydrate map ${computeMs}ms`);
+  }
+  console.info(`[perf] [Fetch] assignment.service hydrate total ${Date.now() - hydrateStart}ms`);
+  return rows;
 }
 
 async function getAssignmentOrThrow(
   supabase: SupabaseClient<Database>,
   params: { organizationId: string; assignmentId: string }
 ): Promise<AssignmentBaseRow> {
+  const queryStart = Date.now();
   const { data, error } = await supabase
     .from("assignments")
     .select("*")
     .eq("organization_id", params.organizationId)
     .eq("id", params.assignmentId)
     .maybeSingle();
+  console.info(`[perf] [DB] assignment.service getAssignmentOrThrow ${Date.now() - queryStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
@@ -257,8 +291,11 @@ export async function listAssignments(
     active?: boolean;
   }
 ): Promise<AssignmentListRow[]> {
+  console.time("[Service] workspace listAssignments total");
   await assertActiveOrganization(supabase, params.organizationId);
 
+  // POSSIBLE OVERFETCH
+  // Project workspace calls this without taskId, so every assignment in the organization is fetched.
   let query = supabase
     .from("assignments")
     .select("id,user_id,task_id,allocated_hours,created_at,start_time,end_time")
@@ -281,13 +318,19 @@ export async function listAssignments(
     query = query.not("end_time", "is", null);
   }
 
+  console.time("[DB] workspace assignments rows");
+  const queryStart = Date.now();
   const { data, error } = await query;
+  console.timeEnd("[DB] workspace assignments rows");
+  console.info(`[perf] [DB] assignment.service listAssignments ${Date.now() - queryStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
   }
 
-  return hydrateAssignmentRows(supabase, params.organizationId, data ?? []);
+  const rows = await hydrateAssignmentRows(supabase, params.organizationId, data ?? []);
+  console.timeEnd("[Service] workspace listAssignments total");
+  return rows;
 }
 
 export async function createAssignment(
@@ -327,6 +370,7 @@ export async function createAssignment(
 
   let persisted: AssignmentBaseRow | null = null;
 
+  const upsertStart = Date.now();
   const { data: upsertData, error: upsertError } = await supabase
     .from("assignments")
     .upsert(insertPayload, {
@@ -335,6 +379,7 @@ export async function createAssignment(
     })
     .select("*")
     .maybeSingle();
+  console.info(`[perf] [DB] assignment.service createAssignment upsert ${Date.now() - upsertStart}ms`);
 
   if (upsertError && upsertError.code !== "42P10") {
     if (upsertError.code === "23505") {
@@ -348,11 +393,14 @@ export async function createAssignment(
   }
 
   if (!persisted) {
+    // POTENTIAL WATERFALL
+    const insertStart = Date.now();
     const { data: insertData, error: insertError } = await supabase
       .from("assignments")
       .insert(insertPayload)
       .select("*")
       .maybeSingle();
+    console.info(`[perf] [DB] assignment.service createAssignment insert fallback ${Date.now() - insertStart}ms`);
 
     if (insertError) {
       if (insertError.code === "23505") {
@@ -451,6 +499,7 @@ export async function updateAssignment(
     updatePayload.end_time = params.updates.end_time;
   }
 
+  const updateStart = Date.now();
   const { data, error } = await supabase
     .from("assignments")
     .update(updatePayload)
@@ -458,6 +507,7 @@ export async function updateAssignment(
     .eq("id", params.assignmentId)
     .select("*")
     .maybeSingle();
+  console.info(`[perf] [DB] assignment.service updateAssignment ${Date.now() - updateStart}ms`);
 
   if (error) {
     if (error.code === "23505") {
@@ -489,6 +539,7 @@ export async function deleteAssignment(
 ): Promise<void> {
   await assertActiveOrganization(supabase, params.organizationId);
 
+  const deleteStart = Date.now();
   const { data, error } = await supabase
     .from("assignments")
     .delete()
@@ -496,6 +547,7 @@ export async function deleteAssignment(
     .eq("id", params.assignmentId)
     .select("id")
     .maybeSingle();
+  console.info(`[perf] [DB] assignment.service deleteAssignment ${Date.now() - deleteStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });

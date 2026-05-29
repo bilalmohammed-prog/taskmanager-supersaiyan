@@ -7,15 +7,22 @@ export default async function InboxPage({
 }: {
   params: Promise<{ orgId: string }>;
 }) {
+  console.time("[perf] inbox page total");
   const { orgId } = await params;
+  console.time("[perf] inbox requireOrgContext");
   const tenant = await requireOrgContext({
     organizationId: orgId,
   });
+  console.timeEnd("[perf] inbox requireOrgContext");
   
+  // POTENTIAL WATERFALL
+  console.time("[perf] inbox listMessages");
   const messages = await listMessages(tenant.supabase, {
     organizationId: tenant.organizationId,
     userId: tenant.userId,
   });
+  console.timeEnd("[perf] inbox listMessages");
+  console.timeEnd("[perf] inbox page total");
 
   return (
     <div className="flex w-full max-w-5xl flex-col space-y-8 pb-16">

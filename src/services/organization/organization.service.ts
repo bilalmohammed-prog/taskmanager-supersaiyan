@@ -16,11 +16,13 @@ export async function createOrganization(
 ): Promise<CreateOrganizationResult> {
   const orgInsert: TablesInsert<"organizations"> = { name, slug };
 
+  const orgStart = Date.now();
   const { data: organization, error: orgError } = await supabase
     .from("organizations")
     .insert(orgInsert)
     .select("*")
     .maybeSingle();
+  console.info(`[perf] [DB] organization.service createOrganization org ${Date.now() - orgStart}ms`);
 
   if (orgError || !organization) {
     throw new ValidationError({
@@ -35,11 +37,14 @@ export async function createOrganization(
     role: "owner",
   };
 
+  // POTENTIAL WATERFALL
+  const memberStart = Date.now();
   const { data: member, error: memberError } = await supabase
     .from("org_members")
     .insert(memberInsert)
     .select("*")
     .maybeSingle();
+  console.info(`[perf] [DB] organization.service createOrganization member ${Date.now() - memberStart}ms`);
 
   if (memberError || !member) {
     // best-effort rollback
@@ -50,6 +55,7 @@ export async function createOrganization(
     });
   }
 
+  const profileStart = Date.now();
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .upsert(
@@ -61,6 +67,7 @@ export async function createOrganization(
     )
     .select("*")
     .maybeSingle();
+  console.info(`[perf] [DB] organization.service createOrganization profile ${Date.now() - profileStart}ms`);
 
   if (profileError || !profile) {
     // best-effort rollback
@@ -79,12 +86,14 @@ export async function getOrganizationById(
   supabase: SupabaseClient<Database>,
   orgId: UUID
 ): Promise<Tables<"organizations"> | null> {
+  const queryStart = Date.now();
   const { data, error } = await supabase
     .from("organizations")
     .select("*")
     .eq("id", orgId)
     .is("deleted_at", null)
     .maybeSingle();
+  console.info(`[perf] [DB] organization.service getOrganizationById ${Date.now() - queryStart}ms`);
 
   if (error) throw new ValidationError({ message: error.message, details: error });
   return data ?? null;
@@ -94,6 +103,7 @@ export async function getUserOrganizations(
   supabase: SupabaseClient<Database>,
   userId: UUID
 ): Promise<Array<Pick<Tables<"organizations">, "id" | "name" | "slug">>> {
+  const queryStart = Date.now();
   const { data, error } = await supabase
     .from("org_members")
     .select(
@@ -106,15 +116,22 @@ export async function getUserOrganizations(
     `
     )
     .eq("user_id", userId);
+  console.info(`[perf] [DB] organization.service getUserOrganizations ${Date.now() - queryStart}ms`);
 
   if (error) throw new ValidationError({ message: error.message, details: error });
 
-  return (data ?? [])
+  const computeStart = Date.now();
+  const organizations = (data ?? [])
     .map((d) => d.organization)
     .filter(
       (org): org is Pick<Tables<"organizations">, "id" | "name" | "slug"> =>
         !!org
     );
+  const computeMs = Date.now() - computeStart;
+  if (computeMs > 8) {
+    console.info(`[perf] [Compute] organization.service user organizations map ${computeMs}ms`);
+  }
+  return organizations;
 }
 
 export async function listOrganizationsForUser(
@@ -128,10 +145,12 @@ export async function listOrganizationMembers(
   supabase: SupabaseClient<Database>,
   params: { organizationId: string }
 ): Promise<Array<{ userId: string; fullName: string; email: string | null }>> {
+  const membersStart = Date.now();
   const { data: members, error: memberError } = await supabase
     .from("org_members")
     .select("user_id")
     .eq("organization_id", params.organizationId);
+  console.info(`[perf] [DB] organization.service orgMembers ${Date.now() - membersStart}ms`);
 
   if (memberError) {
     throw new ValidationError({ message: memberError.message, details: memberError });
@@ -142,20 +161,29 @@ export async function listOrganizationMembers(
     return [];
   }
 
+  // POTENTIAL WATERFALL
+  const profilesStart = Date.now();
   const { data: profiles, error: profileError } = await supabase
     .from("profiles")
     .select("id,full_name,username")
     .in("id", userIds);
+  console.info(`[perf] [DB] organization.service memberProfiles ${Date.now() - profilesStart}ms`);
 
   if (profileError) {
     throw new ValidationError({ message: profileError.message, details: profileError });
   }
 
-  return (profiles ?? []).map((profile) => ({
+  const computeStart = Date.now();
+  const result = (profiles ?? []).map((profile) => ({
     userId: profile.id,
     fullName: profile.full_name ?? "Unknown",
     email: profile.username ?? null,
   }));
+  const computeMs = Date.now() - computeStart;
+  if (computeMs > 8) {
+    console.info(`[perf] [Compute] organization.service member map ${computeMs}ms`);
+  }
+  return result;
 }
 
 export async function switchActiveOrganization(
@@ -164,18 +192,22 @@ export async function switchActiveOrganization(
   orgId: UUID
 ): Promise<Tables<"profiles">> {
   // Ensure the user is actually a member of the organization.
+  const memberStart = Date.now();
   const { data: membership, error: memberError } = await supabase
     .from("org_members")
     .select("id")
     .eq("user_id", userId)
     .eq("organization_id", orgId)
     .maybeSingle();
+  console.info(`[perf] [DB] organization.service switch membership ${Date.now() - memberStart}ms`);
 
   if (memberError) {
     throw new ValidationError({ message: memberError.message, details: memberError });
   }
   if (!membership) throw new ForbiddenError({ message: "Forbidden: user is not an org member" });
 
+  // POTENTIAL WATERFALL
+  const profileStart = Date.now();
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .upsert(
@@ -187,6 +219,7 @@ export async function switchActiveOrganization(
     )
     .select("*")
     .maybeSingle();
+  console.info(`[perf] [DB] organization.service switch profile ${Date.now() - profileStart}ms`);
 
   if (profileError || !profile) {
     throw new ValidationError({

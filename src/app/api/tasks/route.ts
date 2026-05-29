@@ -12,16 +12,23 @@ import { listOrganizationMembers } from "@/services/organization/organization.se
 import { createTask } from "@/services/task/task.service";
 
 export async function POST(req: Request) {
+  const routeStart = Date.now();
   try {
+    const tenantStart = Date.now();
     const tenant = await requireTenantContext(req);
+    console.info(`[perf] [Fetch] api tasks POST requireTenantContext ${Date.now() - tenantStart}ms`);
     const { supabase, organizationId } = tenant;
     authorize("create", "task", tenant);
 
+    const parseStart = Date.now();
     const payload = taskCreateSchema.parse(await req.json());
+    console.info(`[perf] [Compute] api tasks POST parse body ${Date.now() - parseStart}ms`);
 
+    const membersStart = Date.now();
     const organizationMembers = await listOrganizationMembers(supabase, {
       organizationId,
     });
+    console.info(`[perf] [DB] api tasks POST listOrganizationMembers ${Date.now() - membersStart}ms`);
     const assigneeInOrg = organizationMembers.some((member) => member.userId === payload.user_id);
     if (!assigneeInOrg) {
       throw new ForbiddenError({
@@ -37,10 +44,13 @@ export async function POST(req: Request) {
       });
     }
 
+    // POTENTIAL WATERFALL
+    const projectStart = Date.now();
     const project = await getProjectById(supabase, {
       organizationId,
       projectId: payload.project_id,
     });
+    console.info(`[perf] [DB] api tasks POST getProjectById ${Date.now() - projectStart}ms`);
 
     if (!project) {
       throw new ForbiddenError({
@@ -48,6 +58,7 @@ export async function POST(req: Request) {
       });
     }
 
+    const createStart = Date.now();
     const data = await createTask(supabase, {
       organizationId,
       projectId: project.id,
@@ -56,12 +67,16 @@ export async function POST(req: Request) {
       description: payload.description ?? undefined,
       dueDate: payload.due_date ?? undefined,
     });
+    console.info(`[perf] [DB] api tasks POST createTask ${Date.now() - createStart}ms`);
 
+    const assignmentStart = Date.now();
     await createAssignment(supabase, {
       organizationId,
       taskId: data.id,
       userId: payload.user_id,
     });
+    console.info(`[perf] [DB] api tasks POST createAssignment ${Date.now() - assignmentStart}ms`);
+    console.info(`[perf] [Page] api tasks POST total ${Date.now() - routeStart}ms`);
 
     return ok(
       {
@@ -80,6 +95,7 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (err) {
+    console.info(`[perf] [Page] api tasks POST total ${Date.now() - routeStart}ms`);
     console.error("[POST_TASK_EXCEPTION]:", err);
     return fail(err);
   }

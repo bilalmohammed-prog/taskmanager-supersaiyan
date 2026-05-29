@@ -7,12 +7,19 @@ export default async function AnalyticsPage({
 }: {
   params: Promise<{ orgId: string }>;
 }) {
+  console.time("[perf] analytics page total");
   const { orgId } = await params;
+  // POTENTIAL WATERFALL
+  console.time("[perf] analytics requireOrgContext");
   const tenant = await requireOrgContext({ organizationId: orgId });
+  console.timeEnd("[perf] analytics requireOrgContext");
+
+  console.time("[perf] analytics summary db");
   const stats = await getAnalyticsSummaryFromDb(
     tenant.supabase,
     tenant.organizationId
   );
+  console.timeEnd("[perf] analytics summary db");
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -21,27 +28,55 @@ export default async function AnalyticsPage({
   const weekEnd = new Date(todayStart);
   weekEnd.setDate(weekEnd.getDate() + 7);
 
+  const openTasksPromise = (async () => {
+    console.time("[perf] analytics open tasks");
+    const result = await tenant.supabase
+      .from("tasks")
+      .select("id,status,due_date,project_id")
+      .eq("organization_id", tenant.organizationId)
+      .is("deleted_at", null)
+      .in("status", ["todo", "in_progress", "blocked"]);
+    console.timeEnd("[perf] analytics open tasks");
+    return result;
+  })();
+
+  const assignmentsPromise = (async () => {
+    console.time("[perf] analytics assignments");
+    const result = await tenant.supabase
+      .from("assignments")
+      .select("task_id,user_id")
+      .eq("organization_id", tenant.organizationId)
+      .is("end_time", null);
+    console.timeEnd("[perf] analytics assignments");
+    return result;
+  })();
+
+  const projectsPromise = (async () => {
+    console.time("[perf] analytics projects");
+    const result = await tenant.supabase
+      .from("projects")
+      .select("id,end_date")
+      .eq("organization_id", tenant.organizationId)
+      .is("deleted_at", null);
+    console.timeEnd("[perf] analytics projects");
+    return result;
+  })();
+
+  const teamWorkloadPromise = (async () => {
+    console.time("[perf] analytics team workload");
+    const result = await getTeamWorkload(tenant.supabase, {
+      organizationId: tenant.organizationId,
+    });
+    console.timeEnd("[perf] analytics team workload");
+    return result;
+  })();
+
   const [openTasksResult, assignmentsResult, projectsResult, teamWorkload] =
     await Promise.all([
-      tenant.supabase
-        .from("tasks")
-        .select("id,status,due_date,project_id")
-        .eq("organization_id", tenant.organizationId)
-        .is("deleted_at", null)
-        .in("status", ["todo", "in_progress", "blocked"]),
-      tenant.supabase
-        .from("assignments")
-        .select("task_id,user_id")
-        .eq("organization_id", tenant.organizationId)
-        .is("end_time", null),
-      tenant.supabase
-        .from("projects")
-        .select("id,end_date")
-        .eq("organization_id", tenant.organizationId)
-        .is("deleted_at", null),
-      getTeamWorkload(tenant.supabase, {
-        organizationId: tenant.organizationId,
-      }),
+      openTasksPromise,
+      assignmentsPromise,
+      projectsPromise,
+      teamWorkloadPromise,
     ]);
 
   if (openTasksResult.error) {
@@ -58,6 +93,7 @@ export default async function AnalyticsPage({
   const assignments = assignmentsResult.data ?? [];
   const projects = projectsResult.data ?? [];
 
+  console.time("[perf] analytics compute metrics");
   const todoTasks = openTasks.filter((task) => task.status === "todo").length;
   const inProgressTasks = openTasks.filter(
     (task) => task.status === "in_progress"
@@ -130,6 +166,8 @@ export default async function AnalyticsPage({
       ? 0
       : Math.round((stats.completedTasks / stats.totalTasks) * 100);
 
+  console.timeEnd("[perf] analytics compute metrics");
+
   const completedSummary =
     stats.totalTasks === 0
       ? "No tasks yet"
@@ -141,9 +179,13 @@ export default async function AnalyticsPage({
       : `${stats.totalEmployees} active employees`;
 
   const assignmentSummary =
+
+  
     stats.totalResources === 0
       ? "No current assignments"
       : `${stats.totalResources} assignments in play`;
+
+  console.timeEnd("[perf] analytics page total");
 
   return (
     <div className="flex w-full max-w-6xl flex-col gap-10 pb-16">

@@ -19,22 +19,31 @@ type ProjectPageProps = {
 };
 
 export default async function ProjectDetailPage({ params }: ProjectPageProps) {
+  console.time("[perf] [Page] legacy project detail total");
   const { id: projectId } = await params;
+  console.time("[perf] [Fetch] legacy project detail requireOrgContext");
   const ctx = await requireOrgContext();
+  console.timeEnd("[perf] [Fetch] legacy project detail requireOrgContext");
 
+  // POTENTIAL WATERFALL
+  console.time("[perf] [DB] legacy project detail project query");
   const project = await getProjectById(ctx.supabase, {
     organizationId: ctx.organizationId,
     projectId,
   });
+  console.timeEnd("[perf] [DB] legacy project detail project query");
   if (!project) notFound();
 
+  console.time("[perf] [Fetch] legacy project detail related queries");
   const [tasks, assignmentRows, projectMembers, orgMembers] = await Promise.all([
     getTasksByProject(ctx.supabase, { organizationId: ctx.organizationId, projectId }),
     listAssignments(ctx.supabase, { organizationId: ctx.organizationId }),
     listProjectMembers(ctx.supabase, { organizationId: ctx.organizationId, projectId }),
     listOrganizationMembers(ctx.supabase, { organizationId: ctx.organizationId }),
   ]);
+  console.timeEnd("[perf] [Fetch] legacy project detail related queries");
 
+  console.time("[perf] [Compute] legacy project detail assignment map");
   const assignmentByTaskId = new Map<string, { userId: string; name: string | null }>();
   for (const row of assignmentRows) {
     if (!assignmentByTaskId.has(row.task_id) && row.task) {
@@ -44,6 +53,9 @@ export default async function ProjectDetailPage({ params }: ProjectPageProps) {
       });
     }
   }
+  console.timeEnd("[perf] [Compute] legacy project detail assignment map");
+
+  console.timeEnd("[perf] [Page] legacy project detail total");
 
   async function createTaskMutation(formData: FormData) {
     "use server";

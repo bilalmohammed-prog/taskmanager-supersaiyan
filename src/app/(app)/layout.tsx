@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DashboardProvider, useDashboard } from "@/components/providers/dashboard/DashboardContext";
 import LeftSideBar from "@/components/layout/LeftSideBar";
 import { PageHeaderProvider } from "@/components/layout/PageHeaderContext";
@@ -15,21 +15,54 @@ interface DashboardShellProps {
 function DashboardShell({ children }: DashboardShellProps) {
   const { setCurrentUserId } = useDashboard();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // POSSIBLE LARGE CLIENT COMPONENT
+  const hydrationStartRef = useRef<number | null>(null);
+  const renderCountRef = useRef(0);
+
+  useEffect(() => {
+    hydrationStartRef.current = performance.now();
+    console.time("[perf] layout dashboard hydration");
+    console.timeEnd("[perf] layout dashboard hydration");
+  }, []);
+
+  useEffect(() => {
+    renderCountRef.current += 1;
+    if (renderCountRef.current > 1) {
+      console.info(
+        `[render] layout dashboard #${renderCountRef.current} sidebarCollapsed=${sidebarCollapsed}`
+      );
+    }
+  });
 
   useEffect(() => {
     async function loadUser(): Promise<void> {
+      // DUPLICATE CONTEXT LOAD
+      // This client-side layout lookup runs in addition to page/action context loading.
+      console.time("[Fetch] dashboard layout profile flow");
+      const fetchStart = performance.now();
+      console.time("[DB] auth/session dashboard layout");
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      console.timeEnd("[DB] auth/session dashboard layout");
 
-      if (!user) return;
+      if (!user) {
+        console.info(`[perf] layout dashboard auth user ${performance.now() - fetchStart}ms`);
+        console.timeEnd("[Fetch] dashboard layout profile flow");
+        return;
+      }
 
       // Use profiles instead of empid
+      console.time("[DB] profile lookup dashboard layout");
       const { data } = await supabase
         .from("profiles")
         .select("id")
         .eq("id", user.id)
         .maybeSingle();
+      console.timeEnd("[DB] profile lookup dashboard layout");
+
+      console.info(`[perf] layout dashboard profile lookup ${performance.now() - fetchStart}ms`);
+      console.timeEnd("[Fetch] dashboard layout profile flow");
 
       if (data?.id) {
         setCurrentUserId(data.id);

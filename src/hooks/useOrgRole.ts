@@ -25,15 +25,28 @@ export function useOrgRole(orgIdOverride?: string) {
 
   useEffect(() => {
     if (!orgId || !isValidUuid(orgId)) return;
+    // DUPLICATE CONTEXT LOAD
+    // Role lookup repeats auth validation and membership lookup during project workspace hydration.
+    console.time("[Fetch] useOrgRole role flow");
+    console.time("[DB] auth/session useOrgRole");
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
+      console.timeEnd("[DB] auth/session useOrgRole");
+      if (!user) {
+        console.timeEnd("[Fetch] useOrgRole role flow");
+        return;
+      }
+      console.time("[DB] membership lookup useOrgRole");
       supabase
         .from("org_members")
         .select("role")
         .eq("organization_id", orgId)
         .eq("user_id", user.id)
         .maybeSingle()
-        .then(({ data }) => setRole(data?.role ?? null));
+        .then(({ data }) => {
+          console.timeEnd("[DB] membership lookup useOrgRole");
+          console.timeEnd("[Fetch] useOrgRole role flow");
+          setRole(data?.role ?? null);
+        });
     });
   }, [orgId]);
 

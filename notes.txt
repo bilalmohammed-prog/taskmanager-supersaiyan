@@ -1,5 +1,6 @@
 
-2. optimize the react compoennets to make page loading quick
+1. test permissions
+2. improve inbox invite accept/ decline ui doesnt exist yet
 
 instant allocation of tasks in projects:
 

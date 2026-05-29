@@ -15,15 +15,26 @@ type ProjectMemberWithProfile = Pick<
 export async function listProjectMembers(
   projectId: string
 ): Promise<Array<{ user_id: string; name: string }>> {
+  console.time("[Action] workspace listProjectMembers total");
   const validatedProjectId = uuidSchema.parse(projectId);
 
+  console.time("[Action] workspace members requireOrgContext");
   const ctx = await requireOrgContext();
+  console.timeEnd("[Action] workspace members requireOrgContext");
+
+  console.time("[DB] workspace members");
   const members = await listProjectMembersService(ctx.supabase, {
     organizationId: ctx.organizationId,
     projectId: validatedProjectId,
   });
-  return members.map((member: ProjectMemberWithProfile) => ({
+  console.timeEnd("[DB] workspace members");
+
+  console.time("[Compute] workspace members map");
+  const mapped = members.map((member: ProjectMemberWithProfile) => ({
     user_id: member.user_id,
     name: member.full_name ?? "",
   }));
+  console.timeEnd("[Compute] workspace members map");
+  console.timeEnd("[Action] workspace listProjectMembers total");
+  return mapped;
 }

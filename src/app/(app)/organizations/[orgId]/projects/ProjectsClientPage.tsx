@@ -101,6 +101,7 @@ function getAnchoredPopoverPosition(triggerRect: DOMRect, panelWidth: number, pa
 const desktopProjectsTableGrid =
   "md:grid-cols-[minmax(0,2fr)_120px_120px_140px_120px_48px]";
 
+// POSSIBLE LARGE CLIENT COMPONENT
 export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsClientPageProps) {
   const router = useRouter();
   const { addToast } = useToast();
@@ -108,6 +109,8 @@ export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsC
   const role = useOrgRole();
   const canManage = role === "owner" || role === "admin" || role === "manager";
 
+  const hydrationStartRef = useRef<number | null>(null);
+  const renderCountRef = useRef(0);
   const [projects, setProjects] = useState<ProjectWithMeta[]>(initialProjects);
   const [loading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
@@ -143,6 +146,21 @@ export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsC
     addToastRef.current = addToast;
   }, [addToast]);
 
+  useEffect(() => {
+    hydrationStartRef.current = performance.now();
+    console.time("[perf] page projects hydration");
+    console.timeEnd("[perf] page projects hydration");
+  }, []);
+
+  useEffect(() => {
+    renderCountRef.current += 1;
+    if (renderCountRef.current > 1) {
+      console.info(
+        `[render] projects #${renderCountRef.current} projects=${projects.length} loadingMore=${loadingMore} filters=${statusFilter}/${searchQuery.length}`
+      );
+    }
+  }, [loadingMore, projects.length, searchQuery.length, statusFilter]);
+
   const loadMoreProjects = useCallback(async () => {
     if (!orgId || loadingMore) return;
 
@@ -150,11 +168,16 @@ export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsC
       setLoadingMore(true);
 
       const currentLength = projectsCountRef.current;
+      const fetchStart = performance.now();
       const data = await listProjectsWithMetaAction({
         organizationId: orgId,
         pageSize: PAGE_SIZE,
         pageOffset: currentLength,
       });
+
+      console.info(
+        `[perf] projects loadMore listWithMeta ${(performance.now() - fetchStart).toFixed(1)}ms`
+      );
 
       setProjects((prev) => {
         const merged = [...prev, ...data];
@@ -222,7 +245,11 @@ export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsC
     async function loadMembers() {
       try {
         setMembersLoading(true);
+        const fetchStart = performance.now();
         const res = await listOrgMembers(orgId);
+        console.info(
+          `[perf] projects listOrgMembers ${(performance.now() - fetchStart).toFixed(1)}ms`
+        );
         if (!cancelled) {
           setMembersList(res.data ?? []);
         }
@@ -362,6 +389,7 @@ export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsC
     };
   }, [pageHeader, setPageHeader]);
 
+  // POSSIBLE RERENDER HOTSPOT
   const filteredProjects = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     return projects.filter((project) => {
@@ -369,6 +397,17 @@ export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsC
       const matchesStatus = statusFilter === "all" || project.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
+  }, [projects, searchQuery, statusFilter]);
+
+  useEffect(() => {
+    console.time("[perf] projects filter compute");
+    const query = searchQuery.toLowerCase().trim();
+    projects.filter((project) => {
+      const matchesSearch = project.name.toLowerCase().includes(query);
+      const matchesStatus = statusFilter === "all" || project.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+    console.timeEnd("[perf] projects filter compute");
   }, [projects, searchQuery, statusFilter]);
 
   return (

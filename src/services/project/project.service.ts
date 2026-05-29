@@ -36,11 +36,13 @@ export async function createProject(
     end_date: params.endDate ?? null,
   };
 
+  const queryStart = Date.now();
   const { data, error } = await supabase
     .from("projects")
     .insert(insertPayload)
     .select("*")
     .single();
+  console.info(`[perf] [DB] project.service createProject ${Date.now() - queryStart}ms`);
 
   if (error || !data) {
     throw new ValidationError({
@@ -70,6 +72,7 @@ export async function updateProject(
   if (params.startDate !== undefined) updates.start_date = params.startDate;
   if (params.endDate !== undefined) updates.end_date = params.endDate;
 
+  const queryStart = Date.now();
   const { data, error } = await supabase
     .from("projects")
     .update(updates)
@@ -78,6 +81,7 @@ export async function updateProject(
     .is("deleted_at", null)
     .select("*")
     .maybeSingle();
+  console.info(`[perf] [DB] project.service updateProject ${Date.now() - queryStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
@@ -99,6 +103,7 @@ export async function listProjects(
   const from = (page - 1) * size;
   const to = from + size - 1;
 
+  const queryStart = Date.now();
   const { data, error, count } = await supabase
     .from("projects")
     .select("*", { count: "exact" })
@@ -106,6 +111,7 @@ export async function listProjects(
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .range(from, to);
+  console.info(`[perf] [DB] project.service listProjects ${Date.now() - queryStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
@@ -128,6 +134,7 @@ export async function softDeleteProject(
   params: { organizationId: string; projectId: string }
 ): Promise<void> {
   const now = new Date().toISOString();
+  const queryStart = Date.now();
   const { data, error } = await supabase
     .from("projects")
     .update({ deleted_at: now })
@@ -136,6 +143,7 @@ export async function softDeleteProject(
     .is("deleted_at", null)
     .select("id")
     .maybeSingle();
+  console.info(`[perf] [DB] project.service softDeleteProject ${Date.now() - queryStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
@@ -150,12 +158,14 @@ export async function listProjectMembers(
   supabase: SupabaseClient<Database>,
   params: { organizationId: string; projectId: string }
 ): Promise<Array<{ user_id: string; name: string }>> {
+  const membersStart = Date.now();
   const { data: members, error: membersError } = await supabase
     .from("project_members")
     .select("user_id")
     .eq("organization_id", params.organizationId)
     .eq("project_id", params.projectId)
     .is("left_at", null);
+  console.info(`[perf] [DB] project.service projectMembers ${Date.now() - membersStart}ms`);
 
   if (membersError) {
     throw new ValidationError({ message: membersError.message, details: membersError });
@@ -167,16 +177,24 @@ export async function listProjectMembers(
     return [];
   }
 
+  // POTENTIAL WATERFALL
+  const profilesStart = Date.now();
   const { data: profiles, error: profileError } = await supabase
     .from("profiles")
     .select("id, full_name")
     .in("id", userIds);
+  console.info(`[perf] [DB] project.service memberProfiles ${Date.now() - profilesStart}ms`);
 
   if (profileError) {
     throw new ValidationError({ message: profileError.message, details: profileError });
   }
 
+  const computeStart = Date.now();
   const fullNameById = new Map((profiles ?? []).map((profile) => [profile.id, profile.full_name]));
+  const computeMs = Date.now() - computeStart;
+  if (computeMs > 8) {
+    console.info(`[perf] [Compute] project.service member profile map ${computeMs}ms`);
+  }
   return userIds.map((userId) => ({
     user_id: userId,
     name: fullNameById.get(userId) ?? "",
@@ -187,6 +205,7 @@ export async function assignProjectMember(
   supabase: SupabaseClient<Database>,
   params: { organizationId: string; projectId: string; userId: string }
 ): Promise<void> {
+  const queryStart = Date.now();
   const { error } = await supabase.from("project_members").upsert(
     {
       organization_id: params.organizationId,
@@ -199,6 +218,7 @@ export async function assignProjectMember(
       ignoreDuplicates: false,
     }
   );
+  console.info(`[perf] [DB] project.service assignProjectMember ${Date.now() - queryStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
@@ -209,6 +229,7 @@ export async function removeProjectMember(
   supabase: SupabaseClient<Database>,
   params: { organizationId: string; projectId: string; userId: string }
 ): Promise<void> {
+  const queryStart = Date.now();
   const { error } = await supabase
     .from("project_members")
     .update({ left_at: new Date().toISOString() })
@@ -216,6 +237,7 @@ export async function removeProjectMember(
     .eq("project_id", params.projectId)
     .eq("user_id", params.userId)
     .is("left_at", null);
+  console.info(`[perf] [DB] project.service removeProjectMember ${Date.now() - queryStart}ms`);
 
   if (error) {
     throw new ValidationError({ message: error.message, details: error });
