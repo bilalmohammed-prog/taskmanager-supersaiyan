@@ -1,0 +1,53 @@
+What each role can do
+
+owner
+
+Full access in the app permission matrix.
+Can read/manage organization members.
+Can create/update/delete projects.
+Can read/create/update/delete/assign tasks.
+Can read/update assignments.
+Can create/update/delete comments.
+admin
+
+Same permission set as owner in the current code.
+Effectively full access like owner.
+manager
+
+Can read the organization.
+Can create and update projects.
+Can create and update tasks.
+Can assign tasks.
+Can update assignments.
+Can create and delete comments.
+Cannot manage members.
+Cannot delete projects or tasks.
+Cannot update comments.
+Cannot read tasks/assignments via the explicit permission matrix, though many read paths are not separately authorized in the app.
+member
+
+Can read the organization.
+Can read tasks.
+Can read assignments.
+Can create and update comments.
+Cannot create/update/delete projects.
+Cannot create/update/delete/assign tasks.
+Cannot manage members.
+employee and viewer
+
+These exist in the database enum and role selection UI, but the app auth layer normalizes them to member.
+So in current app permissions, they behave like the member role.
+See permissions.ts and addMember.ts.
+Where this is defined
+
+Role normalization and permission matrix: permissions.ts
+Authorization checks: authorization.ts
+Role lookup hook used by UI: useOrgRole.ts
+Database enum values: database.ts
+Role options in team/settings UI: addMember.ts
+Bottom line
+
+owner and admin are currently the same in app permissions.
+manager is a limited editor role.
+member is read/comment only.
+employee and viewer are database/UI labels that currently map to member in authorization.
