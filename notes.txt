@@ -5,6 +5,8 @@
 4. add required searching for tasks
 5. in profile change uui ot email
 6. cache data
+7. Emp manager relation?
+
 instant allocation of tasks in projects:
 
 factors:

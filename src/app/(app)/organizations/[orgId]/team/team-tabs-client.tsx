@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -94,6 +94,11 @@ export default function TeamTabsClient({
   const [roleOverrides, setRoleOverrides] = useState<Record<string, RoleType>>({});
   const [pendingRoleChange, setPendingRoleChange] = useState<PendingRoleChange | null>(null);
   const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null);
+  const [memberColumnWidth, setMemberColumnWidth] = useState<number | null>(null);
+  const [roleColumnWidth, setRoleColumnWidth] = useState<number | null>(null);
+  const workloadTableRef = useRef<HTMLTableElement | null>(null);
+  const workloadMemberHeaderRef = useRef<HTMLTableCellElement | null>(null);
+  const workloadRoleHeaderRef = useRef<HTMLTableCellElement | null>(null);
   const { addToast } = useToast();
   void addMemberAction;
 
@@ -158,6 +163,43 @@ export default function TeamTabsClient({
   const getEffectiveRole = (member: TeamMemberRow): RoleType => {
     return roleOverrides[member.user_id] ?? member.role;
   };
+
+  const syncMembersGeometryFromWorkload = useCallback(() => {
+    const memberWidth = workloadMemberHeaderRef.current?.getBoundingClientRect().width ?? 0;
+    const roleWidth = workloadRoleHeaderRef.current?.getBoundingClientRect().width ?? 0;
+
+    if (memberWidth > 0) {
+      setMemberColumnWidth(memberWidth);
+    }
+
+    if (roleWidth > 0) {
+      setRoleColumnWidth(roleWidth);
+    }
+  }, []);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      syncMembersGeometryFromWorkload();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [syncMembersGeometryFromWorkload, activeTab]);
+
+  useEffect(() => {
+    const table = workloadTableRef.current;
+    if (!table || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => {
+      syncMembersGeometryFromWorkload();
+    });
+
+    observer.observe(table);
+    return () => observer.disconnect();
+  }, [syncMembersGeometryFromWorkload]);
 
   async function submitRoleUpdate(userId: string, previousRole: RoleType, nextRole: RoleType) {
     if (previousRole === nextRole) {
@@ -307,17 +349,26 @@ export default function TeamTabsClient({
             <div className="overflow-hidden rounded-xl border border-border bg-card">
               <div className="overflow-x-auto">
                 <table className="min-w-full border-collapse">
+                  <colgroup>
+                    <col style={memberColumnWidth ? { width: `${memberColumnWidth}px` } : undefined} />
+                    <col style={roleColumnWidth ? { width: `${roleColumnWidth}px` } : undefined} />
+                    <col />
+                    <col />
+                    <col />
+                  </colgroup>
                   <thead>
                     <tr className="border-b border-border bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                      <th className="px-4 py-3 pl-[100px] font-medium">Member</th>
-                      <th className="px-4 py-3 pl-[22px] font-medium">Role</th>
-                      <th className="px-4 py-3 pl-[100px] font-medium text-center">Actions</th>
+                      <th className="px-4 py-3 font-medium">Member</th>
+                      <th className="px-4 py-3 font-medium">Role</th>
+                      <th className="px-4 py-3 font-medium" colSpan={3}>
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {pagedMembers.length === 0 && (
                       <tr>
-                        <td colSpan={3} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">
                           No members found.
                         </td>
                       </tr>
@@ -325,7 +376,7 @@ export default function TeamTabsClient({
 
                     {pagedMembers.map((member) => (
                       <tr key={member.user_id} className="border-b border-border last:border-0">
-                        <td className="px-4 py-3 pl-[8px]">
+                        <td className="px-4 py-3">
                           <Link
                             href={`/organizations/${organizationId}/employees/${member.user_id}`}
                             className="block rounded-md transition-colors hover:text-zinc-700"
@@ -334,12 +385,12 @@ export default function TeamTabsClient({
                             <p className="text-sm text-muted-foreground">{member.email ?? member.user_id}</p>
                           </Link>
                         </td>
-                        <td className="px-4 py-3 pl-[8px]">
+                        <td className="px-4 py-3">
                           <Badge variant="outline" className={`w-fit ${roleBadgeClass(getEffectiveRole(member))}`}>
                             {getEffectiveRole(member)}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3 pl-[10px]">
+                        <td className="px-4 py-3" colSpan={3}>
                           {canManageMembers ? (
                             <div className="flex w-full flex-wrap items-center justify-end gap-2">
                               <Select
@@ -450,11 +501,11 @@ export default function TeamTabsClient({
 
           <div className="overflow-hidden rounded-xl border border-border bg-card">
             <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse">
+              <table ref={workloadTableRef} className="min-w-full border-collapse">
                 <thead>
                   <tr className="border-b border-border bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <th className="px-4 py-3 font-medium">Member</th>
-                    <th className="px-4 py-3 font-medium">Role</th>
+                    <th ref={workloadMemberHeaderRef} className="px-4 py-3 font-medium">Member</th>
+                    <th ref={workloadRoleHeaderRef} className="px-4 py-3 font-medium">Role</th>
                     <th className="px-4 py-3 font-medium">Tasks</th>
                     <th className="px-4 py-3 font-medium">Hours</th>
                     <th className="px-4 py-3 font-medium">Completion</th>
