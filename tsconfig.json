@@ -49,6 +49,6 @@
     "**/examples/**",
     "**/example/**",
     "**/demo/**",
-    "src/app/auth/login/components"
+    "src/app/auth/login/components/**"
   ]
 }

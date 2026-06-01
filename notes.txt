@@ -1,12 +1,12 @@
 
-1. test permissions
+1. test permissions high priority
 2. improve inbox invite accept/ decline ui doesnt exist yet
 3. what happens to tasks after the person leaves the org?
 4. add required searching for tasks
 5. in profile change uui ot email
 6. cache data
-7. Emp manager relation?
-
+7. Emp manager relation? high priority
+8. fix teams page propely
 instant allocation of tasks in projects:
 
 factors:
