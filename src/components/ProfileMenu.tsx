@@ -89,9 +89,7 @@ export default function ProfileMenu({ collapsed = false }: ProfileMenuProps) {
         <div className="space-y-1">
           <p className="text-base font-semibold text-zinc-900">{displayName}</p>
           <p className="break-all text-sm text-zinc-500">{email}</p>
-          <span className="inline-flex items-center rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-medium text-zinc-600">
-            ID: {employee?.id || "Loading..."}
-          </span>
+          
         </div>
 
         <button
