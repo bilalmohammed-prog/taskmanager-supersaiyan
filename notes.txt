@@ -1,9 +1,6 @@
-
-1. test permissions high priority
+1. emp shoulnt be abke to see analytics
 2. improve inbox invite accept/ decline ui doesnt exist yet
-3. what happens to tasks after the person leaves the org?
 4. add required searching for tasks
-5. in profile change uui ot email
 6. cache data
 7. Emp manager relation? high priority
 8. fix teams page propely
@@ -11,6 +8,7 @@
 10. CANNOT SEE WHO INVITE IS FROM WHEN OUT OF ORG
 instant allocation of tasks in projects:
 11. ask again while removing memebrs are u sure
+12. UX also have to handle ppl leaving org tasks
 factors:
 1. role
 2. work hrs filled
