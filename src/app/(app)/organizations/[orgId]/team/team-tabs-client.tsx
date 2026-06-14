@@ -363,10 +363,10 @@ export default function TeamTabsClient({
         </TabsList>
 
         <TabsContent value="members" className="space-y-6 pt-2">
-          <div className="space-y-4">
+          
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <div className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-                <div className="relative min-w-0">
+              <div className="flex flex-col gap-4 p-4 md:flex-row md:items-center">
+                <div className="relative min-w-0 flex-1">
                   <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                   <input
                     value={memberQuery}
@@ -378,14 +378,14 @@ export default function TeamTabsClient({
                     className="h-12 w-full rounded-lg border border-slate-200 bg-white pl-12 pr-4 text-base text-slate-900 shadow-sm outline-none transition placeholder:text-slate-500 hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
-                <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                
                   <select
                     value={roleFilter}
                     onChange={(e) => {
                       setRoleFilter(e.target.value as "all" | RoleType);
                       setMembersPage(1);
                     }}
-                    className="h-12 rounded-lg border border-slate-200 bg-white px-3 text-base text-slate-700 shadow-sm outline-none transition hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="h-12 min-w-[120px] rounded-lg border border-slate-200 bg-white px-4 text-base font-medium text-slate-700 shadow-sm outline-none transition hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   >
                     <option value="all">All roles</option>
                     {roleOptions.map((role) => (
@@ -400,22 +400,22 @@ export default function TeamTabsClient({
                       setMembersPageSize(Number(e.target.value));
                       setMembersPage(1);
                     }}
-                    className="h-12 rounded-lg border border-slate-200 bg-white px-3 text-base text-slate-700 shadow-sm outline-none transition hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="h-12 min-w-[108px] rounded-lg border border-slate-200 bg-white px-4 text-base font-medium text-slate-700 shadow-sm outline-none transition hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   >
                     <option value="10">10 / page</option>
                     <option value="25">25 / page</option>
                     <option value="50">50 / page</option>
                   </select>
-                </div>
+                
               </div>
             </div>
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] table-fixed border-collapse">
                   <colgroup>
-                    <col />
-                    <col className="w-32" />
-                    <col className="w-32" />
+                      <col />
+                      <col className="w-44" />
+                      <col className="w-28" />
                   </colgroup>
                   <thead>
                     <tr className="border-b border-border bg-slate-50/80 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -423,7 +423,7 @@ export default function TeamTabsClient({
 
                       <th className="px-5 py-4 font-semibold">Role</th>
 
-                      <th className="px-5 py-4 text-right font-semibold">
+                      <th className="px-6 py-4 text-left font-semibold">
                         Actions
                       </th>
                     </tr>
@@ -517,9 +517,9 @@ export default function TeamTabsClient({
                               </Badge>
                             )}
                           </td>
-                          <td className="px-5 py-5">
+                          <td className="px-6 py-5">
                             {canManageMembers ? (
-                              <div className="flex items-center justify-end gap-2">
+                              <div className="flex items-center gap-2">
                                 {/* <Select
                                   value={getEffectiveRole(member)}
                                   onValueChange={(value) =>
@@ -618,7 +618,7 @@ export default function TeamTabsClient({
                 </Button>
               </div>
             </div>
-          </div>
+
         </TabsContent>
 
         <TabsContent value="workload" className="space-y-6 pt-2">
@@ -642,7 +642,7 @@ export default function TeamTabsClient({
                   setWorkloadRoleFilter(e.target.value as "all" | RoleType);
                   setWorkloadPage(1);
                 }}
-                className="h-12 rounded-lg border border-slate-200 bg-white px-4 text-base text-zinc-950 shadow-sm outline-none hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                className="h-12 min-w-[120px] rounded-lg border border-slate-200 bg-white px-4 text-base font-medium text-slate-700 shadow-sm outline-none transition hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               >
                 <option value="all">All roles</option>
                 {roleOptions.map((role) => (
@@ -657,7 +657,7 @@ export default function TeamTabsClient({
                   setWorkloadPageSize(Number(e.target.value));
                   setWorkloadPage(1);
                 }}
-                className="h-12 rounded-lg border border-slate-200 bg-white px-4 text-base text-zinc-950 shadow-sm outline-none hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                className="h-12 min-w-[108px] rounded-lg border border-slate-200 bg-white px-4 text-base font-medium text-slate-700 shadow-sm outline-none transition hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               >
                 <option value="10">10 / page</option>
                 <option value="25">25 / page</option>
