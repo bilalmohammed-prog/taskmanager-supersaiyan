@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { MessageSquare, Search, SlidersHorizontal, UserPlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +26,7 @@ import {
 import { useToast } from "@/components/providers/toast";
 import { usePageHeader } from "@/components/layout/PageHeaderContext";
 import type { Database } from "@/lib/types/database";
-import { ROLE_DESCRIPTIONS } from "@/lib/auth/role-descriptions";
-import type { AppRole } from "@/lib/auth/permissions";
+import ComposeMessagePopup from "@/components/ComposeMessagePopup";
 
 type RoleType = Database["public"]["Enums"]["role_type"];
 
@@ -126,6 +126,7 @@ export default function TeamTabsClient({
   const [roleOverrides, setRoleOverrides] = useState<Record<string, RoleType>>({});
   const [pendingRoleChange, setPendingRoleChange] = useState<PendingRoleChange | null>(null);
   const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null);
+  const [composeMode, setComposeMode] = useState<"message" | "invite" | null>(null);
   const [memberColumnWidth, setMemberColumnWidth] = useState<number | null>(null);
   const [roleColumnWidth, setRoleColumnWidth] = useState<number | null>(null);
   const workloadTableRef = useRef<HTMLTableElement | null>(null);
@@ -303,25 +304,36 @@ export default function TeamTabsClient({
     void submitRoleUpdate(member.user_id, previousRole, selectedRole);
   }
 
-  function roleBadgeClass(role: RoleType): string {
-    if (role === "owner") {
-      return "border-indigo-300 bg-indigo-50 text-indigo-700";
-    }
-
-    if (role === "employee") {
-      return "border-zinc-300 bg-zinc-100 text-zinc-700";
-    }
-
-    return "";
-  }
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Team</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Manage organization members and monitor workload in one place.
-        </p>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight text-zinc-950">Team</h1>
+          <p className="mt-2 text-lg text-slate-500">
+            Manage organization members and monitor workload in one place.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 rounded-lg border-slate-200 bg-white px-5 text-base font-medium text-zinc-950 shadow-sm hover:bg-slate-50"
+            onClick={() => setComposeMode("message")}
+          >
+            <MessageSquare className="mr-2 h-5 w-5 text-slate-700" strokeWidth={2.1} />
+            Send Message
+          </Button>
+          <Button
+            type="button"
+            className="h-12 rounded-lg bg-indigo-600 px-5 text-base font-semibold text-white shadow-sm hover:bg-indigo-700"
+            onClick={() => setComposeMode("invite")}
+            disabled={!canManageMembers}
+            aria-disabled={!canManageMembers}
+          >
+            <UserPlus className="mr-2 h-5 w-5" strokeWidth={2.1} />
+            Send Invite
+          </Button>
+        </div>
       </div>
 
       {status === "success" && (
@@ -350,9 +362,10 @@ export default function TeamTabsClient({
           <div className="space-y-4">
             
 
-            <div className="overflow-hidden rounded-xl border border-border bg-card">
-              <div className="flex items-center justify-between gap-4 p-4">
-                <div className="flex items-center gap-3">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
               <input
                 value={memberQuery}
                 onChange={(e) => {
@@ -360,15 +373,17 @@ export default function TeamTabsClient({
                   setMembersPage(1);
                 }}
                 placeholder="Search by name or email..."
-                className="h-10 w-[430px] rounded-md border border-input bg-background px-3 text-sm"
+                className="h-12 w-full rounded-lg border border-slate-200 bg-white pl-12 pr-4 text-base text-slate-900 shadow-sm outline-none transition placeholder:text-slate-500 hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               />
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
               <select
                 value={roleFilter}
                 onChange={(e) => {
                   setRoleFilter(e.target.value as "all" | RoleType);
                   setMembersPage(1);
                 }}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+                className="h-12 rounded-lg border border-slate-200 bg-white px-4 text-base text-zinc-950 shadow-sm outline-none hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               >
                 <option value="all">All roles</option>
                 {roleOptions.map((role) => (
@@ -383,16 +398,20 @@ export default function TeamTabsClient({
                   setMembersPageSize(Number(e.target.value));
                   setMembersPage(1);
                 }}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+                className="h-12 rounded-lg border border-slate-200 bg-white px-4 text-base text-zinc-950 shadow-sm outline-none hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               >
                 <option value="10">10 / page</option>
                 <option value="25">25 / page</option>
                 <option value="50">50 / page</option>
               </select>
+              {/* <Button type="button" variant="outline" className="h-12 rounded-lg border-slate-200 bg-white px-4 text-base font-medium text-zinc-950 shadow-sm hover:bg-slate-50">
+                <SlidersHorizontal className="mr-2 h-4 w-4" />
+                Filters
+              </Button> */}
               </div>
               </div>
             </div>
-            <div className="overflow-hidden rounded-xl border border-border bg-card">
+            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               
               <div className="overflow-x-auto">
                 <table className="w-full min-w-full border-collapse table-fixed">
@@ -404,10 +423,10 @@ export default function TeamTabsClient({
                     <col />
                   </colgroup>
                   <thead>
-                    <tr className="border-b border-border bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                      <th className="px-4 py-3 font-medium">Member</th>
-                      <th className="px-4 py-3 font-medium">Role</th>
-                      <th className="px-4 py-3 font-medium pl-50" colSpan={3}>
+                    <tr className="border-b border-border bg-slate-50/80 text-left text-xs uppercase tracking-wide text-slate-500">
+                      <th className="px-5 py-4 font-semibold">Member</th>
+                      <th className="px-5 py-4 font-semibold">Role</th>
+                      <th className="px-5 py-4 font-semibold" colSpan={3}>
                         Actions
                       </th>
                     </tr>
@@ -430,35 +449,35 @@ export default function TeamTabsClient({
                     return (
                       <tr 
                         key={member.user_id} 
-                        className={`border-b border-border last:border-0 transition-colors ${
-                          isMe ? "bg-violet-50/40 hover:bg-violet-50/70 dark:bg-violet-950/10" : "hover:bg-muted/40"
+                        className={`border-b border-slate-200 last:border-0 transition-colors ${
+                          isMe ? "bg-violet-50/50 hover:bg-violet-50/80" : "hover:bg-slate-50/70"
                         }`}
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-5">
                           <Link
                             href={`/organizations/${organizationId}/employees/${member.user_id}`}
                             className="flex items-center gap-3 rounded-md transition-colors"
                           >
                             {/* Professional Initials Avatar */}
-                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-white text-xs font-semibold shadow-sm ${avatar.gradient}`}>
+                            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-white text-sm font-bold shadow-sm ${avatar.gradient}`}>
                               {avatar.initials}
                             </div>
                             
                             <div className="flex flex-col min-w-0">
-                              <span className="font-semibold text-foreground tracking-tight truncate flex items-center gap-1.5">
+                              <span className="text-lg font-semibold text-zinc-950 tracking-tight truncate flex items-center gap-1.5">
                                 {member.name}
                                 {isMe && <span className="text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full font-medium dark:bg-violet-900/50 dark:text-violet-300">You</span>}
                               </span>
-                              <span className="text-xs text-muted-foreground truncate">{member.email ?? member.user_id}</span>
+                              <span className="text-sm text-slate-500 truncate">{member.email ?? member.user_id}</span>
                             </div>
                           </Link>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-5">
                           <Badge variant="outline" className={`w-fit capitalize shadow-sm font-medium ${roleColorMap[effectiveRole] || roleColorMap.employee}`}>
                             {effectiveRole}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3" colSpan={3}>
+                        <td className="px-5 py-5" colSpan={3}>
                           {canManageMembers ? (
                             <div className="flex w-full flex-wrap items-center justify-start gap-2 pl-30">
                               <Select
@@ -498,7 +517,7 @@ export default function TeamTabsClient({
             </div>
 
 
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center justify-between rounded-b-xl px-3 text-base text-slate-500">
               <p>
                 Showing {pagedMembers.length} of {filteredMembers.length} members
               </p>
@@ -512,7 +531,7 @@ export default function TeamTabsClient({
                 >
                   Prev
                 </Button>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-sm text-slate-500">
                   Page {safeMembersPage} of {totalMemberPages}
                 </span>
                 <Button
@@ -529,8 +548,11 @@ export default function TeamTabsClient({
           </div>
         </TabsContent>
 
-        <TabsContent value="workload" className="space-y-4 pt-2">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+        <TabsContent value="workload" className="space-y-6 pt-2">
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-4 p-4 md:flex-row md:items-center">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
             <input
               value={workloadQuery}
               onChange={(e) => {
@@ -538,15 +560,16 @@ export default function TeamTabsClient({
                 setWorkloadPage(1);
               }}
               placeholder="Search by name or email..."
-              className="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+              className="h-12 w-full rounded-lg border border-slate-200 bg-white pl-12 pr-4 text-base text-slate-900 shadow-sm outline-none transition placeholder:text-slate-500 hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             />
+              </div>
             <select
               value={workloadRoleFilter}
               onChange={(e) => {
                 setWorkloadRoleFilter(e.target.value as "all" | RoleType);
                 setWorkloadPage(1);
               }}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+              className="h-12 rounded-lg border border-slate-200 bg-white px-4 text-base text-zinc-950 shadow-sm outline-none hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
               <option value="all">All roles</option>
               {roleOptions.map((role) => (
@@ -561,24 +584,25 @@ export default function TeamTabsClient({
                 setWorkloadPageSize(Number(e.target.value));
                 setWorkloadPage(1);
               }}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+              className="h-12 rounded-lg border border-slate-200 bg-white px-4 text-base text-zinc-950 shadow-sm outline-none hover:border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
               <option value="10">10 / page</option>
               <option value="25">25 / page</option>
               <option value="50">50 / page</option>
             </select>
+            </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <div className="overflow-x-auto">
               <table ref={workloadTableRef} className="min-w-full border-collapse">
                 <thead>
-                  <tr className="border-b border-border bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                    <th ref={workloadMemberHeaderRef} className="px-4 py-3 font-medium">Member</th>
-                    <th ref={workloadRoleHeaderRef} className="px-4 py-3 font-medium">Role</th>
-                    <th className="px-4 py-3 font-medium">Tasks</th>
-                    <th className="px-4 py-3 font-medium">Hours</th>
-                    <th className="px-4 py-3 font-medium">Completion</th>
+                  <tr className="border-b border-border bg-slate-50/80 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <th ref={workloadMemberHeaderRef} className="px-5 py-4 font-semibold">Member</th>
+                    <th ref={workloadRoleHeaderRef} className="px-5 py-4 font-semibold">Role</th>
+                    <th className="px-5 py-4 font-semibold">Tasks</th>
+                    <th className="px-5 py-4 font-semibold">Hours</th>
+                    <th className="px-5 py-4 font-semibold">Completion</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -600,30 +624,30 @@ export default function TeamTabsClient({
                     return (
                       <tr 
                         key={member.user_id} 
-                        className={`border-b border-border last:border-0 transition-colors ${
-                          isMe ? "bg-violet-50/40 hover:bg-violet-50/70 dark:bg-violet-950/10" : "hover:bg-muted/40"
+                        className={`border-b border-slate-200 last:border-0 transition-colors ${
+                          isMe ? "bg-violet-50/50 hover:bg-violet-50/80" : "hover:bg-slate-50/70"
                         }`}
                       >
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-5">
                           <Link
                             href={`/organizations/${organizationId}/employees/${member.user_id}`}
                             className="flex items-center gap-3 rounded-md transition-colors"
                           >
                             {/* Professional Initials Avatar */}
-                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-white text-xs font-semibold shadow-sm ${avatar.gradient}`}>
+                            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-white text-sm font-bold shadow-sm ${avatar.gradient}`}>
                               {avatar.initials}
                             </div>
 
                             <div className="flex flex-col min-w-0">
-                              <span className="font-semibold text-foreground tracking-tight truncate flex items-center gap-1.5">
+                              <span className="text-lg font-semibold text-zinc-950 tracking-tight truncate flex items-center gap-1.5">
                                 {member.name}
                                 {isMe && <span className="text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-full font-medium dark:bg-violet-900/50 dark:text-violet-300">You</span>}
                               </span>
-                              <span className="text-xs text-muted-foreground truncate">{member.email ?? member.user_id}</span>
+                              <span className="text-sm text-slate-500 truncate">{member.email ?? member.user_id}</span>
                             </div>
                           </Link>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-5">
                           <Badge variant="outline" className={`w-fit capitalize shadow-sm font-medium ${roleColorMap[member.role] || roleColorMap.employee}`}>
                             {member.role}
                           </Badge>
@@ -632,9 +656,9 @@ export default function TeamTabsClient({
                           <span className="font-medium text-foreground">{member.completedTasks}</span> / {member.totalTasks}
                         </td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{member.allocatedHours}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-5">
                           <div className="space-y-1">
-                            <div className="flex justify-between text-xs text-muted-foreground">
+                            <div className="flex justify-between text-sm text-slate-500">
                               <span>Progress</span>
                               <span>{pct}%</span>
                             </div>
@@ -654,7 +678,7 @@ export default function TeamTabsClient({
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <div className="flex items-center justify-between rounded-b-xl px-3 text-base text-slate-500">
             <p>
               Showing {pagedWorkload.length} of {filteredWorkload.length} members
             </p>
@@ -668,7 +692,7 @@ export default function TeamTabsClient({
               >
                 Prev
               </Button>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm text-slate-500">
                 Page {safeWorkloadPage} of {totalWorkloadPages}
               </span>
               <Button
@@ -719,6 +743,9 @@ export default function TeamTabsClient({
         </AlertDialogContent>
       </AlertDialog>
 
+      {composeMode && (
+        <ComposeMessagePopup fixedType={composeMode} onClose={() => setComposeMode(null)} />
+      )}
     </div>
   );
 }

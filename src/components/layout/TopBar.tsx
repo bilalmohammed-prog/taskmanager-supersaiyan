@@ -41,7 +41,9 @@ export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProp
   const isOrgRoute = pathname.includes("/organizations/");
   const isTeamPage = isOrgRoute && pathname.includes("/team");
   const isInbox = isOrgRoute && pathname.includes("/inbox");
-
+  if (isTeamPage) {
+  return null;
+  }
   if (!isOrgRoute) {
     return null;
   }
