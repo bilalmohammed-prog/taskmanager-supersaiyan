@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { MessageSquare, UserPlus } from "lucide-react";
+import { MessageSquare, Send, UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { usePageHeader } from "@/components/layout/PageHeaderContext";
 import { Button } from "@/components/ui/button";
@@ -84,7 +84,11 @@ export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProp
             className="h-9 rounded-lg border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
             onClick={() => setComposeMode("message")}
           >
-            Draft
+            <Send
+              className="mr-2 h-5 w-5 text-slate-700"
+              strokeWidth={2.1}
+            />
+            Send Message
           </Button>
         )}
       </div>

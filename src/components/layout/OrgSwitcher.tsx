@@ -159,7 +159,7 @@ export default function OrgSwitcher({ collapsed }: OrgSwitcherProps) {
   }
 
   return (
-    <div className="space-y-2 rounded-lg border border-zinc-200/60 bg-zinc-50/60 px-3 py-2 shadow-none">
+    <div className="space-y-2 px-3">
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
           <Building2 className="h-3.5 w-3.5 text-zinc-400" />

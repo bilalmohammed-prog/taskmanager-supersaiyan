@@ -20,3 +20,7 @@ factors:
 8. Priority/urgency - Which tasks must happen NOW vs can wait? High-priority tasks should steal capacity from low-priority ones.
 9. Skill level - Junior vs senior employee. Senior might finish 8hr task in 6hrs. Junior might need 10hrs. This multiplier matters.
 10. req skils- react, js etc 
+
+
+11. ui inconsistency   while changing the due date of projects
+12. in space between name and role in memeber tab in teams will add ROLETAGS for instant allocation

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { MessageSquare, Search, UserPlus } from "lucide-react";
+import { Send, Search, UserPlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -318,7 +318,7 @@ export default function TeamTabsClient({
             className="h-12 rounded-lg border-slate-200 bg-white px-5 text-base font-medium text-zinc-950 shadow-sm hover:bg-slate-50"
             onClick={() => setComposeMode("message")}
           >
-            <MessageSquare
+            <Send
               className="mr-2 h-5 w-5 text-slate-700"
               strokeWidth={2.1}
             />
@@ -326,7 +326,7 @@ export default function TeamTabsClient({
           </Button>
           <Button
             type="button"
-            className="h-12 rounded-lg bg-indigo-600 px-5 text-base font-semibold text-white shadow-sm hover:bg-indigo-700"
+            className="h-12 rounded-lg bg-indigo-500 px-5 text-base font-semibold text-white shadow-sm hover:bg-indigo-600"
             onClick={() => setComposeMode("invite")}
             disabled={!canManageMembers}
             aria-disabled={!canManageMembers}
@@ -423,7 +423,7 @@ export default function TeamTabsClient({
 
                       <th className="px-5 py-4 font-semibold">Role</th>
 
-                      <th className="px-6 py-4 text-left font-semibold">
+                      <th className="px-8 py-4 text-left font-semibold">
                         Actions
                       </th>
                     </tr>

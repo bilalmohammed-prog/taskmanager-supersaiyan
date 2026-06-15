@@ -9,6 +9,7 @@ import {
   FolderKanban,
   Inbox,
   Users,
+  Zap,
 } from "lucide-react";
 import ProfileMenu from "@/components/ProfileMenu";
 import OrgSwitcher from "@/components/layout/OrgSwitcher";
@@ -32,22 +33,27 @@ export default function LeftSideBar({ collapsed, onToggle }: LeftSideBarProps) {
 
   return (
     <aside
-      className={`hidden h-full shrink-0 flex-col justify-between border-r border-zinc-200 bg-white py-6 transition-all duration-200 md:flex ${
+      className={`flex h-full shrink-0 flex-col justify-between border-r border-zinc-200 bg-white py-6 transition-all duration-200 md:flex ${
         collapsed ? "w-[92px]" : "w-[280px]"
       }`}
     >
       <div className={`space-y-8 ${collapsed ? "px-4" : "px-6"}`}>
         <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between gap-3"}`}>
           {!collapsed && (
+            <div  className="flex items-center gap-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-brand-foreground shadow-brand">
+              <Zap className="h-4 w-4" strokeWidth={2.5} />
+            </div>
             <div className="text-lg font-semibold tracking-tight text-zinc-800">
               FlashAssign
+            </div>
             </div>
           )}
           <button
             type="button"
             onClick={onToggle}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className={`flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 ${
+            className={`flex h-9 w-9 items-center justify-center rounded-sm text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 ${
               collapsed ? "mx-auto" : ""
             }`}
           >
@@ -67,9 +73,9 @@ export default function LeftSideBar({ collapsed, onToggle }: LeftSideBarProps) {
                 key={href}
                 href={fullHref}
                 title={collapsed ? label : undefined}
-                className={`flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                className={`flex items-center rounded-sm px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-zinc-100 text-zinc-900 shadow-sm ring-1 ring-zinc-200/50"
+                    ? "bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-200/50"
                     : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
                 } ${collapsed ? "justify-center" : "gap-3"}`}
               >
