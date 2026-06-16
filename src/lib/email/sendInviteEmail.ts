@@ -16,7 +16,7 @@ export async function sendInviteEmail({
   const inviteUrl = `${process.env.NEXTAUTH_URL}/invite/${token}`;
 
   const { data, error } = await resend.emails.send({
-    from: "FlashAssign <onboarding@resend.dev>", // change after verifying your domain
+    from: "FlashAssign <invites@flashassign.com>",// change after verifying your domain
     to: email,
     subject: "You've been invited to FlashAssign",
     html: `
