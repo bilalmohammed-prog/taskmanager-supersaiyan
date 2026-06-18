@@ -18,6 +18,8 @@ type ListProjectsWithMetaParams = {
   pageSize?: number;
   pageOffset?: number;
   search?: string;   // optional
+  startDate?: string | null;
+  dueDate?: string | null;
 };
 
 type ProjectWithMetaRow = {
@@ -44,6 +46,8 @@ export async function listProjectsWithMetaAction(
     page_size: pageSize,
     page_offset: pageOffset,
     search_query: search,
+    start_date_from: params.startDate || undefined,
+    due_date_to: params.dueDate || undefined,
   });
 
   if (error) {

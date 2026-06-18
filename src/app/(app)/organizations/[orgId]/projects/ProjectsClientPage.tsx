@@ -125,6 +125,10 @@ export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsC
   const [statusFilter, setStatusFilter] = useState<"all" | ProjectStatus>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [createStartDate, setCreateStartDate] = useState("");
+  const [createEndDate, setCreateEndDate] = useState("");
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [dueDateFilter, setDueDateFilter] = useState("");
   const [hasMore, setHasMore] = useState(initialProjects.length === 12);
   const [loadingMore, setLoadingMore] = useState(false);
   const [savingProjectId, setSavingProjectId] = useState<string | null>(null);
@@ -220,6 +224,8 @@ useEffect(() => {
         pageSize: PAGE_SIZE,
         pageOffset: 0,
         search: query,
+        startDate: startDateFilter || undefined,
+        dueDate: dueDateFilter || undefined,
       });
       if (requestId !== requestIdRef.current) {
             return;
@@ -230,9 +236,11 @@ useEffect(() => {
     } catch (err) {
       console.error(err);
     }
-  },
-  [orgId]
-);
+  }, [
+  orgId,
+  startDateFilter,
+  dueDateFilter,
+]);
 
 useEffect(() => {
   if (firstSearchRef.current) {
@@ -241,7 +249,12 @@ useEffect(() => {
   }
 
   void searchProjects(debouncedSearch);
-}, [debouncedSearch, searchProjects]);
+}, [
+  debouncedSearch,
+  startDateFilter,
+  dueDateFilter,
+  searchProjects,
+]);
 useEffect(() => {
   if (!hasMore || loadingMore) return;
 
@@ -447,6 +460,25 @@ useEffect(() => {
           <option value="paused">Paused</option>
           <option value="archived">Archived</option>
         </select>
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={startDateFilter}
+            onChange={(e) => setStartDateFilter(e.target.value)}
+            className="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+            title="Start Date"
+          />
+
+          <span className="text-sm text-zinc-400">→</span>
+
+          <input
+            type="date"
+            value={dueDateFilter}
+            onChange={(e) => setDueDateFilter(e.target.value)}
+            className="h-9 rounded-md border border-zinc-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+            title="Due Date"
+          />
+        </div>
       </div>
 
       {canManage && (
@@ -472,7 +504,8 @@ useEffect(() => {
         <p className="max-w-lg text-[15px] text-muted-foreground">Manage projects, status, and workspace members.</p>
       </div>
 
-      <div className="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]">
+      <div className="rounded-sm sticky top-4 z-30 border border-zinc-200/80 bg-white p-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] backdrop-blur
+shadow-sm">
         {projectsToolbar}
       </div>
 
@@ -592,6 +625,7 @@ useEffect(() => {
                           )}
                         </div>
                       </div>
+                      
                     </div>
 
                     <div className="hidden md:flex md:items-center">
@@ -964,8 +998,8 @@ useEffect(() => {
                   <label className="text-sm font-medium text-zinc-500">Start date (optional)</label>
                   <input
                     type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    value={createStartDate}
+                    onChange={(e) => setCreateStartDate(e.target.value)}
                     className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition-colors focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -974,8 +1008,8 @@ useEffect(() => {
                   <label className="text-sm font-medium text-zinc-500">Due date (optional)</label>
                   <input
                     type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    value={createEndDate}
+                    onChange={(e) => setCreateEndDate(e.target.value)}
                     className="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition-colors focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
