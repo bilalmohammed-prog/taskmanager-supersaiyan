@@ -36,6 +36,7 @@ type RenameProjectState = {
 type ProjectsClientPageProps = {
   orgId: string;
   initialProjects: ProjectWithMeta[];
+  initialTotalProjects: number;
 };
 
 
@@ -103,7 +104,7 @@ const desktopProjectsTableGrid =
   "md:grid-cols-[minmax(0,2fr)_120px_120px_140px_120px_120px_48px]";
 
 // POSSIBLE LARGE CLIENT COMPONENT
-export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsClientPageProps) {
+export default function ProjectsClientPage({ orgId, initialProjects, initialTotalProjects }: ProjectsClientPageProps) {
   const router = useRouter();
   const { addToast } = useToast();
   const role = useOrgRole();
@@ -121,6 +122,7 @@ export default function ProjectsClientPage({ orgId, initialProjects }: ProjectsC
   const [membersLoading, setMembersLoading] = useState(false);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [memberFilter, setMemberFilter] = useState("");
+  const [totalProjects, setTotalProjects] = useState(initialTotalProjects);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ProjectStatus>("all");
   const [startDate, setStartDate] = useState("");
@@ -198,12 +200,14 @@ useEffect(() => {
       pageOffset: currentLength,
       search: debouncedSearch,
     });
-
+    
     setProjects((prev) => {
-      const merged = [...prev, ...data];
-      return Array.from(new Map(merged.map((p) => [p.id, p])).values());
-    });
-    setHasMore(data.length === PAGE_SIZE);
+  const merged = [...prev, ...data.projects];
+  return Array.from(new Map(merged.map((p) => [p.id, p])).values());
+});
+
+setTotalProjects(data.totalCount);
+setHasMore(data.projects.length === PAGE_SIZE);
   } catch (err) {
     console.error("Load projects failed:", err);
     addToastRef.current("Failed to load projects", "error");
@@ -231,9 +235,10 @@ useEffect(() => {
             return;
         }
 
-      setProjects(data);
-      setHasMore(data.length === PAGE_SIZE);
-    } catch (err) {
+      setProjects(data.projects);
+setTotalProjects(data.totalCount);
+setHasMore(data.projects.length === PAGE_SIZE);
+          } catch (err) {
       console.error(err);
     }
   }, [
@@ -502,6 +507,12 @@ useEffect(() => {
       <div className="space-y-2">
         <h1 className="text-[2rem] leading-none font-medium tracking-tight text-foreground">Projects</h1>
         <p className="max-w-lg text-[15px] text-muted-foreground">Manage projects, status, and workspace members.</p>
+      </div>
+      <div className="mt-4 flex items-center justify-between">
+        <p className="text-sm text-zinc-500">
+          Showing <span className="font-medium text-zinc-900">{projects.length}</span> of{" "}
+          <span className="font-medium text-zinc-900">{totalProjects}</span> projects
+        </p>
       </div>
 
       <div className="rounded-sm sticky top-4 z-30 border border-zinc-200/80 bg-white p-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] backdrop-blur

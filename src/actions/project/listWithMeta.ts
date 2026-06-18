@@ -31,11 +31,12 @@ type ProjectWithMetaRow = {
   member_count: number | null;
   completed: number | null;
   total: number | null;
+  total_count: number | null;
 };
 
 export async function listProjectsWithMetaAction(
   params: ListProjectsWithMetaParams = {}
-): Promise<ProjectWithMeta[]> {
+): Promise<{ projects: ProjectWithMeta[]; totalCount: number }> {
   const ctx = await requireOrgContext({ organizationId: params.organizationId ?? undefined });
   const pageSize = params.pageSize ?? 12;
   const pageOffset = params.pageOffset ?? 0;
@@ -54,7 +55,10 @@ export async function listProjectsWithMetaAction(
     throw new Error(error.message);
   }
 
-  return (data as ProjectWithMetaRow[] | null ?? []).map((row) => ({
+  const rows = (data as ProjectWithMetaRow[] | null) ?? [];
+
+return {
+  projects: rows.map((row) => ({
     id: row.id,
     name: row.name,
     status: row.status ?? "active",
@@ -63,5 +67,7 @@ export async function listProjectsWithMetaAction(
     memberCount: Number(row.member_count ?? 0),
     completed: Number(row.completed ?? 0),
     total: Number(row.total ?? 0),
-  }));
+  })),
+  totalCount: Number(rows[0]?.total_count ?? 0),
+};
 }
