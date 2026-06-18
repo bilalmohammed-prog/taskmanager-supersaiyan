@@ -14,7 +14,17 @@ import { useToast } from "@/components/providers/toast";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Calendar, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+} from "lucide-react";
 import { createPortal } from "react-dom";
 import { listOrgMembers } from "@/actions/organization/listOrgMembers";
 
@@ -147,6 +157,11 @@ export default function ProjectsClientPage({ orgId, initialProjects, initialTota
   const firstSearchRef = useRef(true);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const loadingMoreRef = useRef(false);
+const [sortBy, setSortBy] = useState<
+  "name" | "progress" | "start_date" | "end_date"
+>("name");
+
+const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
 useEffect(() => {
   if (searchQuery === debouncedSearch) return;
@@ -185,6 +200,24 @@ useEffect(() => {
       );
     }
   }, [loadingMore, projects.length, searchQuery.length, statusFilter]);
+  
+  function handleSort(column: typeof sortBy) {
+    if (sortBy === column) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
+    }
+  }
+    function SortIcon(column: typeof sortBy) {
+    if (sortBy !== column) {
+      return <ArrowUpDown className="h-3.5 w-3.5 text-zinc-400" />;
+    }
+
+    return sortOrder === "asc"
+      ? <ArrowUp className="h-3.5 w-3.5 text-indigo-600" />
+      : <ArrowDown className="h-3.5 w-3.5 text-indigo-600" />;
+  }
 
   const loadMoreProjects = useCallback(async () => {
   if (!orgId || loadingMoreRef.current) return;
@@ -199,6 +232,11 @@ useEffect(() => {
       pageSize: PAGE_SIZE,
       pageOffset: currentLength,
       search: debouncedSearch,
+      status: statusFilter,
+      startDate: startDateFilter || undefined,
+      dueDate: dueDateFilter || undefined,
+      sortBy,
+      sortOrder,
     });
     
     setProjects((prev) => {
@@ -215,7 +253,15 @@ setHasMore(data.projects.length === PAGE_SIZE);
     loadingMoreRef.current = false;
     setLoadingMore(false);
   }
-}, [orgId, debouncedSearch]); // loadingMore removed
+}, [
+  orgId,
+  debouncedSearch,
+  statusFilter,
+  startDateFilter,
+  dueDateFilter,
+  sortBy,
+  sortOrder,
+]); // loadingMore removed
   const searchProjects = useCallback(
   async (query: string) => {
     if (!orgId) return;
@@ -230,6 +276,9 @@ setHasMore(data.projects.length === PAGE_SIZE);
         search: query,
         startDate: startDateFilter || undefined,
         dueDate: dueDateFilter || undefined,
+        status: statusFilter,
+        sortBy,
+        sortOrder,
       });
       if (requestId !== requestIdRef.current) {
             return;
@@ -243,8 +292,11 @@ setHasMore(data.projects.length === PAGE_SIZE);
     }
   }, [
   orgId,
+  statusFilter,
   startDateFilter,
   dueDateFilter,
+  sortBy,
+  sortOrder,
 ]);
 
 useEffect(() => {
@@ -254,12 +306,7 @@ useEffect(() => {
   }
 
   void searchProjects(debouncedSearch);
-}, [
-  debouncedSearch,
-  startDateFilter,
-  dueDateFilter,
-  searchProjects,
-]);
+}, [debouncedSearch, searchProjects]);
 useEffect(() => {
   if (!hasMore || loadingMore) return;
 
@@ -566,12 +613,37 @@ shadow-sm">
             <div
               className={`hidden items-center gap-4 border-b border-zinc-200/80 bg-zinc-50/80 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 md:grid ${desktopProjectsTableGrid}`}
             >
-              <div className="min-w-0">Project</div>
+              <div
+                onClick={() => handleSort("name")}
+                className="flex cursor-pointer select-none items-center gap-1 hover:text-zinc-900"
+              >
+                Project
+                {SortIcon("name")}
+              </div>
               <div className="whitespace-nowrap">Members</div>
               <div className="whitespace-nowrap">Status</div>
-              <div className="whitespace-nowrap">Progress</div>
-              <div className="whitespace-nowrap">Start Date</div>
-              <div className="whitespace-nowrap">Due Date</div>
+              <div
+                onClick={() => handleSort("progress")}
+                className="flex cursor-pointer select-none items-center gap-1 hover:text-zinc-900"
+              >
+                Progress
+                {SortIcon("progress")}
+              </div>
+              <div
+                onClick={() => handleSort("start_date")}
+                className="flex cursor-pointer select-none items-center gap-1 hover:text-zinc-900"
+              >
+                Start Date
+                {SortIcon("start_date")}
+              </div>
+              
+              <div
+                onClick={() => handleSort("end_date")}
+                className="flex cursor-pointer select-none items-center gap-1 hover:text-zinc-900"
+              >
+                Due Date
+                {SortIcon("end_date")}
+              </div>
               <div aria-hidden="true" />
             </div>
 

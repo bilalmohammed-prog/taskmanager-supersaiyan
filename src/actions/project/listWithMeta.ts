@@ -20,6 +20,9 @@ type ListProjectsWithMetaParams = {
   search?: string;   // optional
   startDate?: string | null;
   dueDate?: string | null;
+  status?: "all" | "active" | "paused" | "archived";
+  sortBy?: "name" | "progress" | "start_date" | "end_date";
+  sortOrder?: "asc" | "desc";
 };
 
 type ProjectWithMetaRow = {
@@ -49,6 +52,9 @@ export async function listProjectsWithMetaAction(
     search_query: search,
     start_date_from: params.startDate || undefined,
     due_date_to: params.dueDate || undefined,
+    status_filter: params.status || "all",
+    sort_by: params.sortBy || "name",
+    sort_order: params.sortOrder || "asc",
   });
 
   if (error) {
