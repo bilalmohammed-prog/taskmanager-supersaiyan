@@ -562,11 +562,6 @@ useEffect(() => {
         </p>
       </div>
 
-      <div className="rounded-sm sticky top-4 z-30 border border-zinc-200/80 bg-white p-4 shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] backdrop-blur
-shadow-sm">
-        {projectsToolbar}
-      </div>
-
       {loading ? (
         <div className="w-full overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
           <div className="border-b border-zinc-200/80 bg-zinc-50/80 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500">
@@ -592,25 +587,12 @@ shadow-sm">
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          {projects.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/60 p-8 text-center shadow-sm">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50">
-                <Calendar className="h-6 w-6 text-indigo-600" />
-              </div>
-              <h2 className="text-base font-semibold text-zinc-900">No projects yet</h2>
-              <p className="max-w-md text-sm text-zinc-500">Create a project to organize work, add team members, and track delivery.</p>
-              {canManage && (
-                <Button onClick={() => setShowCreate(true)} className="h-9 border-transparent bg-indigo-500 px-3.5 font-medium text-white shadow-sm hover:bg-indigo-600">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create project
-                </Button>
-              )}
-            </div>
-          ) : null}
-
-          <div className="w-full overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-            <div
+        <div className="flex flex-col">
+          <div className="sticky top-0 z-30 bg-white rounded-t-lg border border-b-0 border-zinc-200 overflow-hidden">
+  <div className="border-b border-zinc-200/80 bg-white p-4">
+        {projectsToolbar}
+      </div>
+      <div
               className={`hidden items-center gap-4 border-b border-zinc-200/80 bg-zinc-50/80 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 md:grid ${desktopProjectsTableGrid}`}
             >
               <div
@@ -646,6 +628,25 @@ shadow-sm">
               </div>
               <div aria-hidden="true" />
             </div>
+</div>
+          {projects.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/60 p-8 text-center shadow-sm">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-indigo-200 bg-indigo-50">
+                <Calendar className="h-6 w-6 text-indigo-600" />
+              </div>
+              <h2 className="text-base font-semibold text-zinc-900">No projects yet</h2>
+              <p className="max-w-md text-sm text-zinc-500">Create a project to organize work, add team members, and track delivery.</p>
+              {canManage && (
+                <Button onClick={() => setShowCreate(true)} className="h-9 border-transparent bg-indigo-500 px-3.5 font-medium text-white shadow-sm hover:bg-indigo-600">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create project
+                </Button>
+              )}
+            </div>
+          ) : null}
+
+          <div className="w-full overflow-hidden rounded-b-xl border border-t-0 border-zinc-200 bg-white shadow-sm">
+            
 
             <div className="divide-y divide-zinc-100">
               {filteredProjects.map((project) => {
@@ -884,6 +885,7 @@ shadow-sm">
           }}
           onClick={(e) => e.stopPropagation()}
         >
+          
           <div className="px-2 pb-1 pt-0.5 text-[11px] font-medium uppercase tracking-wider text-zinc-400">
             {actionsMenu.projectName}
           </div>
