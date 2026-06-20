@@ -1,7 +1,16 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Calendar, Plus, Search, Users } from "lucide-react";
+import {
+  AlertCircle,
+  Calendar,
+  Plus,
+  Search,
+  Users,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+} from "lucide-react";
 import type { Enums, Tables, TablesUpdate } from "@/lib/types/database";
 import { updateTask } from "@/actions/task/update";
 import { createTask } from "@/actions/task/create";
@@ -26,13 +35,8 @@ type TaskWithAssignee = Tables<"tasks"> & {
 };
 
 type TaskPatch = Partial<TaskWithAssignee>;
-
 type TaskStatus = Enums<"task_status">;
-
-type HumanResource = {
-  user_id: string;
-  name: string;
-};
+type HumanResource = { user_id: string; name: string; };
 
 export type ProjectWorkspaceInitialData = {
   orgId: string;
@@ -43,6 +47,8 @@ export type ProjectWorkspaceInitialData = {
   projectMembers: HumanResource[];
   tasks: TaskWithAssignee[];
 };
+
+const desktopTasksTableGrid = "md:grid-cols-[48px_minmax(0,1.8fr)_220px_152px_132px]";
 
 type TaskRowProps = {
   task: TaskWithAssignee;
@@ -79,7 +85,7 @@ const TaskRow = memo(function TaskRow({
     ? selectedForDelete
       ? "cursor-pointer border-red-200 bg-red-50/70 hover:bg-red-50/80"
       : "cursor-pointer border-zinc-100 bg-white hover:border-red-200 hover:bg-red-50/30"
-    : "border-zinc-100 bg-white hover:bg-zinc-50/50";
+    : "border-zinc-100 bg-white hover:bg-zinc-100/60";
 
   return (
     <div
@@ -97,7 +103,7 @@ const TaskRow = memo(function TaskRow({
             }
           : undefined
       }
-      className={`group flex flex-col items-start gap-2.5 border-t px-4 py-3.5 transition-colors first:border-t-0 md:grid md:grid-cols-[48px_minmax(0,1.8fr)_220px_152px_132px] md:items-center md:gap-4 md:py-3 ${rowClassName}`}
+      className={`group relative flex flex-col items-start gap-3 px-4 py-4 transition-colors md:grid md:items-center md:gap-4 md:px-6 md:py-3.5 ${desktopTasksTableGrid} ${rowClassName}`}
     >
       <div className="flex w-full justify-center pt-0.5 md:pt-0">
         <TaskSelectionIndicator
@@ -191,7 +197,7 @@ const TaskRow = memo(function TaskRow({
             onCommitUpdate(task.id, { status: value });
           }}
           disabled={statusDisabled}
-          className={`appearance-none rounded-md border px-2.5 py-1 text-[13px] font-medium outline-none disabled:cursor-default ${getTaskStatusBadgeClass(task.status)} ${deleteMode ? "opacity-90" : ""}`}
+          className={`appearance-none rounded-md border px-2.5 py-1 text-[13px] font-medium outline-none disabled:cursor-default cursor-pointer transition-all ${getTaskStatusBadgeClass(task.status)} ${deleteMode ? "opacity-90" : ""}`}
         >
           <option value="todo">To Do</option>
           <option value="in_progress">In Progress</option>
@@ -213,7 +219,7 @@ const TaskRow = memo(function TaskRow({
             if (e.key === "Enter" || e.key === "Escape") e.currentTarget.blur();
           }}
           disabled={fieldsDisabled}
-          className={`bg-transparent text-sm font-medium text-zinc-600 outline-none disabled:cursor-default ${deleteMode ? "opacity-90" : ""}`}
+          className={`bg-transparent text-sm font-normal text-zinc-600 outline-none hover:text-zinc-900 disabled:cursor-default ${deleteMode ? "opacity-90" : ""}`}
         />
       </div>
     </div>
@@ -222,10 +228,7 @@ const TaskRow = memo(function TaskRow({
 
 function formatDueDate(value: string | null) {
   if (!value) return "No due date";
-  return new Date(value).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
+  return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function getTaskStatusLabel(status: TaskStatus | null) {
@@ -246,11 +249,7 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
   const { addToast } = useToast();
   const { setPageHeader } = usePageHeader();
 
-  const orgId = initialData.orgId;
-  const projectId = initialData.projectId;
-  const projectName = initialData.projectName;
-  const role = initialData.role;
-  const userId = initialData.userId;
+  const { orgId, projectId, projectName, role, userId } = initialData;
   const capabilities = getWorkspaceCapabilities(role);
   const canManage = capabilities.canManageTasks;
 
@@ -259,12 +258,22 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
   const [membersLoading, setMembersLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [tasks, setTasks] = useState<TaskWithAssignee[]>(initialData.tasks);
+  
+  // Local Filtering & Sorting State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+  const [dueDateFilter, setDueDateFilter] = useState<string>("");
+  const [sortBy, setSortBy] = useState<"title" | "status" | "due_date">("title");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [createDescription, setCreateDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
+  
   const [showManageMembers, setShowManageMembers] = useState(false);
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
@@ -275,23 +284,12 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
 
   const orgMembersCacheRef = useRef<{ orgId: string; members: HumanResource[] } | null>(null);
-  const renderCountRef = useRef(0);
-
-  useEffect(() => {
-    renderCountRef.current += 1;
-    if (renderCountRef.current > 1) {
-      console.info(
-        `[render] project workspace #${renderCountRef.current} tasks=${tasks.length} members=${projectMembers.length} loading=${showCreate ? "create" : "idle"} deleteMode=${deleteMode}`
-      );
-    }
-  }, [deleteMode, projectMembers.length, showCreate, tasks.length]);
 
   const fetchOrgMembers = useCallback(async () => {
     if (orgMembersCacheRef.current?.orgId === orgId) {
       setEmployees(orgMembersCacheRef.current.members);
       return;
     }
-
     setMembersLoading(true);
     try {
       const humansResult = await listOrgMembers(orgId);
@@ -335,6 +333,57 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
 
   const selectedTaskIdSet = useMemo(() => new Set(selectedTaskIds), [selectedTaskIds]);
 
+  const filteredTasks = useMemo(() => {
+    let result = tasks;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(t => t.title.toLowerCase().includes(q) || (t.description || "").toLowerCase().includes(q));
+    }
+    if (statusFilter !== "all") {
+      result = result.filter(t => t.status === statusFilter);
+    }
+    if (assigneeFilter !== "all") {
+      if (assigneeFilter === "unassigned") {
+        result = result.filter(t => !t.assignee_id);
+      } else {
+        result = result.filter(t => t.assignee_id === assigneeFilter);
+      }
+    }
+    if (dueDateFilter) {
+      result = result.filter(t => t.due_date === dueDateFilter);
+    }
+    
+    return result.sort((a, b) => {
+      let valA = a[sortBy] ?? "";
+      let valB = b[sortBy] ?? "";
+
+      if (sortBy === "title") {
+        valA = valA.toLowerCase();
+        valB = valB.toLowerCase();
+      }
+
+      if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+      if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [tasks, searchQuery, statusFilter, assigneeFilter, dueDateFilter, sortBy, sortOrder]);
+
+  function handleSort(column: typeof sortBy) {
+    if (sortBy === column) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
+    }
+  }
+
+  function SortIcon(column: typeof sortBy) {
+    if (sortBy !== column) return <ArrowUpDown className="h-3.5 w-3.5 text-zinc-400" />;
+    return sortOrder === "asc" 
+      ? <ArrowUp className="h-3.5 w-3.5 text-indigo-600" /> 
+      : <ArrowDown className="h-3.5 w-3.5 text-indigo-600" />;
+  }
+
   const updateTaskInState = useCallback((id: string, updates: TaskPatch) => {
     setTasks((prev) => prev.map((task) => (task.id === id ? { ...task, ...updates } : task)));
   }, []);
@@ -344,8 +393,7 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
       try {
         setSavingId(id);
         await updateTask(id, updates, orgId);
-      } catch (error) {
-        console.error("Save failed", error);
+      } catch {
         addToast("Failed to save task", "error");
       } finally {
         setSavingId(null);
@@ -363,9 +411,7 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
           ? { status: updates.status }
           : null;
 
-      if (!scopedUpdates) {
-        return;
-      }
+      if (!scopedUpdates) return;
 
       updateTaskInState(id, scopedUpdates);
       void commitUpdate(id, scopedUpdates);
@@ -390,9 +436,7 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
   }, []);
 
   const handleBulkDelete = useCallback(async () => {
-    if (selectedTaskIds.length === 0) {
-      return;
-    }
+    if (selectedTaskIds.length === 0) return;
 
     const taskIdsToDelete = [...selectedTaskIds];
     const backupTasks = tasks;
@@ -417,14 +461,7 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
 
     try {
       setCreating(true);
-
-      const created = await createTask(
-        title.trim(),
-        createDescription.trim() || undefined,
-        dueDate,
-        orgId,
-        projectId
-      );
+      const created = await createTask(title.trim(), createDescription.trim() || undefined, dueDate, orgId, projectId);
       const newTask: TaskWithAssignee = {
         ...created,
         assignee_id: null,
@@ -456,7 +493,6 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
       try {
         await assignTaskToResource(taskId, resourceId || null);
         const employee = projectMembers.find((member) => member.user_id === resourceId);
-
         updateTaskInState(taskId, {
           assignee_id: resourceId || null,
           assignee_name: employee?.name ?? null,
@@ -470,11 +506,9 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
 
   async function handleAddMembers() {
     if (selectedMembersToAdd.length === 0) return;
-
     try {
       setSavingMembers(true);
       await Promise.all(selectedMembersToAdd.map((userId) => assignProjectMember(projectId, userId, orgId)));
-
       const nextMembers = employees.filter((employee) => selectedMembersToAdd.includes(employee.user_id));
       setProjectMembers((prev) => [
         ...prev,
@@ -493,7 +527,6 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
 
   async function handleRemoveMembers() {
     if (selectedMembersToRemove.length === 0) return;
-
     try {
       setSavingMembers(true);
       await Promise.all(selectedMembersToRemove.map((userId) => removeProjectMember(projectId, userId)));
@@ -517,7 +550,7 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
             {projectName}
           </h1>
           <p className="text-xs text-zinc-500">
-            {deleteMode ? `${selectedTaskIds.length} selected for deletion` : "Tasks and members in this project"}
+            Manage project tasks and workspace members
           </p>
         </div>
 
@@ -547,42 +580,6 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
               <Users className="mr-2 h-4 w-4 text-zinc-500" />
               Manage Members
             </Button>
-            <Button
-              className="h-8 border-transparent bg-indigo-600 px-3.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-              onClick={() => setShowCreate(true)}
-            >
-              <Plus className="mr-2 h-4 w-4 opacity-90" />
-              Add Task
-            </Button>
-            {!deleteMode ? (
-              <Button
-                variant="outline"
-                className="h-8 border-red-200 bg-white px-3 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50"
-                onClick={toggleDeleteMode}
-                disabled={tasks.length === 0}
-              >
-                Delete Tasks
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  className="h-8 border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
-                  onClick={cancelDeleteMode}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="h-8 bg-red-600 px-3 text-sm font-medium text-white shadow-sm hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
-                  onClick={() => {
-                    void handleBulkDelete();
-                  }}
-                  disabled={selectedTaskIds.length === 0}
-                >
-                  Delete Selected{selectedTaskIds.length ? ` (${selectedTaskIds.length})` : ""}
-                </Button>
-              </>
-            )}
           </div>
         )}
       </div>
@@ -591,24 +588,171 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
     return () => {
       setPageHeader(null);
     };
-  }, [canManage, cancelDeleteMode, deleteMode, handleBulkDelete, projectName, selectedTaskIds.length, setPageHeader, tasks.length, toggleDeleteMode]);
+  }, [canManage, projectName, setPageHeader]);
+
+  const tasksToolbar = (
+    <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative w-full flex-1 max-w-xl">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-900" />
+          <Input
+            placeholder="Search tasks"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9 border-zinc-200 bg-white pl-9 text-sm text-zinc-700 placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-indigo-500 border-zinc-300 shadow-sm"
+          />
+        </div>
+
+        <select
+          value={statusFilter}
+          onChange={(e) =>
+            setStatusFilter(e.target.value as "all" | TaskStatus)
+          }
+          className="h-9 w-full cursor-pointer rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 shadow-sm outline-none transition-colors focus:border-transparent focus:ring-2 focus:ring-indigo-500 sm:w-44"
+        >
+          <option value="all">All statuses</option>
+          <option value="todo">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="blocked">Blocked</option>
+          <option value="done">Completed</option>
+        </select>
+
+        <select
+          value={assigneeFilter}
+          onChange={(e) => setAssigneeFilter(e.target.value)}
+          className="h-9 w-full cursor-pointer rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 shadow-sm outline-none transition-colors focus:border-transparent focus:ring-2 focus:ring-indigo-500 sm:w-44"
+        >
+          <option value="all">All assignees</option>
+          <option value="unassigned">Unassigned</option>
+          {projectMembers.map((m) => (
+            <option key={m.user_id} value={m.user_id}>{m.name}</option>
+          ))}
+        </select>
+
+        <input
+          type="date"
+          value={dueDateFilter}
+          onChange={(e) => setDueDateFilter(e.target.value)}
+          className="h-9 w-[150px] cursor-pointer rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 shadow-sm outline-none transition-colors focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
+
+      {canManage && (
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 md:flex-nowrap">
+          {!deleteMode ? (
+            <Button
+              variant="outline"
+              className="h-9 border-red-200 bg-white px-4 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50"
+              onClick={toggleDeleteMode}
+              disabled={tasks.length === 0}
+            >
+              Delete Tasks
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                className="h-9 border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
+                onClick={cancelDeleteMode}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="h-9 bg-red-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={() => void handleBulkDelete()}
+                disabled={selectedTaskIds.length === 0}
+              >
+                Delete Selected{selectedTaskIds.length ? ` (${selectedTaskIds.length})` : ""}
+              </Button>
+            </>
+          )}
+          <Button
+            className="h-9 shrink-0 cursor-pointer rounded-lg border border-indigo-500 bg-indigo-500 px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-500/90"
+            onClick={() => setShowCreate(true)}
+          >
+            <Plus className="mr-2 h-4 w-4 opacity-90" />
+            Add Task
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 
   return (
-    <div className="flex w-full max-w-5xl flex-col pb-10">
-      <section>
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <div className="hidden grid-cols-[48px_minmax(0,1.8fr)_220px_152px_132px] items-center gap-4 border-b border-zinc-200/80 bg-zinc-50/80 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:grid">
+    <div className="flex w-full flex-col gap-4 pb-12">
+      <div className="flex flex-col">
+        {/* Sticky toolbar + column headers */}
+        <div className="sticky top-0 z-30 border border-b-0 border-zinc-200 bg-white transition-[border-radius] duration-150 rounded-t-lg">
+          <div className="flex items-center justify-between gap-4 rounded-t-lg border-b border-zinc-300 bg-zinc-200/80 px-4 py-3 overflow-hidden">
+            <div className="flex-1">{tasksToolbar}</div>
+          </div>
+
+          {/* Count line */}
+          <div className="flex items-center justify-between border-b border-zinc-300 bg-zinc-200/80 px-6 py-2">
+            <p className="text-[12px] text-zinc-600">
+              Showing{" "}
+              <span className="font-medium text-zinc-600">{filteredTasks.length}</span>
+              {" "}of{" "}
+              <span className="font-medium text-zinc-600">{tasks.length}</span>
+              {" "}tasks
+            </p>
+          </div>
+
+          {/* Headers */}
+          <div
+            className={`hidden items-center gap-4 border-b border-zinc-200 bg-zinc-200/80 px-6 py-3 text-[13px] font-medium uppercase tracking-wider text-zinc-500 md:grid ${desktopTasksTableGrid}`}
+          >
             <div className="flex justify-center">
               <span className="sr-only">Select Task</span>
             </div>
-            <div>Title</div>
-            <div>Assignee</div>
-            <div>Status</div>
-            <div>Due Date</div>
+            <div
+              onClick={() => handleSort("title")}
+              className="flex cursor-pointer select-none items-center gap-1 hover:text-zinc-800"
+            >
+              Title {SortIcon("title")}
+            </div>
+            <div className="whitespace-nowrap">Assignee</div>
+            <div
+              onClick={() => handleSort("status")}
+              className="flex cursor-pointer select-none items-center gap-1 hover:text-zinc-800"
+            >
+              Status {SortIcon("status")}
+            </div>
+            <div
+              onClick={() => handleSort("due_date")}
+              className="flex cursor-pointer select-none items-center gap-1 hover:text-zinc-800"
+            >
+              Due Date {SortIcon("due_date")}
+            </div>
           </div>
+        </div>
 
-          <div className="flex flex-col">
-            {tasks.map((task) => (
+        {tasks.length === 0 || filteredTasks.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-4 rounded-b-xl border border-t-0 border-dashed border-zinc-200 bg-zinc-50/60 p-12 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-indigo-100 bg-indigo-50">
+              <Calendar className="h-5 w-5 text-indigo-500" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-sm font-semibold text-zinc-900">No tasks found</h2>
+              <p className="max-w-xs text-sm text-zinc-400">
+                {tasks.length === 0 ? "Create a task to organize work and assign team members." : "No tasks match your current filters."}
+              </p>
+            </div>
+            {canManage && tasks.length === 0 && (
+              <Button
+                onClick={() => setShowCreate(true)}
+                className="h-9 border-transparent bg-indigo-500 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-600"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Create task
+              </Button>
+            )}
+          </div>
+        ) : null}
+
+        <div className="w-full overflow-hidden rounded-b-xl border border-t-0 border-zinc-200 bg-white shadow-sm">
+          <div className="divide-y divide-zinc-100">
+            {filteredTasks.map((task) => (
               <TaskRow
                 key={`${task.id}-${task.title}-${task.description ?? ""}-${task.due_date ?? ""}`}
                 task={task}
@@ -628,7 +772,7 @@ export default function ProjectWorkspaceClient({ initialData }: { initialData: P
             ))}
           </div>
         </div>
-      </section>
+      </div>
 
       {showCreate && (
         <AppModal
