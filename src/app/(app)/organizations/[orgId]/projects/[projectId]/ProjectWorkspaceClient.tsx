@@ -78,7 +78,8 @@ export type ProjectWorkspaceInitialData = {
 };
 
 const PAGE_SIZE = 10;
-const desktopTasksTableGrid = "md:grid-cols-[48px_minmax(0,1.8fr)_220px_152px_140px_140px_48px]";
+const desktopTasksTableGrid =
+  "md:grid-cols-[minmax(0,1.8fr)_220px_152px_140px_140px_48px]";
 
 type TaskRowProps = {
   task: ProjectTaskRpc;
@@ -138,12 +139,7 @@ const overdue = isTaskOverdue(task);
     <div
       className={`group relative flex flex-col items-start gap-3 px-4 py-4 transition-colors md:grid md:items-center md:gap-4 md:px-6 md:py-3.5 ${desktopTasksTableGrid} ${rowClassName}`}
     >
-      <div className="flex w-full justify-center pt-0.5 md:pt-0">
-        <TaskSelectionIndicator
-          selected={selectedForDelete || task.status === "done"}
-          deleteMode={selectedForDelete}
-        />
-      </div>
+      
 
       <div className="flex w-full min-w-0 flex-col">
         <input
@@ -158,13 +154,18 @@ const overdue = isTaskOverdue(task);
             if (e.key === "Enter") e.currentTarget.blur();
           }}
           disabled={fieldsDisabled}
-          className={`w-full truncate bg-transparent text-[15px] font-medium outline-none disabled:cursor-default ${
-            selectedForDelete
-              ? "line-through text-red-950/80"
+          className={`w-full truncate rounded px-1.5 py-0.5 text-[15px] font-medium outline-none transition-colors disabled:cursor-default
+            ${!fieldsDisabled
+              ? "border border-transparent hover:border-zinc-300 hover:bg-zinc-50 focus:border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 cursor-text"
+              : "bg-transparent border-transparent"
+            }
+            ${selectedForDelete
+              ? "line-through text-red-950/80 opacity-90"
               : task.status === "done"
                 ? "text-zinc-500"
                 : "text-zinc-900"
-          } ${selectedForDelete ? "opacity-90" : ""}`}
+            }
+          `}
         />
         <ExpandableDescription
           value={descriptionValue}
@@ -198,7 +199,7 @@ const overdue = isTaskOverdue(task);
           value={task.assignee_id || ""}
           onChange={(e) => onAssign(task.id, e.target.value)}
           disabled={fieldsDisabled}
-          className={`min-w-0 flex-1 appearance-none bg-transparent text-sm font-medium outline-none disabled:cursor-default ${
+          className={`cursor-pointer min-w-0 flex-1 appearance-none bg-transparent text-sm font-medium outline-none disabled:cursor-default ${
   task.assignee_id
     ? "text-zinc-900"
     : "italic text-zinc-400"
@@ -284,7 +285,7 @@ const overdue = isTaskOverdue(task);
             }`}
             title="Delete task"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="cursor-pointer h-4 w-4" />
           </button>
         )}
       </div>
@@ -916,9 +917,7 @@ void fetchTasks(offsetRef.current, true);
           <div
             className={`hidden items-center gap-4 border-b border-zinc-200 bg-zinc-200/80 px-6 py-3 text-[13px] font-medium uppercase tracking-wider text-zinc-500 md:grid ${desktopTasksTableGrid}`}
           >
-            <div className="flex justify-center">
-              <span className="sr-only">Select Task</span>
-            </div>
+            
             <div
               onClick={() => handleSort("title")}
               className="flex cursor-pointer select-none items-center gap-1 hover:text-zinc-800"
@@ -926,11 +925,8 @@ void fetchTasks(offsetRef.current, true);
               Title {SortIcon("title")}
             </div>
             <div className="whitespace-nowrap">Assignee</div>
-            <div
-              onClick={() => handleSort("status")}
-              className="flex cursor-pointer select-none items-center gap-1 hover:text-zinc-800"
-            >
-              Status {SortIcon("status")}
+            <div className="whitespace-nowrap">
+              Status
             </div>
             <div
               onClick={() => handleSort("start_date")}
@@ -1074,7 +1070,7 @@ void fetchTasks(offsetRef.current, true);
             <select
               value={selectedEmployee}
               onChange={(e) => setSelectedEmployee(e.target.value)}
-              className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition-[border-color,box-shadow] hover:border-zinc-300 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+              className="cursor-pointer h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition-[border-color,box-shadow] hover:border-zinc-300 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">Unassigned</option>
               {projectMembers.map((employee) => (
