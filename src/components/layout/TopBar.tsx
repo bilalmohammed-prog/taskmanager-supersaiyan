@@ -52,6 +52,12 @@ export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProp
   segments.length === 4 &&
   segments[0] === "organizations" &&
   segments[2] === "projects";
+
+  const isEmployeeWorkspacePage =
+  segments.length === 4 &&
+  segments[0] === "organizations" &&
+  segments[2] === "employees";
+
   if (isTeamPage) {
   return null;
   }
@@ -62,6 +68,9 @@ export default function TopBar({ sidebarCollapsed, onToggleSidebar }: TopBarProp
     return null;
   }
   if (isProjectWorkspacePage) {
+    return null;
+  }
+  if (isEmployeeWorkspacePage) {
     return null;
   }
 

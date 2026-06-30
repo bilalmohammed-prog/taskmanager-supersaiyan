@@ -2,110 +2,91 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
-import { createTask } from "@/actions/task/create";
+import {
+  ArrowRight,
+  Calendar,
+  Plus,
+  Search,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Trash2,
+  X,
+} from "lucide-react";
+import type { Enums, TablesUpdate } from "@/lib/types/database";
 import { updateTask } from "@/actions/task/update";
-import { assignTaskToResource } from "@/actions/task/assign";
+import { createTask } from "@/actions/task/create";
 import { deleteTask as deleteTaskAction } from "@/actions/task/delete";
+import { assignTaskToResource } from "@/actions/task/assign";
 import { listOrgMembers } from "@/actions/organization/listOrgMembers";
-import { supabase } from "@/lib/supabase/client";
-import { useOrgRole } from "@/hooks/useOrgRole";
-import { getWorkspaceCapabilities } from "@/lib/auth/ui-capabilities";
-import { isAppRole, toAppRole } from "@/lib/auth/permissions";
 import { usePageHeader } from "@/components/layout/PageHeaderContext";
 import { Button } from "@/components/ui/button";
+import { AppModal } from "@/components/ui/app-modal";
+import { Input } from "@/components/ui/input";
 import { ExpandableDescription } from "@/components/tasks/ExpandableDescription";
-import { TaskSelectionIndicator } from "@/components/tasks/TaskSelectionIndicator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/components/providers/toast";
-import type { Enums } from "@/lib/types/database";
+import { getWorkspaceCapabilities, canEditTask } from "@/lib/auth/ui-capabilities";
+import { isAppRole, toAppRole } from "@/lib/auth/permissions";
+import { supabase } from "@/lib/supabase/client";
+import { useOrgRole } from "@/hooks/useOrgRole";
+import { DatePicker } from "@/components/ui/date-picker";
 
-type EmployeeTask = {
-  task_id: string;
+export type EmployeeTaskRpc = {
+  id: string;
+  organization_id: string;
+  project_id: string | null;
+  project_name: string | null;
   title: string;
-  status: TaskStatus | null;
   description: string | null;
+  status: string;
   start_date: string | null;
   due_date: string | null;
-  project_id: string | null;
-  allocated_hours: number | null;
+  created_by: string;
+  created_at: string;
+  total_count: number;
 };
 
-type ProjectOption = {
-  id: string;
-  name: string;
+type TaskPatch = {
+  title?: string;
+  description?: string | null;
+  status?: TaskStatus;
+  start_date?: string | null;
+  due_date?: string | null;
+  project_id?: string | null;
+  project_name?: string | null;
 };
 
 type TaskStatus = Enums<"task_status">;
+type ProjectResource = { id: string; name: string };
 
-type EmployeeTaskRowProps = {
-  task: EmployeeTask;
+const PAGE_SIZE = 10;
+const desktopTasksTableGrid =
+  "md:grid-cols-[minmax(0,1.8fr)_220px_152px_140px_140px_48px]";
+
+type TaskRowProps = {
+  task: EmployeeTaskRpc;
   canManage: boolean;
   canEditStatus: boolean;
   deleteMode: boolean;
   selectedForDelete: boolean;
-  projects: ProjectOption[];
-  onDraftUpdate: (taskId: string, updates: Partial<EmployeeTask>) => void;
-  onToggleDeleteSelection: (taskId: string) => void;
-  onTitleCommit: (taskId: string, nextTitle: string) => void;
-  onDescriptionCommit: (taskId: string, nextDescription: string) => void;
-  onStatusChange: (taskId: string, status: TaskStatus) => void;
-  onStartDateChange: (taskId: string, nextStartDate: string) => void;
-  onDueDateChange: (taskId: string, nextDueDate: string) => void;
+  projects: ProjectResource[];
+  savingId: string | null;
+  onCommitUpdate: (taskId: string, updates: TablesUpdate<"tasks">) => void;
   onProjectChange: (taskId: string, projectId: string | null) => void;
+  onToggleDeleteSelection: (taskId: string) => void;
 };
 
-type TaskJoinRow = {
-  id: string;
-  title: string;
-  status: TaskStatus | null;
-  description: string | null;
-  due_date: string | null;
-  project_id: string | null;
-  deleted_at: string | null;
-  start_date: string | null;
-};
+function isTaskOverdue(task: { due_date?: string | null; status?: string }): boolean {
+  if (!task.due_date) return false;
+  if (task.status === "completed" || task.status === "done") return false;
 
-type AssignmentTaskRow = {
-  task_id: string;
-  allocated_hours: number | null;
-  tasks: TaskJoinRow | TaskJoinRow[] | null;
-};
+  const dueDate = new Date(task.due_date);
+  const now = new Date();
 
-function mapAssignmentRowsToEmployeeTasks(rows: AssignmentTaskRow[]): EmployeeTask[] {
-  return rows.flatMap((row) => {
-    const joinedTask = toTaskJoin(row);
-    if (!joinedTask) {
-      return [];
-    }
+  dueDate.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
 
-    return [
-      {
-        task_id: row.task_id,
-        title: joinedTask.title,
-        status: joinedTask.status,
-        description: joinedTask.description,
-        start_date: joinedTask.start_date,
-        due_date: joinedTask.due_date,
-        project_id: joinedTask.project_id,
-        allocated_hours: row.allocated_hours,
-      },
-    ];
-  });
-}
-
-function toTaskJoin(row: AssignmentTaskRow): TaskJoinRow | null {
-  if (!row.tasks) {
-    return null;
-  }
-
-  return Array.isArray(row.tasks) ? (row.tasks[0] ?? null) : row.tasks;
+  return dueDate < now;
 }
 
 const EmployeeTaskRow = memo(function EmployeeTaskRow({
@@ -115,163 +96,243 @@ const EmployeeTaskRow = memo(function EmployeeTaskRow({
   deleteMode,
   selectedForDelete,
   projects,
-  onDraftUpdate,
-  onToggleDeleteSelection,
-  onTitleCommit,
-  onDescriptionCommit,
-  onStatusChange,
-  onDueDateChange,
+  savingId,
+  onCommitUpdate,
   onProjectChange,
-  onStartDateChange,
-}: EmployeeTaskRowProps) {
-  const gridClassName = "md:grid-cols-[48px_minmax(0,2fr)_200px_140px_140px]";
+  onToggleDeleteSelection,
+}: TaskRowProps) {
+  const [titleValue, setTitleValue] = useState(task.title);
+  const [descriptionValue, setDescriptionValue] = useState(task.description ?? "");
 
-  const containerClassName = deleteMode
-    ? selectedForDelete
-      ? "cursor-pointer border-red-200 bg-red-50/70 shadow-sm hover:bg-red-50/80"
-      : "cursor-pointer border-zinc-100 bg-white hover:border-red-200 hover:bg-red-50/30"
-    : "border-zinc-100 bg-white hover:bg-zinc-50/50";
   const fieldsDisabled = !canManage || deleteMode;
   const statusDisabled = deleteMode || (!canManage && !canEditStatus);
+  const rowClassName = selectedForDelete
+    ? "border-red-200 bg-red-50/70 hover:bg-red-50/80"
+    : "border-zinc-100 bg-white hover:bg-zinc-100/60";
+  const overdue = isTaskOverdue(task);
 
   return (
     <div
-      role={deleteMode ? "button" : undefined}
-      tabIndex={deleteMode ? 0 : undefined}
-      aria-selected={deleteMode ? selectedForDelete : undefined}
-      className={`group flex flex-col items-start gap-2.5 border-t px-4 py-3.5 transition-colors first:border-t-0 md:grid ${gridClassName} md:items-center md:gap-4 md:py-3 ${containerClassName}`}
-      onClick={deleteMode ? () => onToggleDeleteSelection(task.task_id) : undefined}
-      onKeyDown={
-        deleteMode
-          ? (event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                onToggleDeleteSelection(task.task_id);
-              }
-            }
-          : undefined
-      }
+      className={`group relative flex flex-col items-start gap-3 px-4 py-4 transition-colors md:grid md:items-center md:gap-4 md:px-6 md:py-3.5 ${desktopTasksTableGrid} ${rowClassName}`}
     >
-      <div className="flex w-full justify-center pt-0.5 md:pt-0">
-        <TaskSelectionIndicator selected={deleteMode ? selectedForDelete : task.status === "done"} deleteMode={deleteMode} />
-      </div>
-
       <div className="flex w-full min-w-0 flex-col">
         <input
-          value={task.title}
-          onChange={(event) => onDraftUpdate(task.task_id, { title: event.target.value })}
-          onBlur={(event) => {
-            onTitleCommit(task.task_id, event.target.value);
+          value={titleValue}
+          onChange={(e) => setTitleValue(e.target.value)}
+          onBlur={(e) => {
+            if (e.target.value !== task.title) {
+              onCommitUpdate(task.id, { title: e.target.value });
+            }
           }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.currentTarget.blur();
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+          disabled={fieldsDisabled}
+          className={`w-full truncate rounded px-1.5 py-0.5 text-[15px] font-medium outline-none transition-colors disabled:cursor-default
+            ${
+              !fieldsDisabled
+                ? "border border-transparent hover:border-zinc-300 hover:bg-zinc-50 focus:border-transparent focus:bg-white focus:ring-2 focus:ring-indigo-500 cursor-text"
+                : "bg-transparent border-transparent"
+            }
+            ${
+              selectedForDelete
+                ? "line-through text-red-950/80 opacity-90"
+                : task.status === "done"
+                ? "text-zinc-500"
+                : "text-zinc-900"
+            }
+          `}
+        />
+        <ExpandableDescription
+          value={descriptionValue}
+          onChange={(nextValue) => setDescriptionValue(nextValue)}
+          onCommit={(nextValue) => {
+            if (nextValue !== (task.description ?? "")) {
+              onCommitUpdate(task.id, { description: nextValue.trim() ? nextValue : null });
             }
           }}
           disabled={fieldsDisabled}
-          className={`w-full truncate bg-transparent text-[15px] font-medium outline-none disabled:cursor-default ${
-            deleteMode && selectedForDelete ? "line-through text-red-900/80" : "text-foreground"
-          } ${deleteMode ? "opacity-90" : ""}`}
+          className={`mt-1 ${selectedForDelete ? "opacity-90" : ""}`}
         />
-        <ExpandableDescription
-          value={task.description ?? ""}
-          onChange={(nextValue) => onDraftUpdate(task.task_id, { description: nextValue })}
-          onCommit={(nextValue) => {
-            onDescriptionCommit(task.task_id, nextValue);
-          }}
-          disabled={fieldsDisabled}
-          className={`mt-1 ${deleteMode ? "opacity-90" : ""}`}
-        />
+        <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-zinc-500 md:hidden">
+          <span
+            className={`rounded px-2 py-0.5 text-xs font-medium ${getTaskStatusBadgeClass(
+              task.status
+            )} ${selectedForDelete ? "opacity-90" : ""}`}
+          >
+            {getTaskStatusLabel(task.status)}
+          </span>
+          <span className={selectedForDelete ? "opacity-90" : ""}>
+            Start: {formatDateLabel(task.start_date, "No start date")}
+          </span>
+          <span className={selectedForDelete ? "opacity-90" : ""}>
+            Due: {formatDateLabel(task.due_date, "No due date")}
+          </span>
+          {savingId === task.id && <span>Saving...</span>}
+        </div>
       </div>
 
-      <div className="flex w-full items-center">
-        <Select
-          value={task.project_id ?? "__none__"}
-          onValueChange={(value) => {
-            onProjectChange(task.task_id, value === "__none__" ? null : value);
-          }}
+      <div className="flex w-full items-center gap-2.5">
+        <select
+          value={task.project_id || ""}
+          onChange={(e) => onProjectChange(task.id, e.target.value || null)}
           disabled={fieldsDisabled}
+          className={`cursor-pointer min-w-0 flex-1 appearance-none bg-transparent text-sm font-medium outline-none disabled:cursor-default ${
+            task.project_id ? "text-zinc-900" : "italic text-zinc-400"
+          } ${selectedForDelete ? "opacity-90" : ""}`}
         >
-          <SelectTrigger className={`h-7 w-full border-none bg-transparent px-0 text-xs text-zinc-500 shadow-none focus-visible:ring-0 ${deleteMode ? "opacity-90" : ""}`}>
-            <SelectValue placeholder="No workspace" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">No workspace</SelectItem>
-            {projects.map((project) => (
-              <SelectItem key={project.id} value={project.id}>
-                {project.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <option value="">No workspace</option>
+          {projects.map((project) => (
+            <option key={project.id} value={project.id}>
+              {project.name}
+            </option>
+          ))}
+        </select>
       </div>
 
-      <div className="flex items-center">
-        <Select
-          value={(task.status ?? "todo") as TaskStatus}
-          onValueChange={(value) => {
-            onStatusChange(task.task_id, value as TaskStatus);
+      <div className="hidden md:flex md:flex-col md:items-start md:gap-2">
+        <select
+          value={task.status ?? "todo"}
+          onChange={(e) => {
+            const value = e.target.value as TaskStatus;
+            onCommitUpdate(task.id, { status: value });
           }}
           disabled={statusDisabled}
+          className={`appearance-none rounded-md border px-2.5 py-1 text-[13px] font-medium outline-none disabled:cursor-default cursor-pointer transition-all ${getTaskStatusBadgeClass(
+            task.status
+          )} ${selectedForDelete ? "opacity-90" : ""}`}
         >
-          <SelectTrigger className={`h-8 w-full min-w-32 bg-background text-xs ${deleteMode ? "opacity-85" : ""}`}>
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todo">To Do</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="blocked">Blocked</SelectItem>
-            <SelectItem value="done">Completed</SelectItem>
-          </SelectContent>
-        </Select>
+          <option value="todo">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="blocked">Blocked</option>
+          <option value="done">Completed</option>
+        </select>
+        {savingId === task.id && <span className="text-xs text-zinc-500">Saving...</span>}
       </div>
 
-      <div className="flex items-center">
-        <input
-          type="date"
-          value={task.due_date ?? ""}
-          onChange={(event) => {
-            onDraftUpdate(task.task_id, { due_date: event.target.value || null });
-            onDueDateChange(task.task_id, event.target.value);
-            onStartDateChange(task.task_id, event.target.value);
+      <div className="hidden min-w-0 md:flex md:h-full md:items-center text-sm text-zinc-500">
+        <DatePicker
+          value={task.start_date || ""}
+          variant="ghost"
+          className="-ml-0 h-auto px-0 py-0 text-sm font-normal text-zinc-600 hover:bg-transparent hover:text-zinc-900"
+          placeholder="Set date"
+          ghostPlaceholder
+          onChange={async (val) => {
+            await onCommitUpdate(task.id, { start_date: val || null });
           }}
-          className={`h-8 w-full min-w-36 rounded-md border border-input bg-background px-3 text-xs ${deleteMode ? "opacity-85" : ""}`}
-          disabled={fieldsDisabled}
         />
+      </div>
+
+      <div className="hidden min-w-0 md:flex md:h-full md:items-center">
+        <div className="flex items-center gap-2">
+          <DatePicker
+            value={task.due_date || ""}
+            danger={overdue}
+            variant="ghost"
+            className="h-auto px-0 py-0 text-sm font-normal text-zinc-600 hover:bg-transparent hover:text-zinc-900"
+            placeholder="Set date"
+            ghostPlaceholder
+            onChange={async (val) => {
+              await onCommitUpdate(task.id, { due_date: val || null });
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="flex w-full items-center justify-end md:justify-center">
+        {canManage && (
+          <button
+            type="button"
+            onClick={() => onToggleDeleteSelection(task.id)}
+            className={`rounded-md p-1.5 transition-all outline-none ${
+              selectedForDelete
+                ? "text-red-600 bg-red-100 hover:bg-red-200"
+                : "text-zinc-400 opacity-40 hover:text-red-600 hover:bg-zinc-100 hover:opacity-100 group-hover:opacity-100"
+            }`}
+            title="Delete task"
+          >
+            <Trash2 className="cursor-pointer h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );
 });
 
-// POSSIBLE LARGE CLIENT COMPONENT
+function formatDateLabel(value: string | null, fallback: string) {
+  if (!value) return fallback;
+  return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function getTaskStatusLabel(status: string | null) {
+  if (status === "in_progress") return "In Progress";
+  if (status === "done") return "Completed";
+  if (status === "blocked") return "Blocked";
+  return "To Do";
+}
+
+function getTaskStatusBadgeClass(status: string | null) {
+  if (status === "done") return "bg-emerald-50 text-emerald-700 border-emerald-200/60";
+  if (status === "in_progress") return "bg-indigo-50 text-indigo-700 border-indigo-200/60";
+  if (status === "blocked") return "bg-amber-50 text-amber-700 border-amber-200/60";
+  return "bg-zinc-100 text-zinc-700 border-zinc-200/60";
+}
+
 export default function EmployeeTasksPage() {
   const role = useOrgRole();
   const appRole = role && isAppRole(role) ? toAppRole(role) : null;
-  const canManage = appRole ? getWorkspaceCapabilities(appRole).canManageTasks : false;
-  const canEditOwnAssignedStatus = appRole
-    ? getWorkspaceCapabilities(appRole).canUpdateAssignedTaskStatus
-    : false;
+  const capabilities = appRole ? getWorkspaceCapabilities(appRole) : null;
+  const canManage = capabilities?.canManageTasks ?? false;
+
+  const { orgId, employeeId } = useParams<{ orgId: string; employeeId: string }>();
   const { addToast } = useToast();
   const { setPageHeader } = usePageHeader();
 
-  const { orgId, employeeId } = useParams<{ orgId: string; employeeId: string }>();
-  const hydrationStartRef = useRef<number | null>(null);
-  const renderCountRef = useRef(0);
-  const [tasks, setTasks] = useState<EmployeeTask[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [employeeName, setEmployeeName] = useState("Employee");
-  const [projects, setProjects] = useState<ProjectOption[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState<ProjectResource[]>([]);
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  // Pagination & Server State
+  const [tasks, setTasks] = useState<EmployeeTaskRpc[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  // Filter & Sort State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
+  const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [startDateFilter, setStartDateFilter] = useState<string>("");
+  const [dueDateFilter, setDueDateFilter] = useState<string>("");
+  const [sortBy, setSortBy] = useState<"title" | "status" | "start_date" | "due_date">("title");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  // Modals / Helpers
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [createDescription, setCreateDescription] = useState("");
   const [startDate, setStartDate] = useState("");
-  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
+  const hasMoreRef = useRef(hasMore);
+  const initialLoadingRef = useRef(initialLoading);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreRef = useRef(false);
+  const offsetRef = useRef(0);
+  const addToastRef = useRef(addToast);
+  const isFirstRender = useRef(true);
+  const headingRef = useRef<HTMLDivElement>(null);
+  const [headingGone, setHeadingGone] = useState(false);
 
+  useEffect(() => { addToastRef.current = addToast; }, [addToast]);
+  
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => {
       setCurrentUserId(data.user?.id ?? null);
@@ -279,239 +340,286 @@ export default function EmployeeTasksPage() {
   }, []);
 
   useEffect(() => {
-    hydrationStartRef.current = performance.now();
-    console.time("[perf] page employee-tasks hydration");
-    console.timeEnd("[perf] page employee-tasks hydration");
+    const el = headingRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => setHeadingGone(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
   }, []);
 
+  // Global Page Initialization (Projects and Employee Name)
   useEffect(() => {
-    renderCountRef.current += 1;
-    if (renderCountRef.current > 1) {
-      console.info(
-        `[render] employee-tasks #${renderCountRef.current} tasks=${tasks.length} loading=${loading} deleteMode=${deleteMode}`
-      );
+    async function loadMeta() {
+      if (!orgId || !employeeId) return;
+      try {
+        const [membersRes, projectsRes] = await Promise.all([
+          listOrgMembers(orgId),
+          supabase
+            .from("projects")
+            .select("id, name")
+            .eq("organization_id", orgId)
+            .is("deleted_at", null)
+            .order("name", { ascending: true })
+        ]);
+        
+        const match = membersRes.data?.find((m) => m.user_id === employeeId);
+        if (match) setEmployeeName(match.name);
+        
+        if (projectsRes.data) {
+          setProjects(projectsRes.data.map(p => ({ id: p.id, name: p.name })));
+        }
+      } catch (err) {
+        console.error(err);
+      }
     }
-  }, [deleteMode, loading, tasks.length]);
+    void loadMeta();
+  }, [orgId, employeeId]);
 
-  const fetchEmployeeTasks = useCallback(async () => {
-    const queryStart = performance.now();
-    const { data } = await supabase
-      .from("assignments")
-      .select(
-        `
-          task_id,
-          allocated_hours,
-            tasks!inner(id, title, status, description,start_date, due_date, project_id, deleted_at)
-        `
-      )
-      .eq("organization_id", orgId)
-      .eq("user_id", employeeId)
-      .is("tasks.deleted_at", null);
+  const fetchTasks = useCallback(async (offset: number, append = false) => {
+    if (append && loadingMoreRef.current) return;
 
-    console.info(
-      `[perf] employee-tasks assignments query ${(performance.now() - queryStart).toFixed(1)}ms`
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+
+    if (!append) {
+      initialLoadingRef.current = true;
+      setInitialLoading(true);
+      offsetRef.current = 0;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc("list_employee_tasks_with_meta", {
+        org_uuid: orgId,
+        employee_uuid: employeeId,
+        page_size: PAGE_SIZE,
+        page_offset: offset,
+        search_query: searchQuery || undefined,
+        status_filter: statusFilter !== "all" ? statusFilter : undefined,
+        project_filter: projectFilter !== "all" && projectFilter !== "unassigned" ? projectFilter : undefined,
+        unassigned_only: projectFilter === "unassigned",
+        start_date_from: startDateFilter || undefined,
+        due_date_to: dueDateFilter || undefined,
+        sort_by: sortBy,
+        sort_order: sortOrder,
+      });
+
+      if (error) throw error;
+
+      const fetchedTasks = data ?? [];
+      const count = fetchedTasks[0]?.total_count ?? 0;
+      const newOffset = offset + fetchedTasks.length;
+
+      offsetRef.current = newOffset;
+      hasMoreRef.current = newOffset < count;
+
+      setTasks((prev) => (append ? [...prev, ...fetchedTasks] : fetchedTasks));
+      setTotalCount(count);
+      setHasMore(newOffset < count);
+    } catch (err) {
+      console.error(err);
+      addToastRef.current("Failed to load employee tasks", "error");
+    } finally {
+      initialLoadingRef.current = false;
+      setInitialLoading(false);
+      setLoadingMore(false);
+      loadingMoreRef.current = false;
+    }
+  }, [orgId, employeeId, searchQuery, statusFilter, projectFilter, startDateFilter, dueDateFilter, sortBy, sortOrder]);
+
+  // Handle updates to server queries across filters
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+    }
+    offsetRef.current = 0;
+    void fetchTasks(0, false);
+  }, [fetchTasks]);
+
+  // Infinite Scroll IntersectionObserver hook
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMore || loadingMore || initialLoading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry.isIntersecting) return;
+        observer.unobserve(entry.target);
+        void fetchTasks(offsetRef.current, true);
+      },
+      { rootMargin: "200px" }
     );
 
-    const mapStart = performance.now();
-    const result = mapAssignmentRowsToEmployeeTasks((data ?? []) as AssignmentTaskRow[]);
-    const mapMs = performance.now() - mapStart;
-    if (mapMs > 12) {
-      console.info(`[perf] employee-tasks map tasks ${mapMs.toFixed(1)}ms`);
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, initialLoading, fetchTasks]);
+const canEditStatusForEmployee = useMemo(
+  () =>
+    Boolean(appRole) &&
+    Boolean(currentUserId) &&
+    canEditTask(appRole as Exclude<typeof appRole, null>, {
+      userId: currentUserId as string,
+      assigneeId: employeeId,
+    }),
+  [appRole, currentUserId, employeeId]
+);
+  const updateTaskInState = useCallback((id: string, updates: TaskPatch) => {
+    setTasks(prev =>
+      prev.map(task =>
+        task.id === id ? { ...task, ...updates } : task
+      )
+    );
+  }, []);
+
+  const commitUpdate = useCallback(
+    async (id: string, updates: TablesUpdate<"tasks">) => {
+      try {
+        setSavingId(id);
+        await updateTask(id, updates, orgId);
+      } catch {
+        addToast("Failed to save task", "error");
+      } finally {
+        setSavingId(null);
+      }
+    },
+    [addToast, orgId]
+  );
+
+  const commitTaskUpdate = useCallback(
+    (id: string, updates: TablesUpdate<"tasks">) => {
+      const task = tasks.find((entry) => entry.id === id);
+      
+      const scopedUpdates = canManage
+        ? updates
+        : canEditStatusForEmployee && updates.status !== undefined
+          ? { status: updates.status }
+          : null;
+
+      if (!scopedUpdates) return;
+
+      const patch: TaskPatch = {
+        ...scopedUpdates,
+        status: scopedUpdates.status ?? undefined,
+      };
+
+      updateTaskInState(id, patch);
+      void commitUpdate(id, scopedUpdates);
+    },
+    [canManage, commitUpdate, canEditStatusForEmployee, tasks, updateTaskInState, currentUserId, employeeId]
+  );
+
+  const handleProjectAssignment = useCallback(
+    async (taskId: string, projectId: string | null) => {
+      try {
+        await updateTask(taskId, { project_id: projectId }, orgId);
+        const project = projects.find((p) => p.id === projectId);
+        updateTaskInState(taskId, {
+          project_id: projectId,
+          project_name: projectId ? project?.name ?? null : null,
+        });
+      } catch {
+        addToast("Failed to update workspace", "error");
+      }
+    },
+    [addToast, orgId, projects, updateTaskInState]
+  );
+
+  function handleSort(column: typeof sortBy) {
+    if (sortBy === column) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
     }
-    return result;
-  }, [employeeId, orgId]);
+  }
+
+  function SortIcon(column: typeof sortBy) {
+    if (sortBy !== column) return <ArrowUpDown className="h-3.5 w-3.5 text-zinc-400" />;
+    return sortOrder === "asc" 
+      ? <ArrowUp className="h-3.5 w-3.5 text-indigo-600" /> 
+      : <ArrowDown className="h-3.5 w-3.5 text-indigo-600" />;
+  }
 
   const selectedTaskIdSet = useMemo(() => new Set(selectedTaskIds), [selectedTaskIds]);
-
-  const updateTaskInState = useCallback((taskId: string, updates: Partial<EmployeeTask>) => {
-    setTasks((prev) => prev.map((task) => (task.task_id === taskId ? { ...task, ...updates } : task)));
-  }, []);
-
-  const toggleDeleteMode = useCallback(() => {
-    setDeleteMode(true);
-    setSelectedTaskIds([]);
-  }, []);
-
+  
   const cancelDeleteMode = useCallback(() => {
     setDeleteMode(false);
     setSelectedTaskIds([]);
   }, []);
 
   const toggleTaskSelection = useCallback((taskId: string) => {
-    setSelectedTaskIds((prev) =>
-      prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId]
-    );
+    setSelectedTaskIds((prev) => {
+      const next = prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId];
+      setDeleteMode(next.length > 0);
+      return next;
+    });
   }, []);
-
+  
   const handleBulkDelete = useCallback(async () => {
-    if (!selectedTaskIds.length) {
-      return;
-    }
+    if (selectedTaskIds.length === 0) return;
 
     const taskIdsToDelete = [...selectedTaskIds];
-    const previousTasks = tasks;
+    const backupTasks = tasks;
+    const backupTotal = totalCount;
 
-    setTasks((prev) => prev.filter((task) => !taskIdsToDelete.includes(task.task_id)));
+    setTasks((prev) => prev.filter((task) => !taskIdsToDelete.includes(task.id)));
+    setTotalCount((prev) => Math.max(0, prev - taskIdsToDelete.length));
     setDeleteMode(false);
     setSelectedTaskIds([]);
 
     try {
       await Promise.all(taskIdsToDelete.map((taskId) => deleteTaskAction(taskId, orgId)));
-      addToast(`${taskIdsToDelete.length} task${taskIdsToDelete.length === 1 ? "" : "s"} deleted`, "success");
+      addToast(`Deleted ${taskIdsToDelete.length} task${taskIdsToDelete.length === 1 ? "" : "s"}`, "success");
     } catch {
-      const refreshedTasks = await fetchEmployeeTasks().catch(() => previousTasks);
-      setTasks(refreshedTasks);
+      setTasks(backupTasks);
+      setTotalCount(backupTotal);
       setDeleteMode(true);
-      setSelectedTaskIds(taskIdsToDelete.filter((taskId) => refreshedTasks.some((task) => task.task_id === taskId)));
+      setSelectedTaskIds(taskIdsToDelete);
       addToast("Failed to delete selected tasks", "error");
     }
-  }, [addToast, fetchEmployeeTasks, orgId, selectedTaskIds, tasks]);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true);
-        const loadStart = performance.now();
-
-        const membersStart = performance.now();
-        const members = await listOrgMembers(orgId);
-        console.info(
-          `[perf] employee-tasks listOrgMembers ${(performance.now() - membersStart).toFixed(1)}ms`
-        );
-        const match = members.data?.find((m) => m.user_id === employeeId);
-        if (match) {
-          setEmployeeName(match.name);
-        }
-
-        const tasksStart = performance.now();
-        const normalizedTasks = await fetchEmployeeTasks();
-        console.info(
-          `[perf] employee-tasks fetchEmployeeTasks ${(performance.now() - tasksStart).toFixed(1)}ms`
-        );
-
-        setTasks(normalizedTasks);
-
-        // POTENTIAL WATERFALL
-        const projectsStart = performance.now();
-        const { data: projectData } = await supabase
-          .from("projects")
-          .select("id, name")
-          .eq("organization_id", orgId)
-          .is("deleted_at", null)
-          .order("name", { ascending: true });
-
-        console.info(
-          `[perf] employee-tasks projects query ${(performance.now() - projectsStart).toFixed(1)}ms`
-        );
-
-        setProjects((projectData ?? []).map((p) => ({ id: p.id, name: p.name })));
-        console.info(
-          `[perf] employee-tasks load total ${(performance.now() - loadStart).toFixed(1)}ms`
-        );
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    if (orgId && employeeId) {
-      void load();
-    }
-  }, [orgId, employeeId, fetchEmployeeTasks]);
-
-  useEffect(() => {
-    setPageHeader(
-      <div className="flex w-full flex-wrap items-center justify-between gap-3 md:flex-nowrap">
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-semibold tracking-tight text-zinc-900">Tasks · {employeeName}</h1>
-          <p className="text-xs text-zinc-500">
-            {deleteMode ? `${selectedTaskIds.length} selected for deletion` : "Assigned tasks across projects"}
-          </p>
-        </div>
-
-        {canManage && (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button
-              className="h-8 border-transparent bg-indigo-600 px-3.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-              onClick={() => setShowCreate(true)}
-            >
-              <Plus className="mr-2 h-4 w-4 opacity-90" />
-              Add Task
-            </Button>
-
-            {!deleteMode ? (
-              <Button
-                variant="outline"
-                className="h-8 border-red-200 bg-white px-3 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50"
-                onClick={toggleDeleteMode}
-                disabled={tasks.length === 0}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Tasks
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  className="h-8 border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
-                  onClick={cancelDeleteMode}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="h-8 bg-red-600 px-3 text-sm font-medium text-white shadow-sm hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
-                  onClick={() => {
-                    void handleBulkDelete();
-                  }}
-                  disabled={selectedTaskIds.length === 0}
-                >
-                  Delete Selected{selectedTaskIds.length ? ` (${selectedTaskIds.length})` : ""}
-                </Button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-    );
-
-    return () => {
-      setPageHeader(null);
-    };
-  }, [canManage, cancelDeleteMode, deleteMode, employeeName, handleBulkDelete, selectedTaskIds.length, setPageHeader, tasks.length, toggleDeleteMode]);
+  }, [addToast, orgId, selectedTaskIds, tasks, totalCount]);
 
   async function handleCreate() {
-    if (!title.trim()) {
-      return;
-    }
+    if (!title.trim()) return;
 
     try {
       setCreating(true);
-      const created = await createTask(
-        title.trim(),
-        description.trim() || undefined,
-        startDate,
-        dueDate,
-        orgId,
-        selectedProjectId || null
-      );
+      const created = await createTask(title.trim(), createDescription.trim() || undefined, startDate, dueDate, orgId, selectedProjectId || null);
+      
+      const optionalUpdates: TablesUpdate<"tasks"> = {};
+      if (startDate) {
+        optionalUpdates.start_date = startDate;
+      }
 
+      if (Object.keys(optionalUpdates).length > 0) {
+        await updateTask(created.id, optionalUpdates, orgId);
+      }
+
+      // Automatically assign the newly created task to this employee context
       await assignTaskToResource(created.id, employeeId);
 
-      setTasks((prev) => [
-        {
-          task_id: created.id,
-          title: created.title,
-          status: created.status,
-          description: created.description,
-          start_date: created.start_date,
-          due_date: created.due_date,
-          project_id: created.project_id,
-          allocated_hours: null,
-        },
-        ...prev,
-      ]);
+      const newTask: EmployeeTaskRpc = {
+        id: created.id,
+        organization_id: orgId,
+        project_id: selectedProjectId || null,
+        project_name: projects.find((p) => p.id === selectedProjectId)?.name ?? null,
+        title: created.title,
+        description: created.description ?? null,
+        status: "todo",
+        start_date: startDate || null,
+        due_date: dueDate || null,
+        created_by: currentUserId!,
+        created_at: new Date().toISOString(),
+        total_count: totalCount + 1,
+      };
 
+      setTasks((prev) => [newTask, ...prev]);
+      setTotalCount((prev) => prev + 1);
       setTitle("");
-      setDescription("");
+      setCreateDescription("");
       setStartDate("");
       setDueDate("");
       setSelectedProjectId("");
@@ -524,204 +632,317 @@ export default function EmployeeTasksPage() {
     }
   }
 
-  async function handleTitleCommit(taskId: string, nextTitle: string) {
-    const previousTasks = tasks;
-    updateTaskInState(taskId, { title: nextTitle });
+  const tasksToolbar = (
+    <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative w-full flex-1 max-w-xl">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <Input
+            placeholder="Search tasks"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9 border-zinc-200 bg-white pl-9 text-sm text-zinc-700 placeholder:text-zinc-500 focus-visible:ring-2 focus-visible:ring-indigo-500 border-zinc-300 shadow-sm"
+          />
+        </div>
 
-    try {
-      await updateTask(taskId, { title: nextTitle }, orgId);
-    } catch {
-      setTasks(await fetchEmployeeTasks().catch(() => previousTasks));
-      addToast("Failed to update title", "error");
-    }
-  }
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as "all" | TaskStatus)}
+          className="h-9 w-full cursor-pointer rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 shadow-sm outline-none transition-colors focus:border-transparent focus:ring-2 focus:ring-indigo-500 sm:w-44"
+        >
+          <option value="all">All statuses</option>
+          <option value="todo">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="blocked">Blocked</option>
+          <option value="done">Completed</option>
+        </select>
 
-  async function handleDescriptionCommit(taskId: string, nextDescription: string) {
-    const previousTasks = tasks;
-    updateTaskInState(taskId, { description: nextDescription || null });
+        <select
+          value={projectFilter}
+          onChange={(e) => setProjectFilter(e.target.value)}
+          className="h-9 w-full cursor-pointer rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-700 shadow-sm outline-none transition-colors focus:border-transparent focus:ring-2 focus:ring-indigo-500 sm:w-44"
+        >
+          <option value="all">Any workspace</option>
+          <option value="unassigned">No workspace</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
 
-    try {
-      await updateTask(taskId, { description: nextDescription || null }, orgId);
-    } catch {
-      setTasks(await fetchEmployeeTasks().catch(() => previousTasks));
-      addToast("Failed to update description", "error");
-    }
-  }
+        <div className="flex items-center gap-2">
+          <DatePicker
+              value={startDateFilter || null}
+              onChange={(value) => setStartDateFilter(value ?? "")}
+              placeholder="Start date"
+              className="h-9 w-[150px] justify-start border-zinc-300 bg-white px-3 text-sm font-normal shadow-sm hover:bg-white"
+          />
 
-  async function handleStatusChange(taskId: string, status: TaskStatus) {
-    const previousTasks = tasks;
-    updateTaskInState(taskId, { status });
+          <ArrowRight className="h-4 w-4 text-zinc-400" />
 
-    try {
-      await updateTask(taskId, { status }, orgId);
-    } catch {
-      setTasks(await fetchEmployeeTasks().catch(() => previousTasks));
-      addToast("Failed to update status", "error");
-    }
-  }
+          <DatePicker
+              value={dueDateFilter || null}
+              onChange={(value) => setDueDateFilter(value ?? "")}
+              placeholder="Due date"
+              className="h-9 w-[150px] justify-start border-zinc-300 bg-white px-3 text-sm font-normal shadow-sm hover:bg-white"
+          />
+        </div>
+      </div>
 
-  async function handleDueDateChange(taskId: string, nextDueDate: string) {
-    const previousTasks = tasks;
-    updateTaskInState(taskId, { due_date: nextDueDate || null });
-
-    try {
-      await updateTask(taskId, { due_date: nextDueDate || null }, orgId);
-    } catch {
-      setTasks(await fetchEmployeeTasks().catch(() => previousTasks));
-      addToast("Failed to update due date", "error");
-    }
-  }
-  async function handleStartDateChange(taskId: string, nextStartDate: string) {
-    const previousTasks = tasks;
-    updateTaskInState(taskId, { start_date: nextStartDate || null });
-
-    try {
-      await updateTask(taskId, { start_date: nextStartDate || null }, orgId);
-    } catch {
-      setTasks(await fetchEmployeeTasks().catch(() => previousTasks));
-      addToast("Failed to update start date", "error");
-    }
-  }
-
-  async function handleProjectChange(taskId: string, projectId: string | null) {
-    const previousTasks = tasks;
-    updateTaskInState(taskId, { project_id: projectId });
-
-    try {
-      await updateTask(taskId, { project_id: projectId }, orgId);
-    } catch {
-      setTasks(await fetchEmployeeTasks().catch(() => previousTasks));
-      addToast("Failed to update project", "error");
-    }
-  }
+      {canManage && (
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 md:flex-nowrap">
+          <Button
+            className="h-9 shrink-0 cursor-pointer rounded-lg border border-indigo-500 bg-indigo-500 px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-500/90"
+            onClick={() => setShowCreate(true)}
+          >
+            <Plus className="mr-2 h-4 w-4 opacity-90" />
+            Add Task
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 
   return (
-    <div className="flex w-full max-w-5xl flex-col gap-2 pb-12">
-      <section>
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-          <div className="hidden grid-cols-[48px_minmax(0,2fr)_200px_140px_140px] items-center gap-4 border-b border-zinc-200/80 bg-zinc-50/80 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:grid">
-            <div className="flex justify-center">
-              <span className="sr-only">Select Task</span>
-            </div>
-            <div>Task</div>
-            <div>Assigned Workspace</div>
-            <div>Status</div>
-            <div>Due Date</div>
+    <div className="flex w-full flex-col gap-4 pb-12">
+      <div className="flex items-start justify-between gap-4">
+        <div ref={headingRef} className="space-y-1">
+          <h1
+            className="text-2xl font-semibold tracking-tight text-zinc-900 truncate max-w-[640px]"
+            title={employeeName}
+          >
+            {employeeName}
+          </h1>
+          <p className="text-sm text-zinc-500">
+            Manage assigned tasks and workspace allocations.
+          </p>
+        </div>
+      </div>
+
+      {deleteMode && selectedTaskIds.length > 0 && (
+        <div className="fixed top-4 left-1/2 z-[100] flex w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-white shadow-xl animate-in fade-in slide-in-from-top-4 duration-200">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/20 text-xs font-semibold text-red-400">
+              {selectedTaskIds.length}
+            </span>
+            <span>
+              Delete {selectedTaskIds.length} task{selectedTaskIds.length === 1 ? "" : "s"}?
+            </span>
           </div>
-
-          <div className="flex flex-col">
-            {loading && (
-              <div className="px-4 py-4 text-sm text-zinc-500">Loading tasks...</div>
-            )}
-
-            {!loading && tasks.length === 0 && (
-              <div className="px-4 py-4 text-sm text-zinc-500">No tasks assigned to this employee.</div>
-            )}
-
-            {!loading &&
-              tasks.map((task) => {
-                return (
-                  <EmployeeTaskRow
-                    key={task.task_id}
-                    task={task}
-                    canManage={canManage}
-                    canEditStatus={canEditOwnAssignedStatus && currentUserId === employeeId}
-                    deleteMode={deleteMode}
-                    selectedForDelete={selectedTaskIdSet.has(task.task_id)}
-                    projects={projects}
-                    onDraftUpdate={updateTaskInState}
-                    onToggleDeleteSelection={toggleTaskSelection}
-                    onTitleCommit={handleTitleCommit}
-                    onDescriptionCommit={handleDescriptionCommit}
-                    onStatusChange={handleStatusChange}
-                    onStartDateChange={handleStartDateChange}
-                    onDueDateChange={handleDueDateChange}
-                    onProjectChange={handleProjectChange}
-                  />
-                );
-              })}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={cancelDeleteMode}
+              className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+              title="Cancel selection"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <Button
+              size="sm"
+              className="h-8 bg-red-600 px-3 text-xs font-medium text-white hover:bg-red-700"
+              onClick={() => void handleBulkDelete()}
+            >
+              Confirm
+            </Button>
           </div>
         </div>
-      </section>
+      )}
 
-      {showCreate && canManage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          onClick={(e) => e.currentTarget === e.target && setShowCreate(false)}
-        >
-          <div className="w-full max-w-md space-y-4 rounded-xl border border-border bg-card p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-foreground">Create Task</h2>
+      <div className="flex flex-col">
+        <div className={`sticky top-0 z-30 border border-b-0 border-zinc-200 bg-white transition-[border-radius] duration-150 ${headingGone ? "rounded-none" : "rounded-t-lg"}`}>
+          {headingGone && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute top-0 left-0 right-0 h-12 -translate-y-full"
+              style={{
+                background: "linear-gradient(to top, rgba(249,250,251,0.95) 0%, transparent 100%)",
+              }}
+            />
+          )}
+          <div className="flex items-center justify-between gap-4 rounded-t-lg border-b border-zinc-300 bg-zinc-200/80 px-4 py-3 overflow-hidden">
+            <div className="flex-1">{tasksToolbar}</div>
+          </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Title</label>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                placeholder="Task title"
-              />
+          <div className="flex items-center justify-between border-b border-zinc-300 bg-zinc-200/80 px-6 py-2">
+            <p className="text-[12px] text-zinc-600">
+              Showing{" "}
+              <span className="font-medium text-zinc-600">{tasks.length}</span>
+              {" "}of{" "}
+              <span className="font-medium text-zinc-600">{totalCount}</span>
+              {" "}tasks
+            </p>
+          </div>
+
+          <div
+            className={`hidden items-center gap-4 border-b border-zinc-200 bg-zinc-200/80 px-6 py-3 text-[13px] font-medium uppercase tracking-wider text-zinc-500 md:grid ${desktopTasksTableGrid}`}
+          >
+            <div
+              onClick={() => handleSort("title")}
+              className="flex cursor-pointer select-none items-center gap-1 hover:text-zinc-800"
+            >
+              Title {SortIcon("title")}
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Description</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-                placeholder="Add task details"
-              />
+            <div className="whitespace-nowrap">Workspace</div>
+            <div className="whitespace-nowrap">Status</div>
+            <div
+              onClick={() => handleSort("start_date")}
+              className="flex cursor-pointer select-none items-center gap-1 hover:text-zinc-800"
+            >
+              Start Date {SortIcon("start_date")}
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Start date</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              />
+            <div
+              onClick={() => handleSort("due_date")}
+              className="flex cursor-pointer select-none items-center gap-1 hover:text-zinc-800"
+            >
+              Due Date {SortIcon("due_date")}
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Due date</label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-              />
+            <div className="flex justify-center">
+              <span className="sr-only">Actions</span>
             </div>
+          </div>
+        </div>
 
-            
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Project (optional)</label>
-              <Select
-                value={selectedProjectId || "__none__"}
-                onValueChange={(value) => setSelectedProjectId(value === "__none__" ? "" : value)}
+        {tasks.length === 0 && !initialLoading ? (
+          <div className="flex flex-col items-center justify-center gap-4 rounded-b-xl border border-t-0 border-dashed border-zinc-200 bg-zinc-50/60 p-12 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border border-indigo-100 bg-indigo-50">
+              <Calendar className="h-5 w-5 text-indigo-500" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-sm font-semibold text-zinc-900">No tasks found</h2>
+              <p className="max-w-xs text-sm text-zinc-400">
+                Create a task to organize work or clear your applied workspace filters.
+              </p>
+            </div>
+            {canManage && (
+              <Button
+                onClick={() => setShowCreate(true)}
+                className="h-9 border-transparent bg-indigo-500 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-600"
               >
-                <SelectTrigger className="h-9 w-full bg-background text-sm">
-                  <SelectValue placeholder="No project" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">No project</SelectItem>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <Plus className="mr-2 h-4 w-4" />
+                Create task
+              </Button>
+            )}
+          </div>
+        ) : null}
+        
+        <div className="w-full overflow-hidden rounded-b-xl border border-t-0 border-zinc-200 bg-white shadow-sm opacity-100 transition-opacity">
+          <div className={`divide-y divide-zinc-100 ${initialLoading ? "opacity-40 pointer-events-none" : ""}`}>
+            {tasks.map((task) => (
+              <EmployeeTaskRow
+                key={task.id}
+                task={task}
+                canManage={canManage}
+                
+                canEditStatus={canEditStatusForEmployee}
+                deleteMode={deleteMode}
+                selectedForDelete={selectedTaskIdSet.has(task.id)}
+                projects={projects}
+                savingId={savingId}
+                onCommitUpdate={commitTaskUpdate}
+                onProjectChange={handleProjectAssignment}
+                onToggleDeleteSelection={toggleTaskSelection}
+              />
+            ))}
+          </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={() => setShowCreate(false)} disabled={creating}>
+          <div ref={sentinelRef} className="h-4 w-full bg-transparent" />
+
+          {loadingMore && (
+            <div className="flex items-center justify-center border-t border-zinc-100 bg-zinc-50/50 py-4 text-xs font-medium text-zinc-500">
+              <span className="animate-pulse">Loading additional tasks...</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showCreate && (
+        <AppModal
+          title="Add Task"
+          description="Create a task and optionally attach it to a workspace right away."
+          onClose={() => setShowCreate(false)}
+          widthClassName="w-[380px]"
+          footer={
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setShowCreate(false)}
+                disabled={creating}
+                className="h-8 px-3 text-sm text-zinc-600"
+              >
                 Cancel
               </Button>
-              <Button onClick={handleCreate} disabled={creating || !title.trim() || !dueDate || !startDate}>
+              <Button
+                disabled={creating}
+                onClick={() => void handleCreate()}
+                className="h-8 bg-indigo-600 px-3 text-sm text-white hover:bg-indigo-700"
+              >
                 {creating ? "Creating..." : "Create"}
               </Button>
+            </>
+          }
+        >
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-zinc-600">Task title</label>
+            <input
+              placeholder="Task title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition-[border-color,box-shadow] placeholder:text-zinc-400 hover:border-zinc-300 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-zinc-600">Start date</label>
+            <div className="relative">
+              <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <DatePicker
+              value={startDate || null}
+              onChange={(value) => setStartDate(value ?? "")}
+              placeholder="Start date"
+              className="h-9 w-[150px] justify-start border-zinc-300 bg-white px-3 text-sm font-normal shadow-sm hover:bg-white"
+            />
             </div>
           </div>
-        </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-zinc-600">Due date</label>
+            <div className="relative">
+              <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <DatePicker
+              value={dueDate || null}
+              onChange={(value) => setDueDate(value ?? "")}
+              placeholder="Due date"
+              className="h-9 w-[150px] justify-start border-zinc-300 bg-white px-3 text-sm font-normal shadow-sm hover:bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-zinc-600">Workspace</label>
+            <select
+              value={selectedProjectId}
+              onChange={(e) => setSelectedProjectId(e.target.value)}
+              className="cursor-pointer h-9 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm text-zinc-900 shadow-sm outline-none transition-[border-color,box-shadow] hover:border-zinc-300 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">No workspace</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-zinc-600">Description</label>
+            <textarea
+              value={createDescription}
+              onChange={(e) => setCreateDescription(e.target.value)}
+              rows={2}
+              placeholder="Add description"
+              className="w-full resize-none rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 placeholder:text-zinc-400 outline-none transition-[border-color,box-shadow] focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </AppModal>
       )}
     </div>
   );

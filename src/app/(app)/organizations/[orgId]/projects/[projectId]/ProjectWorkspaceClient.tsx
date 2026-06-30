@@ -852,6 +852,7 @@ void fetchTasks(offsetRef.current, true);
             className="text-2xl font-semibold tracking-tight text-zinc-900 truncate max-w-[640px]"
             title={projectName}
           >
+            
             {projectName}
           </h1>
           <p className="text-sm text-zinc-500">
