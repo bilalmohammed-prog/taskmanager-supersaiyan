@@ -188,7 +188,7 @@ export default async function AnalyticsPage({
   console.timeEnd("[perf] analytics page total");
 
   return (
-    <div className="flex w-full max-w-6xl flex-col gap-10 pb-16">
+    <div className="flex w-full max-w-10xl flex-col gap-10 pb-16">
       <div className="space-y-2">
         <h1 className="text-[2rem] leading-none font-medium tracking-tight text-foreground">
           Analytics
