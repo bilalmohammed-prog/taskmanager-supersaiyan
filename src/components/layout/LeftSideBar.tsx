@@ -9,6 +9,7 @@ import {
   FolderKanban,
   Users,
   Zap,
+  History,
 } from "lucide-react";
 import ProfileMenu from "@/components/ProfileMenu";
 import OrgSwitcher from "@/components/layout/OrgSwitcher";
@@ -37,6 +38,12 @@ const NAV_ITEMS = [
     href: "analytics",
     icon: BarChart3,
     matchRoutes: ["analytics"],
+  },
+  {
+    label: "Audit Logs",
+    href: "audit-logs",
+    icon: History,
+    matchRoutes: ["audit-logs"],
   },
   
 ] as const;

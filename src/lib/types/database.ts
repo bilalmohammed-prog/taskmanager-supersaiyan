@@ -58,6 +58,57 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          changes: Json
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          organization_id: string
+          project_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          changes?: Json
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          organization_id: string
+          project_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          changes?: Json
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          organization_id?: string
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           content: string
@@ -528,6 +579,32 @@ export type Database = {
       can_access_task: {
         Args: { org_uuid: string; task_uuid: string }
         Returns: boolean
+      }
+      get_audit_logs: {
+        Args: {
+          p_action?: string
+          p_cursor?: string
+          p_entity_type?: string
+          p_limit?: number
+          p_organization_id: string
+          p_project_id?: string
+          p_search?: string
+          p_sort_by?: string
+          p_sort_dir?: string
+        }
+        Returns: {
+          action: string
+          actor_id: string
+          actor_name: string
+          changes: Json
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          organization_id: string
+          project_id: string
+          total_count: number
+        }[]
       }
       is_manager: { Args: { org: string }; Returns: boolean }
       is_org_admin: { Args: { org_id: string }; Returns: boolean }

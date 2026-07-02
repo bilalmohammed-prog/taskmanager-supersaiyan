@@ -7,6 +7,9 @@ import { updateTask as updateTaskService } from "@/services/task/task.service";
 import { uuidSchema } from "@/lib/validation/common";
 import { taskUpdateSchema, normalizeTaskUpdateStatus } from "@/lib/validation/task";
 import type { Tables, TablesUpdate } from "@/lib/types/database";
+import { createAuditLog } from "@/services/audit/audit.service";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getTaskById } from "@/services/task/task.service";
 
 export async function updateTask(
   taskId: string,
@@ -44,17 +47,83 @@ export async function updateTask(
       project_id: validatedUpdates.project_id,
     },
   });
-
-  return updateTaskService(ctx.supabase, {
+  const before = await getTaskById(ctx.supabase, {
     organizationId: ctx.organizationId,
     taskId: validatedTaskId,
-    updates: {
-      title: validatedUpdates.title,
-      description: validatedUpdates.description,
-      start_date: validatedUpdates.startDate,
-      due_date: validatedUpdates.dueDate,
-      status: normalizeTaskUpdateStatus(validatedUpdates.status),
-      project_id: validatedUpdates.project_id,
-    },
   });
+
+  if (!before) {
+    throw new Error("Task not found");
+  }
+  const updatedTask = await updateTaskService(ctx.supabase, {
+  organizationId: ctx.organizationId,
+  taskId: validatedTaskId,
+  updates: {
+    title: validatedUpdates.title,
+    description: validatedUpdates.description,
+    start_date: validatedUpdates.startDate,
+    due_date: validatedUpdates.dueDate,
+    status: normalizeTaskUpdateStatus(validatedUpdates.status),
+    project_id: validatedUpdates.project_id,
+  },
+});
+  const changes = [];
+
+if (before.title !== updatedTask.title) {
+  changes.push({
+    field: "title",
+    before: before.title,
+    after: updatedTask.title,
+  });
+}
+
+if (before.description !== updatedTask.description) {
+  changes.push({
+    field: "description",
+    before: before.description,
+    after: updatedTask.description,
+  });
+}
+
+if (before.start_date !== updatedTask.start_date) {
+  changes.push({
+    field: "start_date",
+    before: before.start_date,
+    after: updatedTask.start_date,
+  });
+}
+
+if (before.due_date !== updatedTask.due_date) {
+  changes.push({
+    field: "due_date",
+    before: before.due_date,
+    after: updatedTask.due_date,
+  });
+}
+
+if (before.status !== updatedTask.status) {
+  changes.push({
+    field: "status",
+    before: before.status,
+    after: updatedTask.status,
+  });
+}
+
+if (before.project_id !== updatedTask.project_id) {
+  changes.push({
+    field: "project_id",
+    before: before.project_id,
+    after: updatedTask.project_id,
+  });
+}
+  await createAuditLog(supabaseAdmin, {
+    organizationId: ctx.organizationId,
+    projectId: updatedTask.project_id,
+    actorId: ctx.userId,
+    action: "UPDATE",
+    entityType: "task",
+    entityId: updatedTask.id,
+    changes,
+  });
+  return updatedTask;
 }

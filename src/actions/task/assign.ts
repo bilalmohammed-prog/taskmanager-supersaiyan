@@ -5,6 +5,8 @@ import { authorize } from "@/lib/auth/authorization";
 import { createAssignment, deleteAssignment, listAssignments } from "@/services/resource/assignment.service";
 import { getTaskById } from "@/services/task/task.service";
 import { uuidSchema } from "@/lib/validation/common";
+import { createAuditLog } from "@/services/audit/audit.service";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function assignTaskToResource(
   taskId: string,
@@ -25,7 +27,7 @@ export async function assignTaskToResource(
     organizationId: ctx.organizationId,
     taskId: validatedTaskId,
   });
-
+  const previousAssignee = existingAssignments[0]?.user_id ?? null;
   await Promise.all(
     existingAssignments.map((assignment) =>
       deleteAssignment(ctx.supabase, {
@@ -42,4 +44,22 @@ export async function assignTaskToResource(
       userId: validatedUserId,
     });
   }
+
+  if (previousAssignee !== validatedUserId) {
+  await createAuditLog(supabaseAdmin, {
+    organizationId: ctx.organizationId,
+    projectId: task.project_id,
+    actorId: ctx.userId,
+    action: "UPDATE",
+    entityType: "task",
+    entityId: task.id,
+    changes: [
+      {
+        field: "assignee",
+        before: previousAssignee,
+        after: validatedUserId,
+      },
+    ],
+  });
+}
 }

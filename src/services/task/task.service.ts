@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { NotFoundError, ValidationError } from "@/lib/api/errors";
 import type { Database, Tables, TablesInsert } from "@/lib/types/database";
+import { createAuditLog } from "@/services/audit/audit.service";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function createTask(
   supabase: SupabaseClient<Database>,
@@ -52,7 +54,15 @@ export async function createTask(
   if (!data) {
     throw new ValidationError({ message: "Failed to create task" });
   }
-
+  await createAuditLog(supabaseAdmin, {
+    organizationId: params.organizationId,
+    projectId: data.project_id,
+    actorId: params.createdBy,
+    action: "CREATE",
+    entityType: "task",
+    entityId: data.id,
+    changes: [],
+  });
   return data;
 }
 
